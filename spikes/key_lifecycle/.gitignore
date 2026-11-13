@@ -1,0 +1,11 @@
+.dart_tool/
+.pub/
+coverage/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.json.tmp
+*.key
+*.pem
+secrets/
