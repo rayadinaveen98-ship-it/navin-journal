@@ -17,13 +17,13 @@
 - APK SHA-256: `da678c40cd8cf621e1211b362d3678cc2856d00d5678ea1795b54bf1eb31f6cd`, verified against the downloaded artifact.
 - APK 01 remains a **separate application package** and is not replaced by this diagnostic.
 - **Four real encrypted-worker Flutter UI integration tests PASSED** in [focused run 43463736435](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43463736435). The earlier fake-async deadlock was resolved by properly awaiting worker operations using WidgetTester.runAsync; full UI tests then caught and led to a Material/ink feedback fix on encrypted saved-page cards. This is **Flutter test-runner evidence only**, not an Android emulator or physical-device runtime test.
-- Android Keystore force-stop/relaunch, clean-device key-loss recovery, real-device accessibility and security signoff remain open.
+- **Separate connected Writing Studio Android crash-recovery fixture PASSED** at API 34 with Android Keystore and two verified process force-stops ([run 43479108180](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43479108180): `ACK_V1 → ACK_V2 → RECOVERED_V2`). The standalone Library/Reader navigation APK itself has **not** been exercised through its UI on an Android emulator/physical handset. Clean-device key-loss recovery, private-data security and real-device accessibility remain open.
 
 ## Updated testable APK (latest)
 
 - [APK 02 successful updated build run 43464148090](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43464148090): **23 encrypted worker, 13 stable Flutter UI and 4 true encrypted-worker navigation tests all passed**; standalone Android APK built and uploaded as artifact 14058260789.
 - Updated debug APK SHA-256: `623e115685eebdcf23603a655747e5357cc93254a9c841ff12a59e8040a65081` (verified byte-for-byte against GitHub Actions artifact).
-- Fixed saved-page Material/ink response; users can install the updated fictional-only debug build. Android Keystore runtime/OS force-stop validation still pending independently.
+- Fixed saved-page Material/ink response; users can install the updated fictional-only debug build. A **separate** connected editor/Keystore native force-stop proof has passed (run 43479108180); hardware phone/tablet testing of the Library remains open.
 
 - [Phone/tablet test acceptance checklist](APK02_PHYSICAL_DEVICE_ACCEPTANCE.md) specifies the exact read/save/reopen/version and UI criteria using fictional text only; same-install force-stop is NOT equivalent to a fresh-device backup/restore test.
 
