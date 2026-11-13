@@ -9,7 +9,8 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * STAGED ANDROID CANDIDATE, NOT COMPILED/DEVICE-TESTED OR INTEGRATED.
+ * STAGED ANDROID CANDIDATE: compiled and tested on an API-35 emulator.
+ * NOT tested on physical Android hardware or integrated with Flutter.
  *
  * The wrapping key lives under AndroidKeyStore. Only AES-GCM-wrapped DEK
  * bytes and nonce/tag may be persisted; raw DEKs must never be logged,
