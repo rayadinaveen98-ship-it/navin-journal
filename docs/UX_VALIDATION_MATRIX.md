@@ -81,3 +81,7 @@ Successful run: https://github.com/rayadinaveen98-ship-it/navin-journal/actions/
 ## Automated HTML accessibility audit — 2026-11-13
 
 Axe-core reviewed seven representative screens against WCAG 2.0/2.1 A/AA rules in headless Chromium. **0 automated violation types were reported**. The audit JSON is in the same [GitHub Actions screenshot artifact](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43388845744). Manual screen-reader, keyboard/IME, text scaling and physical-device checks are still required.
+
+## Extended typography and bilingual verification — 2026-11-13
+
+Latest [extended QA evidence](QA_STAGE3_EXTENDED_2026-11-13.md): 84/84 Chromium checks passed covering 200% text reflow, mixed Telugu–English input/emoji, journal picker, editor-origin Back navigation, dialog focus, and a reduced viewport (not a native soft keyboard). Manual device / accessibility / actual user research still pending.
