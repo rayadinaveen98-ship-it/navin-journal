@@ -50,3 +50,7 @@ Use `npm run check:a11y` after installing dependencies. This injects axe-core in
 ## 200% typography and bilingual preview
 
 Use `npm run check:extended` to run the Chromium checks for the text-size selector (100/125/150/200%), journal-aware editing, Telugu–English/emoji content, large-title wrapping, simulated reduced-height keyboard viewport and modal focus restoration. Latest passing run: [43391287664](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43391287664). This **does not** validate native Telugu IME or persistent data.
+
+## Keyboard and focus regression suite
+
+Run `npm run check:keyboard` in the `prototype` folder. On 2026-11-13, 33/33 focus/keyboard checks passed across a 360px phone, 768px tablet and 1024px tablet viewport. Tests cover skip link, re-rendered navigation focus, `aria-current`, Ctrl+K search focus, dialog focus trapping and Escape focus return. This is not equivalent to TalkBack or VoiceOver testing; see [manual device test runbook](../docs/DEVICE_UX_TEST_RUNBOOK.md).
