@@ -508,6 +508,70 @@ class JournalVault {
     'sha256': r['sha256'] as String,
   };
 
+  /// Imports only an authenticated, fully validated snapshot into an
+  /// EMPTY encrypted test vault. All related rows commit as ONE SQL transaction.
+  ///
+  /// The caller MUST have authenticated the v2 archive first. This method
+  /// never overwrites/merges existing data. A4.3 device restore is still open.
+  Future<void> importIntoEmpty(Map<String, dynamic> snapshot) async {
+    await ProductSnapshotCodec().validate(snapshot);
+    _transaction(() {
+      for (final table in ['attachments', 'revisions', 'entries', 'journals']) {
+        if ((_db.select('SELECT COUNT(*) AS n FROM ' + table).single['n'] as int) != 0) {
+          throw const JournalUnavailable();
+        }
+      }
+      for (final value in snapshot['journals'] as List) {
+        final j = Map<String, dynamic>.from(value as Map);
+        _db.execute('''
+          INSERT INTO journals(id,name,archived,created_at_ms,deleted_at_ms)
+          VALUES(?,?,?,?,?)
+        ''', [
+          j['id'], j['name'], j['archived'] == true ? 1 : 0,
+          j['createdAtMs'], j['deletedAtMs'],
+        ]);
+        injectFailure?.call('after_import_journal');
+      }
+      for (final value in snapshot['entries'] as List) {
+        final e = Map<String, dynamic>.from(value as Map);
+        _db.execute('''
+          INSERT INTO entries(
+            id,journal_id,title,body,created_at_ms,updated_at_ms,
+            event_at_ms,version,deleted_at_ms
+          ) VALUES(?,?,?,?,?,?,?,?,?)
+        ''', [
+          e['id'], e['journalId'], e['title'], e['body'], e['createdAtMs'],
+          e['updatedAtMs'], e['eventAtMs'], e['version'], e['deletedAtMs'],
+        ]);
+        injectFailure?.call('after_import_entry');
+      }
+      for (final value in snapshot['revisions'] as List) {
+        final r = Map<String, dynamic>.from(value as Map);
+        _db.execute('''
+          INSERT INTO revisions(
+            entry_id,version,journal_id,title,body,event_at_ms,updated_at_ms
+          ) VALUES(?,?,?,?,?,?,?)
+        ''', [
+          r['entryId'], r['version'], r['journalId'], r['title'],
+          r['body'], r['eventAtMs'], r['updatedAtMs'],
+        ]);
+        injectFailure?.call('after_import_revision');
+      }
+      for (final value in snapshot['attachments'] as List) {
+        final a = Map<String, dynamic>.from(value as Map);
+        _db.execute('''
+          INSERT INTO attachments(id,entry_id,name,mime,bytes,sha256)
+          VALUES(?,?,?,?,?,?)
+        ''', [
+          a['id'], a['entryId'], a['name'], a['mime'],
+          base64Decode(a['data'] as String), a['sha256'],
+        ]);
+        injectFailure?.call('after_import_attachment');
+      }
+      injectFailure?.call('before_import_commit');
+    });
+  }
+
   /// Snapshot from one consistent SQLite transaction (WAL snapshot isolation).
   /// Returns a plaintext IN-MEMORY map; callers MUST NOT write/log it.
   /// onAfterJournals is a test-only race seam for concurrent SQLite writers.
