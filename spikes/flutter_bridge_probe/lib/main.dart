@@ -11,6 +11,7 @@ import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_key_lifecycle_spike/key_envelope_coordinator.dart';
 
 import 'android_key_bridge.dart';
+import 'autosave_probe.dart';
 
 const _sampleBody = 'Fictional entry · తెలుగు test · 🪷';
 
@@ -152,6 +153,16 @@ class _KeyBridgeProbeAppState extends State<KeyBridgeProbeApp> {
                     key: const ValueKey('run-test'),
                     onPressed: running ? null : run,
                     child: const Text('Run fictional encryption roundtrip'),
+                  ),
+                  const SizedBox(height: 14),
+                  OutlinedButton(
+                    key: const ValueKey('open-fictional-autosave'),
+                    onPressed: () {
+                      Navigator.of(context).push(MaterialPageRoute<void>(
+                        builder: (_) => const FictionalAutosavePage(),
+                      ));
+                    },
+                    child: const Text('Open fictional autosave editor'),
                   ),
                   const SizedBox(height: 22),
                   Text(
