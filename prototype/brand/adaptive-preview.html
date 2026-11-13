@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>Folded Page — launcher geometry review</title>
+<style>
+:root{--canvas:#F8F5EE;--ink:#282923;--muted:#56594F;--card:#FFFCF7;--line:#DAD6CB;--sage:#475A43}
+[data-theme=dark]{--canvas:#15191C;--ink:#F1EDE4;--muted:#B9C0B9;--card:#1D2226;--line:#3B4142}
+*{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--ink);font-family:system-ui,-apple-system,sans-serif}
+header{padding:25px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+button{cursor:pointer;border:1px solid var(--line);border-radius:13px;color:var(--ink);background:var(--card);padding:12px 18px;min-height:48px}
+button:focus-visible{outline:3px solid var(--sage);outline-offset:3px}
+main{max-width:1000px;margin:auto;padding:40px 24px 70px}h1,h2{font-family:Georgia,serif;font-weight:500;letter-spacing:-.03em}h1{font-size:clamp(30px,5vw,48px);margin:10px 0}p{line-height:1.6;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-top:32px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;text-align:center}
+.card h2{font-size:21px;margin:17px 0 6px}.card p{font-size:12px;margin:0}
+.mask{width:min(100%,170px);aspect-ratio:1;position:relative;margin:auto;overflow:hidden;background:var(--sage)}
+.mask img{width:100%;height:100%;position:absolute;inset:0;display:block}
+.mask.circle{border-radius:50%}.mask.squircle{border-radius:32%}.mask.rounded{border-radius:18%}.mask.square{border-radius:0}
+.mask.themed{background:#E3EAD9}.themed .foreground{display:none}
+.mask.themed::before{content:"";inset:0;position:absolute;background:#416345;mask:url("folded-page-monochrome.svg") center/100% 100% no-repeat;-webkit-mask:url("folded-page-monochrome.svg") center/100% 100% no-repeat}
+.measure{font-size:13px;padding:19px 24px;border-radius:17px;border:1px solid var(--line);margin-top:25px;background:var(--card)}
+.measure strong{color:var(--ink)}
+.safety{display:flex;align-items:center;gap:20px;margin-top:20px;flex-wrap:wrap}
+.guide{width:180px;height:180px;position:relative;background:var(--sage);border-radius:12px}
+.guide .safe{border:2px dashed #FFEBBA;position:absolute;top:19.44%;left:19.44%;width:61.11%;height:61.11%;pointer-events:none}
+.guide img{position:absolute;inset:0;width:100%;height:100%}.guide span{position:absolute;color:#FFEBBA;bottom:4px;left:6px;font-size:10px}
+@media(max-width:800px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:440px){.grid{grid-template-columns:1fr 1fr;gap:10px}.card{padding:13px}.mask{width:100%}.card h2{font-size:17px}.card p{font-size:11px}main{padding:28px 16px}header{padding:19px 16px}}
+</style></head>
+<body data-theme="light"><header><strong>Navin Journal · Stage 3</strong><button id="theme">Preview dark surface</button></header>
+<main><div style="font-size:11px;letter-spacing:.16em;font-weight:800;color:var(--muted)">APPROVED VISUAL MARK · ADAPTIVE ICON RESEARCH</div><h1>Folded Page — system masks</h1><p>Four launcher shape studies using the staged adaptive foreground and background layers. The same mark is recognizable without relying on one specific Android launcher mask.</p>
+<div class="grid">
+ <section class="card"><div class="mask circle"><img class="background" src="folded-page-adaptive-background.svg" alt=""><img class="foreground" src="folded-page-adaptive-foreground.svg" alt=""></div><h2>Circle</h2><p>Round Android launcher mask</p></section>
+ <section class="card"><div class="mask squircle"><img class="background" src="folded-page-adaptive-background.svg" alt=""><img class="foreground" src="folded-page-adaptive-foreground.svg" alt=""></div><h2>Squircle</h2><p>Soft modern device shape</p></section>
+ <section class="card"><div class="mask rounded"><img class="background" src="folded-page-adaptive-background.svg" alt=""><img class="foreground" src="folded-page-adaptive-foreground.svg" alt=""></div><h2>Rounded</h2><p>Rounded rectangular icon</p></section>
+ <section class="card"><div class="mask circle themed"><h2 class="sr-only" style="display:none">themed</h2></div><h2>Monochrome</h2><p>System recoloring simulation</p></section>
+</div>
+<div class="safety"><div class="guide"><img src="folded-page-adaptive-foreground.svg" alt="Approved notebook foreground artwork with an inner 66/108 safe region shown in a dotted guide"><div class="safe"></div><span>66 × 66dp safe guide</span></div><div style="max-width:550px"><h2>Centered in the safe area</h2><p>Both adaptive layers have 108 × 108 viewports. The foreground is scaled to keep recognizable notebook artwork inside the inner 66 × 66 design area. Device-specific masks and visual effects still need validation with Android Studio and an actual launcher.</p></div></div>
+<div class="measure"><strong>Review-only assets.</strong> This page tests visual composition and masking. It does not install an Android adaptive icon, certify Android vector rendering, or generate a signed APK. The public consumer name is still provisional.</div>
+</main>
+<script>document.getElementById('theme').addEventListener('click',()=>{let dark=document.body.dataset.theme!=='dark';document.body.dataset.theme=dark?'dark':'light';document.getElementById('theme').textContent=dark?'Preview light surface':'Preview dark surface'})</script>
+</body></html>
