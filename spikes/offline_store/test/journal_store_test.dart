@@ -273,11 +273,11 @@ void main() {
     store.close();
     final raw = sqlite3.open(databasePath);
     raw.userVersion = 99;
-    raw.dispose();
+    raw.close();
     expect(() => JournalStore.open(databasePath), throwsStateError);
     final reset = sqlite3.open(databasePath);
     reset.userVersion = 1;
-    reset.dispose();
+    reset.close();
     store = JournalStore.open(databasePath);
     expect(store.getJournal(journal.id)?.name, 'Personal');
   });
