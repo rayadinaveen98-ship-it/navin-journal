@@ -1,0 +1,35 @@
+name: Stage 4 Encrypted SQLite A2 Spike
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'spikes/encrypted_store/**'
+      - '.github/workflows/encrypted-store-spike.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  encrypted-vault-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Verify independent Python sqlite3
+        run: python3 -c "import sqlite3; print('Independent Python SQLite:', sqlite3.sqlite_version)"
+      - name: Resolve encrypted native SQLite build hooks
+        working-directory: spikes/encrypted_store
+        run: dart pub get
+      - name: Check code format
+        working-directory: spikes/encrypted_store
+        run: dart format --output=none --set-exit-if-changed .
+      - name: Analyze encrypted spike
+        working-directory: spikes/encrypted_store
+        run: dart analyze --fatal-infos
+      - name: Run encrypted vault negative/positive tests
+        working-directory: spikes/encrypted_store
+        run: dart test --reporter expanded
