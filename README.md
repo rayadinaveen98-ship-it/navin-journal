@@ -1,6 +1,6 @@
 # Navin Journal
 
-**Status:** Product pre-production — Stage 3 (approved visual direction; detailed UX specified; validation pending).  
+**Status:** Stage 3 design awaits physical-device/user signoff; Stage 4 isolated SQLite storage proof-of-concept has started. No production journaling app or APK.  
 **Project name:** Navin Journal is the internal working title, not the approved consumer brand.  
 **Repository:** `rayadinaveen98-ship-it/navin-journal`
 
@@ -47,6 +47,8 @@ These are priorities, **not delivered functionality**. Product and technical dec
 - [Connected journal management & recovery UX preview](prototype/journal-recovery-review.html) (fictional examples, in-memory only)
 - [Journal and recovery UX validation report](docs/UX_RECOVERY_STAGE3.md)
 - [Connected writing-to-recovery Stage 3 handoff](docs/UX_CONNECTED_JOURNEY_STAGE3.md)
+- [Stage 4 engineering spike (A1 tested, encryption pending)](docs/STAGE4_ENGINEERING_SPIKE.md)
+- [Dart SQLite transaction reference package](spikes/offline_store/README.md) (fictional data only)
 - [Stage 3 brand comparison preview](prototype/brand-study.html) (option 01 Folded Page selected)
 - [Adaptive launcher-mask visual review](prototype/brand/adaptive-preview.html) (design-only)
 - [Prototype usage and limits](prototype/README.md)
