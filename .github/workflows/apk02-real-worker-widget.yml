@@ -35,7 +35,9 @@ jobs:
           set -euo pipefail
           TARGET="$GITHUB_WORKSPACE/preview_app/_worker_widgets"
           flutter create --org com.navinjournal --project-name navin_journal_preview --platforms=android "$TARGET"
-          cp "$GITHUB_WORKSPACE/preview_app/lib/"*.dart "$TARGET/lib/"
+          cp "$GITHUB_WORKSPACE/preview_app/lib/connected_writing_studio.dart" "$TARGET/lib/"
+          cp "$GITHUB_WORKSPACE/preview_app/lib/fictional_journal_library.dart" "$TARGET/lib/"
+          cp "$GITHUB_WORKSPACE/preview_app/lib/visuals.dart" "$TARGET/lib/"
           rm -f "$TARGET/test/widget_test.dart"
           cp "$GITHUB_WORKSPACE/preview_app/apk02_test/fictional_journal_library_test.dart" "$TARGET/test/"
           python3 - "$TARGET/pubspec.yaml" "$GITHUB_WORKSPACE" <<'PY'
