@@ -37,6 +37,9 @@ jobs:
       - name: Keyboard and screen-reader-oriented focus checks
         working-directory: prototype
         run: npm run check:keyboard
+      - name: Brand identity visual browser checks
+        working-directory: prototype
+        run: npm run check:brand
       - name: Automated HTML accessibility scan
         working-directory: prototype
         run: npm run check:a11y
