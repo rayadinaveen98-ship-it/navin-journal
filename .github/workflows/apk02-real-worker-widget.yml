@@ -1,0 +1,72 @@
+name: APK 02 Real Worker to Flutter Widget Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'preview_app/lib/fictional_journal_library.dart'
+      - 'preview_app/lib/connected_writing_studio.dart'
+      - 'preview_app/apk02_test/fictional_journal_library_test.dart'
+      - 'packages/journal_editor/**'
+      - 'packages/journal_core/**'
+      - '.github/workflows/apk02-real-worker-widget.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apk02-real-worker-widgets
+  cancel-in-progress: true
+
+jobs:
+  library-widget-with-real-worker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Prepare disposable fictional Flutter test harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET="$GITHUB_WORKSPACE/preview_app/_worker_widgets"
+          flutter create --org com.navinjournal --project-name navin_journal_preview --platforms=android "$TARGET"
+          cp "$GITHUB_WORKSPACE/preview_app/lib/"*.dart "$TARGET/lib/"
+          rm -f "$TARGET/test/widget_test.dart"
+          cp "$GITHUB_WORKSPACE/preview_app/apk02_test/fictional_journal_library_test.dart" "$TARGET/test/"
+          python3 - "$TARGET/pubspec.yaml" "$GITHUB_WORKSPACE" <<'PY'
+          from pathlib import Path
+          import sys
+          dest, root = Path(sys.argv[1]), Path(sys.argv[2])
+          s = dest.read_text()
+          deps = (
+            "  navin_journal_core:\n"
+            f"    path: {root / 'packages/journal_core'}\n"
+            "  navin_journal_editor:\n"
+            f"    path: {root / 'packages/journal_editor'}\n"
+            "  navin_journal_autosave_spike:\n"
+            f"    path: {root / 'spikes/autosave_coordinator'}\n"
+            "  navin_journal_encrypted_spike:\n"
+            f"    path: {root / 'spikes/encrypted_store'}\n"
+          )
+          s = s.replace("dependencies:\n", "dependencies:\n" + deps, 1)
+          s += "\nhooks:\n  user_defines:\n    sqlite3:\n      source: sqlite3mc\n"
+          dest.write_text(s)
+          PY
+          echo "WORKER_WIDGET_ROOT=$TARGET" >> "$GITHUB_ENV"
+      - name: Resolve and analyze real-worker widgets
+        shell: bash
+        run: |
+          cd "$WORKER_WIDGET_ROOT"
+          flutter pub get
+          dart format lib test
+          flutter analyze --no-pub
+      - name: Verify encrypted Library Reader Writer real-isolate widgets
+        shell: bash
+        run: |
+          cd "$WORKER_WIDGET_ROOT"
+          flutter test test/fictional_journal_library_test.dart --reporter expanded --concurrency=1 --timeout=40s
