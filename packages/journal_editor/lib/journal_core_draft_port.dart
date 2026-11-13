@@ -104,10 +104,13 @@ class JournalCoreDraftPort implements DraftCommitPort {
       throw const DraftConflict();
     }
     final version = existing['version'] as int;
+    // Editing title/body must not reset a previously assigned event date.
+    // An explicit date-edit API will handle changing/clearing it separately.
+    final effectiveEventAtMs = eventAtMs ?? existing['eventAtMs'] as int?;
     final matches = existing['title'] == content.title &&
         existing['body'] == content.body &&
         existing['journalId'] == journalId &&
-        existing['eventAtMs'] == eventAtMs;
+        existing['eventAtMs'] == effectiveEventAtMs;
 
     // Exact one-version-ahead match is the only acceptable idempotent retry.
     // A different external edit (even the same body at other versions) is a
@@ -130,7 +133,7 @@ class JournalCoreDraftPort implements DraftCommitPort {
         journalId: journalId,
         title: content.title,
         body: content.body,
-        eventAtMs: eventAtMs,
+        eventAtMs: effectiveEventAtMs,
       );
     } on JournalConflict {
       throw const DraftConflict();
