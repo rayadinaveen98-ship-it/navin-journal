@@ -1,0 +1,11 @@
+name: navin_journal_recovery_archive_spike
+description: Isolated authenticated user-held-key recovery archive proof for fictional entries and media.
+publish_to: none
+version: 0.0.1
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+dependencies:
+  cryptography: 2.9.0
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.0
