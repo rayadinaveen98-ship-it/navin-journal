@@ -49,3 +49,7 @@ Screenshot bundle `stage3-ux-screenshots` includes eight new brand review screen
 Product owner selects a mark direction for refinement (recommended: Folded Page) and confirms the consumer-facing brand strategy. Only then should the chosen identity be applied to the main navigation/editor screen, adaptive launcher assets and welcome experience.
 
 Do not declare Stage 3 complete while real-device and user validation remains open.
+
+## Selected-mark addendum — 13 November 2026
+
+User approved **01 / Folded Page** as the visual mark. The main Stage 3 HTML prototype includes the selected light/dark SVG on Welcome, Setup, sidebar and mobile app bar. Android adaptive foreground/background, monochrome and XML staging sources were added; see [asset manifest](BRAND_ASSET_HANDOFF.md). The [latest successful workflow run 43398686436](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43398686436) passed 31 approved-brand browser assertions, the pre-existing 20/90/84/33/52 suites, well-formed XML/geometry checks, and automated axe-core audit. An initially blank CSS-mask themed preview was corrected to display the actual SVG. These tests do not verify native Android compilation or real devices.
