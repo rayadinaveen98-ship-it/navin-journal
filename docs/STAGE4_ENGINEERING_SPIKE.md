@@ -117,6 +117,8 @@ This is stronger than simulated Dart exceptions, but **not** Android force-stop/
 
 The [A3.3 emulator editor run 43422522118](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43422522118) had compiled the Android debug APK but failed during **ADB installation** because Android's package manager was unavailable. The revised workflow now checks for `pm path android`, uses cold boot and runs the two Flutter integration suites sequentially; new runtime validation is pending. This is not a diagnosis of the editor's runtime correctness.
 
+**A3.4 Android force-stop recovery is now verified:** [run 43427287021](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43427287021) recorded ACK_V1, killed the process, recorded ACK_V2 from a new process, killed it again and recorded RECOVERED_V2 from another fresh process. The same app-private database/AndroidKeyStore alias remained accessible. [Full A3.4 report](STAGE4_A3_4_ANDROID_FORCE_STOP.md). Does not close A3.3 real editor or physical security gates.
+
 ## A4.1 — Independently encrypted archive verification [16/16 LINUX TESTS PASS]
 
 [A4.1 portable archive spike](../spikes/recovery_archive/README.md) exports a bounded, **fully AES-256-GCM-encrypted** fictional snapshot of Telugu/English entries and attachments, encrypted counts and timestamp, and SHA-256 attachment hashes. The encryption key is a fresh **user-held 256-bit recovery key**, independent of Android Keystore/device-bound data wrapping keys. No passphrase KDF or account recovery exists in this feasibility stage.
@@ -125,9 +127,17 @@ The [A3.3 emulator editor run 43422522118](https://github.com/rayadinaveen98-shi
 
 **Explicitly not done:** A real SQLite/attachment snapshot exporter, file-system atomicity, key custody UX, password recovery, product-scale streaming, clean-device restore, schema compatibility/migrations, disk-full tests, independent security audit or release-ready backup. **A4 production restore gate remains OPEN.**
 
-## A4.2 — Transactional clean-device recovery [NOT STARTED]
+## A4.2 — Staged encrypted clean-vault restore [34/34 LINUX TESTS PASS]
 
-A verified backup must be staged and integrity-checked before any writes to an existing vault. Restore requires a **separate destination**, schema and ID conflict policy, safe multi-file media staging, atomic commit/rollback, and a clean Android device test with **no original Android Keystore key**. Invalid, tampered, missing-key or interrupted restores must leave the original vault intact. [A4.1 constraints](../spikes/recovery_archive/README.md) are not a substitute for a recovery rehearsal.
+[Run 43433845516](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43433845516) verified the **34/34 combined A4 tests** (16 A4.1 + 18 staged-restore cases). The [A4.2 implementation](../spikes/recovery_archive/lib/staged_restore.dart) authenticates the independently keyed AES-256-GCM archive *before* any disk staging, creates an encrypted SQLite3MultipleCiphers database in a same-parent temporary folder using a **fresh independent destination key**, inserts entries/media within one transaction, closes/reopens and verifies exact source bytes/hashes, then promotes only into a nonexistent destination. Failed restores remove staging artifacts and do not intentionally modify existing targets.
+
+Wrong archive key/tampering, wrong destination key, unsupported formats, target collision, seven fault-injection points, truncated data and empty archive handling were tested. See [technical handoff](STAGE4_A4_2_CLEAN_RESTORE.md).
+
+**A4 production gate remains OPEN:** simplified fictional test schema, no media filesystem staging, no existing-vault merge, no race-free `RENAME_NOREPLACE`/directory fsync, no real consistent source export, no password KDF, no new-device Keystore wrapping, no Android clean-device restore and no independent security review.
+
+## A4.3 — Product-scale and Android clean-device recovery [NOT STARTED]
+
+Implement actual journal/revision/Trash/attachment snapshot and migration mapping, safe large-file backup, clean-device source copy and externally held key, new-device secure key handling, authenticated staged import with no-clobber semantics, and hardware/device recovery QA. Invalid/tampered archives must never change an existing vault.
 
 ## A5 — Native Flutter/Android device feasibility [NOT STARTED]
 
