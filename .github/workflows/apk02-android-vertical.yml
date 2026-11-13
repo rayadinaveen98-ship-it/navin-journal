@@ -8,6 +8,8 @@ on:
       - 'preview_app/test/**'
       - 'preview_app/ci/apk02_android_roundtrip.sh'
       - 'packages/journal_core/**'
+      - 'packages/journal_editor/**'
+      - 'preview_app/apk02_test/**'
       - 'spikes/flutter_bridge_probe/lib/android_key_bridge.dart'
       - 'spikes/flutter_bridge_probe/native/MainActivity.kt'
       - 'spikes/key_lifecycle/**'
@@ -47,6 +49,7 @@ jobs:
           cp "$ROOT/preview_app/lib/"*.dart "$TARGET/lib/"
           rm -f "$TARGET/test/widget_test.dart"
           cp "$ROOT/preview_app/test/"*.dart "$TARGET/test/"
+          cp "$ROOT/preview_app/apk02_test/"*.dart "$TARGET/test/"
 
           NATIVE="$TARGET/android/app/src/main/kotlin"
           mkdir -p "$NATIVE/com/navinjournal/navin_journal_preview"
@@ -72,6 +75,10 @@ jobs:
           extra = (
               "  navin_journal_core:\n"
               f"    path: {root / 'packages/journal_core'}\n"
+              "  navin_journal_editor:\n"
+              f"    path: {root / 'packages/journal_editor'}\n"
+              "  navin_journal_autosave_spike:\n"
+              f"    path: {root / 'spikes/autosave_coordinator'}\n"
               "  navin_journal_bridge_probe:\n"
               f"    path: {root / 'spikes/flutter_bridge_probe'}\n"
               "  navin_journal_encrypted_spike:\n"
@@ -100,11 +107,11 @@ jobs:
         run: |
           cd "$APK02_ROOT"
           flutter test --reporter expanded
-      - name: Build APK 02 scripted encrypted Writing Studio debug fixture
+      - name: Build APK 02 connected fictional Writing Studio debug fixture
         shell: bash
         run: |
           cd "$APK02_ROOT"
-          flutter build apk --debug -t lib/apk02_probe_main.dart
+          flutter build apk --debug -t lib/apk02_connected_main.dart
           test -s build/app/outputs/flutter-apk/app-debug.apk
       - name: Actual Android Keystore, isolate, encrypted vault and force-stop proof
         uses: reactivecircus/android-emulator-runner@v2
