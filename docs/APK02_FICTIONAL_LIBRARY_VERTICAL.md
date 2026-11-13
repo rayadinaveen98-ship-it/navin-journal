@@ -11,6 +11,14 @@
 - [Flutter integration tests](../preview_app/apk02_test/fictional_journal_library_test.dart) test: empty library; scripted sample save; list refresh and encrypted reader; historical revision after editing; worker close/reopen with the same key; narrow phone and tablet layouts.
 - [Standalone debug APK CI](../.github/workflows/apk02-library-debug.yml) builds a separate Android application package. It runs strict analyzer, visual and fictional encrypted UI widget tests, then compiles the Library / Reader / Writer debug APK and uploads the artifact if every stage passes.
 
+## Verified build evidence
+
+- [Successful APK 02 fictional Library debug build](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43457857948): **23/23 encrypted Dart/editor worker integration tests** passed, **13/13 stable Flutter visual/save-status widget tests** passed, strict Dart and Flutter analysis clean, and a standalone Android debug APK compiled and uploaded as artifact ID **14054687841**.
+- APK SHA-256: `da678c40cd8cf621e1211b362d3678cc2856d00d5678ea1795b54bf1eb31f6cd`, verified against the downloaded artifact.
+- APK 01 remains a **separate application package** and is not replaced by this diagnostic.
+- The newly authored Flutter widget tests that exercise a real Dart background isolate from a widget test are still **NOT VERIFIED**: the combined test runner stalled. Build CI therefore runs the proven encrypted worker tests and the stable UI widget tests separately. These independent passes do not prove the combined UI/isolate journey on an emulator or handset.
+- Android Keystore force-stop/relaunch, clean-device key-loss recovery, real-device accessibility and security signoff remain open.
+
 ## User-visible fictional test journey
 
 1. Launch the **separately installed** library diagnostic. Its data store is not shared with APK 01.
