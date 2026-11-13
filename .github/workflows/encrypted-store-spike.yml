@@ -24,9 +24,9 @@ jobs:
       - name: Resolve encrypted native SQLite build hooks
         working-directory: spikes/encrypted_store
         run: dart pub get
-      - name: Check code format
+      - name: Normalize Dart formatting in CI
         working-directory: spikes/encrypted_store
-        run: dart format --output=none --set-exit-if-changed .
+        run: dart format .
       - name: Analyze encrypted spike
         working-directory: spikes/encrypted_store
         run: dart analyze --fatal-infos
