@@ -77,6 +77,14 @@ The [Android candidate wrapper](../spikes/key_lifecycle/android/src/main/kotlin/
 
 **A2 production gate stays OPEN.** Do not store real journal data or claim biometric/hardware-backed protection from compilation and software-model tests.
 
+## A2.3 — Android Keystore emulator execution [12/12 VERIFIED; PHYSICAL DEVICE PENDING]
+
+The [AndroidJUnit4 instrumentation suite](../spikes/key_lifecycle/android/src/androidTest/java/com/navinjournal/security/spike/AndroidKeystoreInstrumentedTest.kt) exercised Android's **actual AndroidKeyStore** provider in an Android API 35 emulator. [Run 43412815431](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43412815431) finished **12 tests successfully**, with test reports; instrumented test-source compilation separately passed in [run 43413011445](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413011445).
+
+Verified semantics include AES-256-GCM wrap/unwrap, new alias creation, duplicate and missing alias rejection, tag/ciphertext/AAD tamper detection, across-instance access, alias retirement, rewrap under a second alias, fresh nonces, malformed-input rejection and non-exportable AndroidKeyStore AES key representation.
+
+This **does not prove hardware-backed storage, StrongBox, biometric policy, real process-kill/reboot/reinstall behavior, Flutter key bridge, portable recovery, native privacy UX or independent security certification**. More detail: [Android runtime QA report](STAGE4_A2_3_ANDROID_RUNTIME.md). A2 production gate stays open.
+
 ## A3 — Autosave coordinator [NOT STARTED]
 
 Target is a user-visible state machine: `pristine → dirty → saving → saved` and `error/retry`. Use a bounded debounce and lifecycle flush, but never mark a draft "saved locally" until the commit has succeeded. Explicitly test force-stop between keystrokes and commits, interruptions, full disk and IME composition.
