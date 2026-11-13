@@ -1,11 +1,10 @@
+// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings
 /// Android API-35 emulator tests for isolated A3.3 fictional editor.
 ///
 /// These exercise real Flutter widgets, Flutter→Android Keystore unwrap and
 /// SQLite3MultipleCiphers storage work in a background isolate. They do NOT
 /// test device force-stop, reboot/reinstall, physical IME, or backup/restore.
 library;
-
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
