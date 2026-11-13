@@ -58,3 +58,7 @@ Run `npm run check:keyboard` in the `prototype` folder. On 2026-11-13, 33/33 foc
 ## Brand identity study (approval pending)
 
 Open `brand-study.html` to compare three original SVG candidates in writing/memory contexts, at 28px and 48px, with a light/dark toggle. The page is independent of the journaling prototype. Run `npm run check:brand` for Chromium selection/visual checks. Latest [verified CI run 43393618241](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43393618241): **52/52** brand checks passed. See [brand QA report](../docs/QA_STAGE3_BRAND_2026-11-13.md). No consumer-facing logo is approved and there is no journal storage.
+
+## Approved visual mark — Folded Page (option 01)
+
+The owner approved Folded Page on 2026-11-13. The core preview now includes the selected logo on Welcome, Setup, desktop sidebar and compact mobile header, with light/dark SVG variants. The focused editor remains unbranded. Preview [adaptive masks](brand/adaptive-preview.html) and run `npm run check:approved-brand` to exercise SVG loads, selected UI screens, native-mask **simulations**, and dark mode. The staged Android XML is structurally checked with `python3 tests/icon_xml.py`; there is still no Android app or AAPT2 compilation. See [asset handoff](../docs/BRAND_ASSET_HANDOFF.md).
