@@ -2,6 +2,8 @@
 /// -> authenticated envelope -> SQLite3MultipleCiphers -> reopen and rotate.
 ///
 /// TEST FIXTURES ONLY. Do not use private journal contents.
+library;
+
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
