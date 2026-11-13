@@ -1,6 +1,6 @@
 # Navin Journal
 
-**Status:** Stage 3 physical-device/user signoff is open. Stage 4 A2.4 Flutter→Android Keystore→encrypted SQLite proof passed 14 Flutter contract and 2 Android emulator integration tests. A3.1–A3.3 state-machine, encrypted SQLite transaction and off-main-isolate tests passed **44 Linux tests (including three real SIGKILL recovery checks)**. No production diary APK, device-verified security/backup, or Android lifecycle autosave exists.  
+**Status:** Stage 3 physical-device/user signoff is open. Stage 4 A2.4 Flutter→Android Keystore→encrypted SQLite proof passed 14 Flutter contract and 2 Android emulator integration tests. A3.1–A3.4 state-machine, encrypted SQLite transaction, off-main-isolate and OS-kill tests passed **44 Linux tests (including three real SIGKILL recovery checks)**. No production diary APK, device-verified security/backup, or Android lifecycle autosave exists.  
 **Project name:** Navin Journal is the internal working title, not the approved consumer brand.  
 **Repository:** `rayadinaveen98-ship-it/navin-journal`
 
@@ -47,14 +47,14 @@ These are priorities, **not delivered functionality**. Product and technical dec
 - [Connected journal management & recovery UX preview](prototype/journal-recovery-review.html) (fictional examples, in-memory only)
 - [Journal and recovery UX validation report](docs/UX_RECOVERY_STAGE3.md)
 - [Connected writing-to-recovery Stage 3 handoff](docs/UX_CONNECTED_JOURNEY_STAGE3.md)
-- [Stage 4 engineering spike (A1 tested, encryption pending)](docs/STAGE4_ENGINEERING_SPIKE.md)
+- [Stage 4 engineering spike (A1–A3 Linux/emulator feasibility evidence)](docs/STAGE4_ENGINEERING_SPIKE.md)
 - [Dart SQLite transaction reference package](spikes/offline_store/README.md) (fictional data only)
 - [Encrypted SQLite3MultipleCiphers feasibility spike](spikes/encrypted_store/README.md) (13 Linux tests; fictional data; not a production secure vault)
 - [Device key-envelope lifecycle spike](spikes/key_lifecycle/README.md) (14 Linux protocol tests and 12 Android emulator tests; physical-device gate open)
 - [Android Keystore API-35 emulator QA report](docs/STAGE4_A2_3_ANDROID_RUNTIME.md)
-- [A2.4 Flutter-to-AndroidKeyStore probe](spikes/flutter_bridge_probe/README.md) (14 Flutter channel tests and an Android debug build verified; native full roundtrip pending)
+- [A2.4 Flutter-to-AndroidKeyStore probe](spikes/flutter_bridge_probe/README.md) (14 Flutter channel + 2 Android emulator integration checks passed; still test-only)
 - [A2.4 engineering handoff](docs/STAGE4_A2_4_FLUTTER_BRIDGE.md)
-- [A3 autosave + encrypted background worker](spikes/autosave_coordinator/README.md) (**41 Linux tests passed**; Android editor lifecycle validation pending)
+- [A3 autosave + encrypted background worker](spikes/autosave_coordinator/README.md) (**44 Linux tests passed**, including 3 actual SIGKILL checks; Android editor lifecycle validation pending)
 - [A3.3 Flutter diagnostic editor and acceptance report](docs/STAGE4_A3_3_ANDROID_EDITOR.md)
 - [A3.4 Linux crash/kill recovery evidence](docs/STAGE4_A3_4_CRASH_RECOVERY.md) (three OS SIGKILL checks; Android force-stop remains open)
 - [Stage 3 brand comparison preview](prototype/brand-study.html) (option 01 Folded Page selected)
@@ -68,7 +68,7 @@ These are priorities, **not delivered functionality**. Product and technical dec
 
 ## Current constraints
 
-No source code, APK, server or live prototype is represented as complete in this repository initialization. No paid infrastructure may be provisioned without an explicit decision and a cost assessment. Avoid vendor lock-in, unreviewed AI access to journal content, and irreversible data formats.
+Engineering spike source and diagnostic Android debug builds exist; no production journal app, signed release APK, secure backup or live server is represented as complete. No paid infrastructure may be provisioned without an explicit decision and a cost assessment. Avoid vendor lock-in, unreviewed AI access to journal content, and irreversible data formats.
 
 ## Next gate
 
