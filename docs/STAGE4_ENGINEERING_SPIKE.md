@@ -85,6 +85,14 @@ Verified semantics include AES-256-GCM wrap/unwrap, new alias creation, duplicat
 
 This **does not prove hardware-backed storage, StrongBox, biometric policy, real process-kill/reboot/reinstall behavior, Flutter key bridge, portable recovery, native privacy UX or independent security certification**. More detail: [Android runtime QA report](STAGE4_A2_3_ANDROID_RUNTIME.md). A2 production gate stays open.
 
+## A2.4 — Flutter native bridge [CONTRACT AND ANDROID BUILD VERIFIED; END-TO-END PENDING]
+
+A debug-only [Flutter bridge probe](../spikes/flutter_bridge_probe/README.md) now implements the A2.2 `DeviceKeyProtector` interface with a typed `MethodChannel` to the tested Kotlin AndroidKeyStore wrapper. The Kotlin host dispatches key operations on a worker thread, validates arguments, and returns sanitized errors. Flutter does **not** silently use software keys if the native provider is absent.
+
+The [CI workflow](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/workflows/flutter-keystore-bridge.yml) has passed Flutter analysis, **14/14 contract tests**, and building a **debug-only Android APK**. Two follow-up emulator tests attempt the actual native bridge + encrypted SQLite3MultipleCiphers reopen and rotation; they must pass before A2.4 native runtime is marked complete. See [A2.4 handoff](STAGE4_A2_4_FLUTTER_BRIDGE.md).
+
+**Not a production app:** No auto-save, consumer UI, secure portability, loss recovery, hardware/biometric proof, iOS, release-signed APK or private journal data. Raw DEK bytes cross the platform channel and memory copies are not proven wiped. A2 production security gate remains OPEN.
+
 ## A3 — Autosave coordinator [NOT STARTED]
 
 Target is a user-visible state machine: `pristine → dirty → saving → saved` and `error/retry`. Use a bounded debounce and lifecycle flush, but never mark a draft "saved locally" until the commit has succeeded. Explicitly test force-stop between keystrokes and commits, interruptions, full disk and IME composition.
