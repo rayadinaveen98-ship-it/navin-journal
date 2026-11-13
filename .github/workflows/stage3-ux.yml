@@ -1,0 +1,41 @@
+name: Stage 3 UX Chromium review
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "prototype/**"
+      - ".github/workflows/stage3-ux.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stage3-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install browser test dependencies
+        working-directory: prototype
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Mocked DOM checks
+        working-directory: prototype
+        run: npm run check:smoke
+      - name: Actual browser rendering and navigation checks
+        working-directory: prototype
+        run: npm run check:browser
+      - name: Upload screenshots for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage3-ux-screenshots
+          path: prototype/artifacts/*.png
+          retention-days: 7
+          if-no-files-found: ignore
