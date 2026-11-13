@@ -1,0 +1,126 @@
+name: APK 02 Encrypted Android Writer Vertical Slice
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'preview_app/lib/**'
+      - 'preview_app/test/**'
+      - 'preview_app/ci/apk02_android_roundtrip.sh'
+      - 'packages/journal_core/**'
+      - 'spikes/flutter_bridge_probe/lib/android_key_bridge.dart'
+      - 'spikes/flutter_bridge_probe/native/MainActivity.kt'
+      - 'spikes/key_lifecycle/**'
+      - '.github/workflows/apk02-android-vertical.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: navin-apk02-android-writer
+  cancel-in-progress: true
+
+jobs:
+  encrypted-android-writer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate disposable Flutter app with tested Kotlin Keystore adapter
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$GITHUB_WORKSPACE"
+          TARGET="$ROOT/preview_app/_apk02_generated"
+          flutter create --org com.navinjournal \
+            --project-name navin_journal_preview --platforms=android "$TARGET"
+          cp "$ROOT/preview_app/lib/"*.dart "$TARGET/lib/"
+          rm -f "$TARGET/test/widget_test.dart"
+          cp "$ROOT/preview_app/test/"*.dart "$TARGET/test/"
+
+          NATIVE="$TARGET/android/app/src/main/kotlin"
+          mkdir -p "$NATIVE/com/navinjournal/navin_journal_preview"
+          mkdir -p "$NATIVE/com/navinjournal/security/spike"
+          cp "$ROOT/spikes/flutter_bridge_probe/native/MainActivity.kt" \
+            "$NATIVE/com/navinjournal/navin_journal_preview/MainActivity.kt"
+          sed -i 's/package com.navinjournal.navin_journal_bridge_probe/package com.navinjournal.navin_journal_preview/' \
+            "$NATIVE/com/navinjournal/navin_journal_preview/MainActivity.kt"
+          cp "$ROOT/spikes/key_lifecycle/android/src/main/kotlin/com/navinjournal/security/spike/AndroidKeystoreKeyProtector.kt" \
+            "$NATIVE/com/navinjournal/security/spike/"
+
+          RES="$TARGET/android/app/src/main/res"
+          mkdir -p "$RES/drawable" "$RES/mipmap-anydpi-v26"
+          cp "$ROOT/prototype/brand/android/drawable/"*.xml "$RES/drawable/"
+          cp "$ROOT/prototype/brand/android/mipmap-anydpi-v26/navin_journal_ic_launcher.xml" \
+            "$RES/mipmap-anydpi-v26/ic_launcher.xml"
+
+          python3 - "$TARGET/pubspec.yaml" "$ROOT" <<'PY'
+          from pathlib import Path
+          import sys
+          path, root = Path(sys.argv[1]), Path(sys.argv[2])
+          s = path.read_text()
+          extra = (
+              "  navin_journal_core:\n"
+              f"    path: {root / 'packages/journal_core'}\n"
+              "  navin_journal_bridge_probe:\n"
+              f"    path: {root / 'spikes/flutter_bridge_probe'}\n"
+              "  navin_journal_encrypted_spike:\n"
+              f"    path: {root / 'spikes/encrypted_store'}\n"
+              "  navin_journal_key_lifecycle_spike:\n"
+              f"    path: {root / 'spikes/key_lifecycle'}\n"
+          )
+          s = s.replace("dependencies:\n", "dependencies:\n" + extra, 1)
+          s += "\nhooks:\n  user_defines:\n    sqlite3:\n      source: sqlite3mc\n"
+          path.write_text(s)
+          PY
+          echo "APK02_ROOT=$TARGET" >> "$GITHUB_ENV"
+      - name: Resolve native SQLite3MC and all Flutter dependencies
+        shell: bash
+        run: |
+          cd "$APK02_ROOT"
+          flutter pub get
+          dart format lib test
+      - name: Static analysis of preview and Android bridge
+        shell: bash
+        run: |
+          cd "$APK02_ROOT"
+          flutter analyze --no-pub
+      - name: Existing six visual UI widget tests
+        shell: bash
+        run: |
+          cd "$APK02_ROOT"
+          flutter test --reporter expanded
+      - name: Build APK 02 scripted encrypted Writing Studio debug fixture
+        shell: bash
+        run: |
+          cd "$APK02_ROOT"
+          flutter build apk --debug -t lib/apk02_probe_main.dart
+          test -s build/app/outputs/flutter-apk/app-debug.apk
+      - name: Actual Android Keystore, isolate, encrypted vault and force-stop proof
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -camera-back none -no-snapshot-load -no-snapshot-save
+          script: bash "$GITHUB_WORKSPACE/preview_app/ci/apk02_android_roundtrip.sh"
+      - name: Publish debug-only test harness after Android verification
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: navin-apk02-android-ENCRYPTED-FICTIONAL-DIAGNOSTIC-NOT-BETA
+          path: preview_app/_apk02_generated/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
+          if-no-files-found: error
