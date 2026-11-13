@@ -1,0 +1,33 @@
+name: Stage 4 A4.1 Portable Recovery Archive
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'spikes/recovery_archive/**'
+      - '.github/workflows/recovery-archive.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-key-archive:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Resolve cryptography and test dependencies
+        working-directory: spikes/recovery_archive
+        run: dart pub get
+      - name: Source format
+        working-directory: spikes/recovery_archive
+        run: dart format .
+      - name: Static analysis
+        working-directory: spikes/recovery_archive
+        run: dart analyze --fatal-infos
+      - name: Authenticate encrypted portable archive and test malicious input
+        working-directory: spikes/recovery_archive
+        run: dart test --reporter expanded
