@@ -1,6 +1,6 @@
 # Navin Journal
 
-**Status:** Stage 3 design awaits physical-device/user signoff; Stage 4 isolated SQLite storage proof-of-concept has started. No production journaling app or APK.  
+**Status:** Stage 3 physical-device/user signoff remains open. Stage 4 isolated A1 transaction and A2 encrypted-file proofs have passing Linux tests; no production journaling app, secure key lifecycle, verified backup or APK.  
 **Project name:** Navin Journal is the internal working title, not the approved consumer brand.  
 **Repository:** `rayadinaveen98-ship-it/navin-journal`
 
@@ -49,6 +49,7 @@ These are priorities, **not delivered functionality**. Product and technical dec
 - [Connected writing-to-recovery Stage 3 handoff](docs/UX_CONNECTED_JOURNEY_STAGE3.md)
 - [Stage 4 engineering spike (A1 tested, encryption pending)](docs/STAGE4_ENGINEERING_SPIKE.md)
 - [Dart SQLite transaction reference package](spikes/offline_store/README.md) (fictional data only)
+- [Encrypted SQLite3MultipleCiphers feasibility spike](spikes/encrypted_store/README.md) (13 Linux tests; fictional data; not a production secure vault)
 - [Stage 3 brand comparison preview](prototype/brand-study.html) (option 01 Folded Page selected)
 - [Adaptive launcher-mask visual review](prototype/brand/adaptive-preview.html) (design-only)
 - [Prototype usage and limits](prototype/README.md)
