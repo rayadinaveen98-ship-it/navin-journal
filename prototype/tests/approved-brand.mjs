@@ -53,6 +53,8 @@ try{
  check(await page.locator('.mask .foreground').count()===3,'three adaptive foregrounds');
  check(await page.locator('.mask img').evaluateAll(imgs=>imgs.every(i=>i.complete&&i.naturalWidth>0)),'adaptive vector layers load');
  check(await page.locator('.guide img').evaluate(el=>el.complete&&el.naturalWidth>0),'safe-area foreground guide loads');
+ check(await page.locator('.themed .mono-foreground').count()===1,'monochrome foreground SVG shown in themed mask');
+ check(await imageReady(page.locator('.themed .mono-foreground')),'monochrome preview SVG decodes');
  check(await page.locator('.guide .safe').count()===1,'66dp safe-area guide exists');
  await page.screenshot({path:path.join(out,'approved-launcher-masks-light.png'),fullPage:true});
  await page.locator('#theme').click();
