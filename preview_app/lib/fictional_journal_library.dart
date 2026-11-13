@@ -277,10 +277,14 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
         Container(
           key: ValueKey('library-saved-' + (row['id'] as String)),
           margin: const EdgeInsets.only(top: 12),
-          decoration: BoxDecoration(color: c.paper,
-            border: Border.all(color: c.stroke),
-            borderRadius: BorderRadius.circular(14)),
-          child: ListTile(
+          child: Material(
+            color: c.paper,
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: c.stroke),
+            ),
+            child: ListTile(
             key: ValueKey('library-open-' + (row['id'] as String)),
             onTap: _busy ? null :
               () => unawaited(_readPage(row['id'] as String)),
@@ -296,6 +300,7 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
                 style: TextStyle(color: c.secondary))),
             trailing: Text('v' + (row['version'] as int).toString(),
               style: TextStyle(color: c.action)),
+            ),
           ),
         ),
     ],
