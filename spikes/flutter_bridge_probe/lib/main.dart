@@ -1,6 +1,9 @@
+// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings
 /// TEST-ONLY Flutter shell: real MethodChannel -> AndroidKeyStore and encrypted
 /// SQLite roundtrip, on fictional data. No user diary, no production UX.
 /// Only build/debug this package in an isolated disposable environment.
+library;
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
