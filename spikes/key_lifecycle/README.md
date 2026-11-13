@@ -1,11 +1,12 @@
 # Stage 4 A2.2 — Device-wrapping-key lifecycle proof of concept
 
-**Status on 13 November 2026:** Protocol tested with fictional data and a software key-provider double; Android Keystore adapter **compiled** (not device-tested). This is not a production key lifecycle or private journaling app.
+**Status on 13 November 2026:** Protocol tested with fictional data and a software key-provider double; Android Keystore adapter **compiled and passed 12/12 API-35 emulator runtime tests** (not tested on physical device). This is not a production key lifecycle or private journaling app.
 
 ## Verified evidence
 
 - [Linux key-envelope and encrypted SQLite tests](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43410218147): **14/14 Dart tests passed**, plus static analysis.
 - [Android API-35 Kotlin compilation](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43410753987): **successful `compileDebugKotlin`**, no device or emulator execution.
+- [Android API-35 emulator runtime instrumentation](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43412815431): **12/12 tests passed** with the actual AndroidKeyStore framework provider. See [A2.3 QA matrix](../../docs/STAGE4_A2_3_ANDROID_RUNTIME.md).
 - [A2 encrypted-file baseline](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43408840728): **13/13 checks passed** for file encryption and wrong-key rejection.
 - [A1 transactional SQLite baseline](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43405223151): **18/18 tests passed**, not a native app.
 
@@ -57,7 +58,7 @@ This is a **KEK rewrap**; it does not rotate the database's data key, regenerate
 
 ## Critical limitations — A2.2 is not finished for production
 
-- **Platform binding:** The Android Kotlin wrapper is staged and compiled, but **has not run on an Android emulator or phone**; there is no Flutter MethodChannel, integration test or hardware-backed key status/attestation.
+- **Platform binding:** The Android Kotlin wrapper is compiled and **12 emulator instrumentation tests pass**; **no physical phone test**, Flutter MethodChannel, hardware-backed key attestation, true reboot/reinstall or biometric gating has been performed.
 - **Platform unlock policy:** The Kotlin candidate uses `setUserAuthenticationRequired(false)` explicitly for its test scope. There is no biometric-gated journal, user presence requirement or app lock.
 - **Durability:** The envelope writes are flushed and renamed on a Linux test filesystem, but no parent-directory fsync, multi-process exclusivity, Android power-loss or filesystem-failure guarantee is proved. Temporary metadata files are not cleanup-hardened.
 - **Key memory:** The DEK crosses Dart and SQLite native memory; best-effort byte clearing does not prove all runtime copies are wiped. The fake provider stores KEKs in ordinary process memory and is **never an acceptable shipping implementation**.
@@ -69,7 +70,7 @@ This is a **KEK rewrap**; it does not rotate the database's data key, regenerate
 
 ## Next gates
 
-1. **A2.3 Android runtime test:** install an isolated test harness and verify AES-GCM wrap/unwrap, wrong key, tamper, alias deletion/invalidation, reboot and reinstall on actual Android.
+1. **A2.3 Android runtime:** Emulator AES-GCM/alias tests passed (12). Physical Android device testing, invalidation behavior with actual biometric policy, reboot/reinstall and long-lived key persistence remain OPEN.
 2. **A2.4 Flutter bridge / lifecycle:** connect app-isolated storage with a typed native channel and measured key-memory exposure. Add concurrency/lock semantics and crash-injection.
 3. **A4 portable recovery:** design/test authenticated user-controlled recovery archive separately, without relying on a device-bound key.
 4. **A3 autosave:** implement `dirty → saving → saved/error` against a production-approved encrypted store, then force-stop and reopen tests.
