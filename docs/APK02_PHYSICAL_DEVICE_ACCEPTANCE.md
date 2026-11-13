@@ -29,7 +29,7 @@ A failed case needs an exact reproduction: step number, observed screen/message,
 
 ## Security gates NOT covered by physical preview
 
-- Android Keystore/device key custody and process-lifecycle proof for the *connected vertical fixture*, including successful ADB `ACK_V1 → ACK_V2 → RECOVERED_V2` after actual force stops
+- The **separate Android API-34 Keystore connected-editor crash/restart fixture HAS PASSED** (`ACK_V1 → ACK_V2 → RECOVERED_V2`, two confirmed force-stops, [run 43479108180](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43479108180)). **But this Library APK still needs its own real-device UI interaction/force-stop test**; the emulator check was not a consumer Library flow or a test of production-level device key custody.
 - Independent encrypted backup and recovery on another clean Android installation (not just same-install force-stop)
 - Atomic no-clobber restore, fsync/corruption/power-loss/disk-full checks, migrations and key-loss education
 - Native media file protection, exports, accessibility, Telugu keyboard composition, physical-device performance and independent security review
