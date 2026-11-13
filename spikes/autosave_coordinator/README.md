@@ -51,3 +51,7 @@ There is no claim that a `saved` draft is **backed up, synced, restorable on ano
 - **A4:** Authenticated backup, clean-device restore and failure tests, independent of device-only keys.
 
 Related: [Stage 4 tracker](../../docs/STAGE4_ENGINEERING_SPIKE.md), [A2.4 Flutter bridge](../flutter_bridge_probe/README.md), [product reliability requirements](../../docs/DATA_PRIVACY_RELIABILITY.md).
+
+## A3.3 encrypted background worker addendum — 2026-11-13
+
+The [single-owner encrypted isolate](lib/encrypted_isolate_store.dart) and [8 worker tests](test/encrypted_isolate_store_test.dart) are now committed. [CI 43421552880](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43421552880) passed **41/41 combined A3 tests** and static analysis. The worker moves encrypted SQLite queries off the Flutter UI isolate and serializes requests; wrong keys never open a plaintext fallback and saved records survive worker close/reopen. A separate [debug Flutter Android editor](../flutter_bridge_probe/lib/autosave_probe.dart) is under emulator validation. **OS force-stop, power loss, real hardware and production privacy approval are not established.** [Full A3.3 report](../../docs/STAGE4_A3_3_ANDROID_EDITOR.md).
