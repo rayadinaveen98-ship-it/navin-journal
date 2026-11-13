@@ -6,8 +6,6 @@
 /// be proven wiped. No silent key generation happens during unwrap.
 library;
 
-import 'dart:typed_data';
-
 import 'package:flutter/services.dart';
 import 'package:navin_journal_key_lifecycle_spike/key_envelope_coordinator.dart';
 
