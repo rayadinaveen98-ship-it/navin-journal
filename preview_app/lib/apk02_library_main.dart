@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings
+// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings, curly_braces_in_flow_control_structures
 /// APK02 fictional-only end-to-end Library / Reader / Editor Android shell.
 /// Not a consumer app, private diary, or independently recoverable vault.
 library;
