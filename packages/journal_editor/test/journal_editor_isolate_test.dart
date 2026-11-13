@@ -76,6 +76,10 @@ void main() {
     expect(second.indicator.phase, SavePhase.saved);
     expect(second.indicator.databaseVersion, 2);
     expect(await worker.historyCount(id), 1);
+    final revisions = await worker.readRevisions(id);
+    expect(revisions.length, 1);
+    expect(revisions.single['body'], originalBody);
+    expect(revisions.single['version'], 1);
     expect((await worker.readEntry(id))!['body'], revisedBody);
     await worker.close();
     worker = await JournalEditorWorker.open(dbPath, key: key);
