@@ -21,6 +21,7 @@
 | NJ-015 | F1 Folded Page approved as primary visual mark | APPROVED 2026-11-13 | User selected “01”; retain A + C visual language and B dark theme. Final consumer name, legal availability and production launcher QA remain open |
 | NJ-016 | Connected Journal Management/Trash/Recovery UX | DESIGN-VALIDATED 2026-11-13 | Simulated create/rename/archive/delete/restore, explicit orphan destination, fake backup states; 80 Chromium checks passed; no real storage or recovery engine |
 | NJ-017 | Stage 3 connected writing/recovery UX | DESIGN-VALIDATED 2026-11-13 | Fictional write/edit/discard/delete/restore flows pass 41 Chromium checks; mobile Writer nav overlap fixed; no production autosave/storage or security |
+| NJ-018 | Stage 4 A1 isolated unencrypted SQLite reference store | TESTED 2026-11-13 | 18/18 Linux Dart tests passed; confirms transaction/revision model only, not production engine, encryption, autosave or Flutter stack |
 ## Pending high-impact decisions
 
 - Final consumer brand name, trademark/availability review and production launcher/splash approval; Folded Page direction approved.
