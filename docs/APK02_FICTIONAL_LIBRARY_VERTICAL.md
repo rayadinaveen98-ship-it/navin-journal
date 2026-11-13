@@ -25,6 +25,8 @@
 - Updated debug APK SHA-256: `623e115685eebdcf23603a655747e5357cc93254a9c841ff12a59e8040a65081` (verified byte-for-byte against GitHub Actions artifact).
 - Fixed saved-page Material/ink response; users can install the updated fictional-only debug build. Android Keystore runtime/OS force-stop validation still pending independently.
 
+- [Phone/tablet test acceptance checklist](APK02_PHYSICAL_DEVICE_ACCEPTANCE.md) specifies the exact read/save/reopen/version and UI criteria using fictional text only; same-install force-stop is NOT equivalent to a fresh-device backup/restore test.
+
 ## User-visible fictional test journey
 
 1. Launch the **separately installed** library diagnostic. Its data store is not shared with APK 01.
