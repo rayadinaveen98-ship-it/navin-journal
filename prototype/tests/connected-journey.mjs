@@ -27,6 +27,9 @@ try {
   await page.locator('[data-action="newEntry"]').click();
   check(await page.locator('#entryForm').count()===1,name+' writing form opens from specific journal');
   check(await page.locator('#entryJournal').inputValue()==='j1',name+' writer journal inherited');
+  if(width<781)check(!(await page.locator('.mobile').isVisible()),name+' mobile navigation hidden while writing');
+  const noOverlap=await page.evaluate(()=>{const editor=document.querySelector('.writerBody').getBoundingClientRect();const nav=document.querySelector('.mobile').getBoundingClientRect();return getComputedStyle(document.querySelector('.mobile')).display==='none'||nav.top>=editor.bottom});
+  check(noOverlap,name+' no bottom-navigation overlay over editor');
   await page.locator('#entryForm button[type="submit"]').click();
   check((await page.locator('#entryError').textContent()).includes('Write a title or a thought'),name+' blank entry refused');
   await page.locator('#entryTitle').fill('నా రోజు — My journal');
