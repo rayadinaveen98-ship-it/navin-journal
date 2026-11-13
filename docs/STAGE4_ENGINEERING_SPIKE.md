@@ -85,19 +85,23 @@ Verified semantics include AES-256-GCM wrap/unwrap, new alias creation, duplicat
 
 This **does not prove hardware-backed storage, StrongBox, biometric policy, real process-kill/reboot/reinstall behavior, Flutter key bridge, portable recovery, native privacy UX or independent security certification**. More detail: [Android runtime QA report](STAGE4_A2_3_ANDROID_RUNTIME.md). A2 production gate stays open.
 
-## A2.4 — Flutter native bridge [CONTRACT AND ANDROID BUILD VERIFIED; END-TO-END PENDING]
+## A2.4 — Flutter native bridge [14/14 CONTRACT + 2/2 EMULATOR VERIFIED]
 
-A debug-only [Flutter bridge probe](../spikes/flutter_bridge_probe/README.md) now implements the A2.2 `DeviceKeyProtector` interface with a typed `MethodChannel` to the tested Kotlin AndroidKeyStore wrapper. The Kotlin host dispatches key operations on a worker thread, validates arguments, and returns sanitized errors. Flutter does **not** silently use software keys if the native provider is absent.
+A debug-only [Flutter bridge probe](../spikes/flutter_bridge_probe/README.md) implements the A2.2 `DeviceKeyProtector` interface over a typed Flutter `MethodChannel` to the tested Kotlin AndroidKeyStore wrapper. The host processes key operations on a background executor and returns sanitized errors, without silently falling back to a software key.
 
-The [CI workflow](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/workflows/flutter-keystore-bridge.yml) has passed Flutter analysis, **14/14 contract tests**, and building a **debug-only Android APK**. Two follow-up emulator tests attempt the actual native bridge + encrypted SQLite3MultipleCiphers reopen and rotation; they must pass before A2.4 native runtime is marked complete. See [A2.4 handoff](STAGE4_A2_4_FLUTTER_BRIDGE.md).
+**Verified CI [run 43416837265](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43416837265):** Flutter analysis succeeded, **14/14 MethodChannel tests**, Android debug APK build, and **2/2 true API-35 emulator integration tests** passed. The on-emulator test used the native bridge to unwrap a fictional encrypted SQLite3MultipleCiphers database key, reopen the file, rotate the device wrapping key and reopen the record; the other confirmed a missing alias is rejected.
 
-**Not a production app:** No auto-save, consumer UI, secure portability, loss recovery, hardware/biometric proof, iOS, release-signed APK or private journal data. Raw DEK bytes cross the platform channel and memory copies are not proven wiped. A2 production security gate remains OPEN.
+This completes the *A2.4 emulator integration proof*, **not** a physical-device secure vault. Raw DEK bytes still cross Flutter/JVM/native memory. Key invalidation, reboot/reinstall, native plugin lifecycle, recovery archive, iOS parity, hardware-backed residency and independent security review remain open. [Technical report](STAGE4_A2_4_FLUTTER_BRIDGE.md).
 
-## A3 — Autosave coordinator [NOT STARTED]
+## A3.1/A3.2 — Autosave state machine and encrypted commits [33/33 LINUX TESTS]
 
-Target is a user-visible state machine: `pristine → dirty → saving → saved` and `error/retry`. Use a bounded debounce and lifecycle flush, but never mark a draft "saved locally" until the commit has succeeded. Explicitly test force-stop between keystrokes and commits, interruptions, full disk and IME composition.
+A new [isolated A3 spike](../spikes/autosave_coordinator/README.md) implements debounced autosave states (`pristine, dirty, saving, saved, error, conflict`), explicit IME composition start/end, forced flush and safe dismissal refusal while unsaved. The UI status `Saved locally` is emitted **only when the exact latest draft is acknowledged by storage**.
 
-The A1 `createEntry` and `editEntry` functions are synchronous transaction calls; they are **not autosave**. The Stage 3 HTML demo's `Add to demo journal` button is also **not autosave**.
+The encrypted SQLite3MultipleCiphers adapter persists stable ID, title, body and previous versions as one transaction. A lost-acknowledgement retry recognizes an identical already-committed snapshot without duplicating it; a different intervening snapshot raises a conflict. Injected failures between revision and update roll back; unsupported schemas and wrong keys fail closed.
+
+**Verified CI [run 43420715468](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43420715468): 33/33 tests passed (21 controller + 12 encrypted adapter), with Dart analyzer clean.** The encrypted adapter is a disposable spike, not the final A1+A2 product schema or Flutter runtime implementation.
+
+**A3.3/A3.4 pending:** move synchronous SQLite writes off UI isolate, integrate with real Flutter lifecycle, test physical-device IME, pause/kill/reopen, low storage and recovery of every acknowledged version. No data input from actual users; no claim that unsaved keystrokes survive Android killing the app.
 
 ## A4 — Verified backup and clean-device restore [NOT STARTED]
 
