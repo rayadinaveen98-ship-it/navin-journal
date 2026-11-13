@@ -103,6 +103,12 @@ The encrypted SQLite3MultipleCiphers adapter persists stable ID, title, body and
 
 **A3.3/A3.4 pending:** move synchronous SQLite writes off UI isolate, integrate with real Flutter lifecycle, test physical-device IME, pause/kill/reopen, low storage and recovery of every acknowledged version. No data input from actual users; no claim that unsaved keystrokes survive Android killing the app.
 
+## A3.3 — Encrypted isolate and Flutter editor integration [LINUX VERIFIED; ANDROID RUNTIME PENDING]
+
+The [encrypted isolate store](../spikes/autosave_coordinator/lib/encrypted_isolate_store.dart) is a single-owner SQLite worker behind the A3 `DraftCommitPort` interface. It preserves the versioned, fail-closed encrypted storage contract while keeping disk transactions off Flutter's UI isolate. The expanded [A3 CI run 43421552880](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43421552880) passed **41/41** tests (33 state/storage + 8 isolate worker tests).
+
+A [test-only Flutter writing screen](../spikes/flutter_bridge_probe/lib/autosave_probe.dart) and [two Android emulator widget/lifecycle tests](../spikes/flutter_bridge_probe/integration_test/autosave_probe_integration_test.dart) are committed. The [A3.3 Android QA report](STAGE4_A3_3_ANDROID_EDITOR.md) separates Linux proof, Flutter Android debug compilation, emulator runtime, real Android lifecycle and physical IME gates. An emulator widget test does **not** demonstrate force-stop durability.
+
 ## A4 — Verified backup and clean-device restore [NOT STARTED]
 
 Archive must provide authenticated encryption, versioned manifest, media hashes, journal/entry counts and user-visible recovery instructions. Integrity verification must be performed *before* touching the destination vault. Invalid, tampered, missing-key or interrupted restores must leave the original vault intact.
