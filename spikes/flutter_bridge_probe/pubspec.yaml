@@ -9,6 +9,8 @@ dependencies:
     sdk: flutter
   navin_journal_key_lifecycle_spike:
     path: ../key_lifecycle
+  navin_journal_encrypted_spike:
+    path: ../encrypted_store
 dev_dependencies:
   flutter_test:
     sdk: flutter
