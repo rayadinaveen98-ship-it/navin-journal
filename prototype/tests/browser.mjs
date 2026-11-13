@@ -37,6 +37,14 @@ try{
   await page.locator('#draftTitle').fill('A private thought');
   await area.fill(('This is a sample entry during a browser design review.\n').repeat(9));
   verify(await area.evaluate(el=>el.scrollHeight<=el.clientHeight+3),name+' writing canvas does not scroll internally');
+  const beforeTheme=await area.inputValue();
+  await page.locator('[data-action="theme"]:visible').click();
+  verify((await page.locator('#draftBody').inputValue())===beforeTheme,name+' theme switch retains typed draft');
+  verify(await page.locator('#draftBody').evaluate(el=>document.activeElement===el),name+' theme switch retains editor focus');
+  await page.locator('[data-action="theme"]:visible').click();
+  verify(await page.locator('body').getAttribute('data-theme')==='light',name+' theme returns to light');
+  const noToolbarOverlap=await page.evaluate(()=>{const a=document.getElementById('draftBody').getBoundingClientRect(),t=document.querySelector('.editor-tools').getBoundingClientRect();return a.bottom<=t.top+2});
+  verify(noToolbarOverlap,name+' editor toolbar below writing canvas');
   if(width<760)verify(!(await page.locator('.mobile-nav').isVisible()),name+' mobile navigation hidden while writing');
   await page.screenshot({path:path.join(out,name+'-writing.png'),fullPage:true});
   overflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
