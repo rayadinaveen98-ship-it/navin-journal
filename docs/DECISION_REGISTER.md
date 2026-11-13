@@ -25,6 +25,7 @@
 | NJ-019 | Stage 4 A2 encrypted-file research implementation using SQLite3MultipleCiphers | LINUX FEASIBILITY TESTED 2026-11-13 | 13/13 tests pass; verify wrong/no key, encrypted revision, legacy file rejection; NOT a production key provider, Android vault or approved security architecture |
 | NJ-020 | A2.2 staged wrapping-key protocol and Android Keystore adapter | LINUX PROTOCOL TESTED + ANDROID SOURCE COMPILED 2026-11-13 | 14/14 test-double+encrypted SQLite checks passed; Kotlin API35 compile passed. Native runtime, recovery, app binding and security approval remain open |
 | NJ-021 | A2.3 real AndroidKeyStore emulator runtime validation | EMULATOR TESTED 2026-11-13 | 12/12 AndroidJUnit4 API35 tests passed; validates Android framework provider in emulator, NOT hardware-backed physical device, Flutter bridge, recovery or release security gate |
+| NJ-022 | A2.4 Flutter MethodChannel to Android Keystore | DEBUG BUILD & CONTRACT TESTED 2026-11-13 | 14 Flutter contract tests passed and Android debug harness builds with sqlite3mc; full native end-to-end emulator test in progress. NOT production key security or usable journaling UI |
 ## Pending high-impact decisions
 
 - Final consumer brand name, trademark/availability review and production launcher/splash approval; Folded Page direction approved.
