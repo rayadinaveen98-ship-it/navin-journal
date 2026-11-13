@@ -1,6 +1,6 @@
 # Navin Journal
 
-**Status:** Stage 3 physical-device/user signoff remains open. Stage 4 isolated A1 transaction and A2 encrypted-file proofs have passing Linux tests; no production journaling app, secure key lifecycle, verified backup or APK.  
+**Status:** Stage 3 physical-device/user signoff remains open. Stage 4 isolated A1 transaction, A2 encrypted-file and A2.2 device-key lifecycle *protocol* proofs have passing Linux tests; Android Keystore adapter compiles. No production journaling app, device-verified secure key lifecycle, verified backup or APK.  
 **Project name:** Navin Journal is the internal working title, not the approved consumer brand.  
 **Repository:** `rayadinaveen98-ship-it/navin-journal`
 
@@ -50,6 +50,7 @@ These are priorities, **not delivered functionality**. Product and technical dec
 - [Stage 4 engineering spike (A1 tested, encryption pending)](docs/STAGE4_ENGINEERING_SPIKE.md)
 - [Dart SQLite transaction reference package](spikes/offline_store/README.md) (fictional data only)
 - [Encrypted SQLite3MultipleCiphers feasibility spike](spikes/encrypted_store/README.md) (13 Linux tests; fictional data; not a production secure vault)
+- [Device key-envelope lifecycle spike](spikes/key_lifecycle/README.md) (14 Linux protocol tests; Android Keystore Kotlin compiles but not executed on device)
 - [Stage 3 brand comparison preview](prototype/brand-study.html) (option 01 Folded Page selected)
 - [Adaptive launcher-mask visual review](prototype/brand/adaptive-preview.html) (design-only)
 - [Prototype usage and limits](prototype/README.md)
