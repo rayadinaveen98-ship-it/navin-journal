@@ -57,6 +57,7 @@ These are priorities, **not delivered functionality**. Product and technical dec
 - [A3 autosave + encrypted background worker](spikes/autosave_coordinator/README.md) (**44 Linux tests passed**, including 3 actual SIGKILL checks; Android editor lifecycle validation pending)
 - [A3.3 Flutter diagnostic editor and acceptance report](docs/STAGE4_A3_3_ANDROID_EDITOR.md)
 - [A3.4 Linux crash/kill recovery evidence](docs/STAGE4_A3_4_CRASH_RECOVERY.md) (three OS SIGKILL checks; Android force-stop remains open)
+- [A3.4 Android ADB force-stop/relaunch test harness](docs/STAGE4_A3_4_ANDROID_FORCE_STOP.md) (dedicated debug-only emulator fixture; runtime verification open)
 - [Stage 3 brand comparison preview](prototype/brand-study.html) (option 01 Folded Page selected)
 - [Adaptive launcher-mask visual review](prototype/brand/adaptive-preview.html) (design-only)
 - [Prototype usage and limits](prototype/README.md)
