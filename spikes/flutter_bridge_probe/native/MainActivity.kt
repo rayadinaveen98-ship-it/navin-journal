@@ -22,17 +22,53 @@ import java.util.concurrent.RejectedExecutionException
 class MainActivity : FlutterActivity() {
     companion object {
         const val CHANNEL = "navin_journal/security_key_wrap_v1"
+        const val TEST_LIFECYCLE_CHANNEL = "navin_journal/test_lifecycle_v1"
+        private const val TEST_MARKER_FILE = "nj_crash_phase.txt"
     }
 
     private val protector = AndroidKeystoreKeyProtector()
     private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
     private var methodChannel: MethodChannel? = null
+    private var diagnosticChannel: MethodChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
         methodChannel = channel
+        // Test-only A3.4 lifecycle hook: exposes app-private path and test
+        // status markers, never the encrypted DEK, journal text or key alias.
+        val diagnostic = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            TEST_LIFECYCLE_CHANNEL,
+        )
+        diagnosticChannel = diagnostic
+        diagnostic.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getPrivateRoot" -> result.success(filesDir.absolutePath)
+                "getStartPhase" ->
+                    result.success(intent.getStringExtra("nj_test_phase") ?: "")
+                "markPhase" -> {
+                    val marker = call.argument<String>("marker")
+                    if (marker !in setOf(
+                            "ACK_V1", "ACK_V2", "RECOVERED_V1",
+                            "RECOVERED_V2", "FAILED",
+                        )
+                    ) {
+                        result.error("INVALID_ARGUMENT", "Unknown test marker", null)
+                    } else {
+                        try {
+                            java.io.File(filesDir, TEST_MARKER_FILE)
+                                .writeText(marker!!, Charsets.US_ASCII)
+                            result.success(null)
+                        } catch (_: Exception) {
+                            result.error("NATIVE_ERROR", "Test marker unavailable", null)
+                        }
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
         channel.setMethodCallHandler { call, result ->
             if (call.method !in setOf("provision", "wrap", "unwrap", "retire")) {
                 result.notImplemented()
@@ -129,6 +165,8 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        diagnosticChannel?.setMethodCallHandler(null)
+        diagnosticChannel = null
         methodChannel?.setMethodCallHandler(null)
         methodChannel = null
         executor.shutdown()
