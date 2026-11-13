@@ -1,6 +1,6 @@
 # Navin Journal — A2.4 Flutter-to-Android Keystore integration
 
-**Status:** Engineering-only Flutter bridge and debug test harness are implemented. The current CI job determines compile/runtime acceptance; do not mark emulator/native integration passed until the matching workflow succeeds.  
+**Status:** **Verified on API-35 Android emulator**: [CI run 43416837265](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43416837265) passed Flutter analysis, **14/14 MethodChannel tests**, a debug-only Android build, and **2/2 true Flutter→Kotlin→AndroidKeyStore→encrypted SQLite integration tests**. Production security and physical-device gates remain open.  
 **Project date:** 2026-11-13  
 **User data:** **NONE. Fictional, disposable test fixtures only.**
 
@@ -37,9 +37,9 @@ The test must fail if the runtime loads ordinary unencrypted SQLite. To prevent 
 
 - A2.3 Android runtime: 12/12 instrumentation tests passed on API 35 emulator, [run 43413956404](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413956404).
 - A2.2 Linux protocol: 14/14 test-double checks passed, [run 43410218147](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43410218147).
-- A2.4 Flutter MethodChannel contract tests: 14 tests are implemented; CI result should be inspected from the [Flutter bridge Actions workflow](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/workflows/flutter-keystore-bridge.yml).
+- A2.4 Flutter MethodChannel contract tests: all **14 contract tests passed** in the [verified Flutter bridge run](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43416837265).
 
-Do not infer a successful Android APK or full on-device SQLite roundtrip from unit or static-analysis success.
+A **debug-only engineering APK** and both on-emulator integration tests were successfully built and executed in [CI run 43416837265](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43416837265). This is still not a usable diary, a production-signed app, or proof of secure physical-device key management.
 
 ## Remaining security and reliability gates
 
