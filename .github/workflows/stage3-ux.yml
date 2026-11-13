@@ -25,6 +25,11 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npx playwright install --with-deps chromium
+      - name: Install Telugu fallback fonts for Unicode screenshot QA
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fonts-noto-core
+          fc-cache -f
       - name: Mocked DOM checks
         working-directory: prototype
         run: npm run check:smoke
