@@ -137,6 +137,16 @@ class JournalEditorWorker implements DraftCommitPort {
     return r['count'] as int;
   }
 
+  /// Historical versions are queried inside the same encrypted worker; this
+  /// is for scripted verification only, not an unencrypted revision cache.
+  Future<List<Map<String, Object?>>> readRevisions(String entryId) async {
+    final r = await _send('read_revisions', {'entryId': entryId});
+    return [
+      for (final value in r['revisions'] as List)
+        Map<String, Object?>.from(value as Map),
+    ];
+  }
+
   Future<bool> integrityCheck() async {
     final r = await _send('integrity', {});
     return r['healthy'] == true;
@@ -280,6 +290,9 @@ Future<void> _editorStorageWorker(List<Object> args) async {
         case 'history_count':
           final records = vault.listRevisions(message['entryId'] as String);
           reply.send({'id': id, 'ok': true, 'count': records.length});
+        case 'read_revisions':
+          final records = vault.listRevisions(message['entryId'] as String);
+          reply.send({'id': id, 'ok': true, 'revisions': records});
         case 'integrity':
           reply.send({'id': id, 'ok': true, 'healthy': vault.integrityCheck()});
         case 'start_session':
