@@ -153,7 +153,7 @@ class RecoveryArchiveCodec {
         a.name == '.' ||
         a.name == '..' ||
         a.name.contains('/') ||
-        a.name.contains(r'\') ||
+        a.name.contains('\\') ||
         a.name.runes.any((v) => v < 32 || v == 127) ||
         !RegExp(r'^[a-zA-Z0-9.+_-]+/[a-zA-Z0-9.+_-]+$')
             .hasMatch(a.mimeType) ||
