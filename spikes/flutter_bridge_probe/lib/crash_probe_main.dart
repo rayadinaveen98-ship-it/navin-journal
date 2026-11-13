@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings
 /// A3.4 — Android force-stop/relaunch proof. Debug-only, fictional data.
 ///
 /// This is a separate APK entrypoint and is NOT the Navin Journal app.
