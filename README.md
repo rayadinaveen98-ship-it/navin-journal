@@ -1,6 +1,6 @@
 # Navin Journal
 
-**Status:** Stage 3 physical-device/user signoff remains open. Stage 4 isolated A1 transaction, A2 encrypted-file and A2.2 device-key lifecycle *protocol* proofs have passing Linux tests; Android Keystore adapter compiles and passed 12/12 API-35 emulator runtime tests. No production journaling app, physical-device security validation, verified backup or APK.  
+**Status:** Stage 3 physical-device/user signoff remains open. Stage 4 isolated A1 transaction, A2 encrypted-file and A2.2 device-key lifecycle *protocol* proofs have passing Linux tests; Android Keystore adapter compiles and passed 12/12 API-35 emulator runtime tests. A debug-only Flutter engineering test APK builds; no production journaling app, physical-device security validation or verified backup.  
 **Project name:** Navin Journal is the internal working title, not the approved consumer brand.  
 **Repository:** `rayadinaveen98-ship-it/navin-journal`
 
@@ -52,6 +52,8 @@ These are priorities, **not delivered functionality**. Product and technical dec
 - [Encrypted SQLite3MultipleCiphers feasibility spike](spikes/encrypted_store/README.md) (13 Linux tests; fictional data; not a production secure vault)
 - [Device key-envelope lifecycle spike](spikes/key_lifecycle/README.md) (14 Linux protocol tests and 12 Android emulator tests; physical-device gate open)
 - [Android Keystore API-35 emulator QA report](docs/STAGE4_A2_3_ANDROID_RUNTIME.md)
+- [A2.4 Flutter-to-AndroidKeyStore probe](spikes/flutter_bridge_probe/README.md) (14 Flutter channel tests and an Android debug build verified; native full roundtrip pending)
+- [A2.4 engineering handoff](docs/STAGE4_A2_4_FLUTTER_BRIDGE.md)
 - [Stage 3 brand comparison preview](prototype/brand-study.html) (option 01 Folded Page selected)
 - [Adaptive launcher-mask visual review](prototype/brand/adaptive-preview.html) (design-only)
 - [Prototype usage and limits](prototype/README.md)
