@@ -18,10 +18,10 @@
 | NJ-013 | Four-tab UX and the 18-screen detailed specification | DRAFTED 2026-11-13 | Requires usability and accessibility validation before sign-off |
 | NJ-014 | Light/dark semantic design tokens, type and spacing | DRAFTED 2026-11-13 | Proposed values contrast-checked in principle; actual component/device review pending |
 
-| NJ-015 | Original marks F1 Folded Page, F2 Quiet Leaf, F3 Memory Window | EXPLORATION 2026-11-13 | Three original SVGs and responsive comparison page committed; F1 recommended only; user approval pending |
+| NJ-015 | F1 Folded Page approved as primary visual mark | APPROVED 2026-11-13 | User selected “01”; retain A + C visual language and B dark theme. Final consumer name, legal availability and production launcher QA remain open |
 ## Pending high-impact decisions
 
-- Final consumer brand and logo; screen-level visual review and accessibility validation.
+- Final consumer brand name, trademark/availability review and production launcher/splash approval; Folded Page direction approved.
 - Android-first validation vs simultaneous platform support.
 - Precise encrypted backup recovery process and key handling.
 - Minimal P0 inline media set.
