@@ -341,14 +341,16 @@ class _JournalPreviewAppState extends State<JournalPreviewApp> {
         crossAxisAlignment: expanded ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
           Padding(padding: const EdgeInsets.fromLTRB(8, 0, 8, 32),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
+            child: Row(mainAxisSize: MainAxisSize.max, children: [
               const FoldedPageMark(size: 43),
               if (expanded) ...[
                 const SizedBox(width: 12),
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Navin Journal', style: editorial(c, 20)),
-                  Text('DESIGN PREVIEW', style: _eyebrow()),
-                ]),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Navin Journal', maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: editorial(c, 19)),
+                  Text('DESIGN PREVIEW', maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: _eyebrow()),
+                ])),
               ],
             ]),
           ),
@@ -494,13 +496,13 @@ class _JournalPreviewAppState extends State<JournalPreviewApp> {
       final wide = constraints.maxWidth >= 760;
       final artwork = ScenicArt(
         variation: 0,
-        height: wide ? 620 : 210,
+        height: wide ? 620 : 150,
         radius: BorderRadius.zero,
       );
       final copy = Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: wide ? 54 : 28,
-          vertical: wide ? 70 : 36,
+          horizontal: wide ? 54 : 26,
+          vertical: wide ? 70 : 24,
         ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 540),
@@ -508,17 +510,17 @@ class _JournalPreviewAppState extends State<JournalPreviewApp> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const FoldedPageMark(size: 58),
-              const SizedBox(height: 29),
+              const FoldedPageMark(size: 50),
+              const SizedBox(height: 16),
               _label('Still Pages · Memory Atelier'),
               Text('A private home\nfor your stories.', style: editorial(c, wide ? 52 : 40)),
-              const SizedBox(height: 21),
+              const SizedBox(height: 14),
               Text(
                 'The smallest moments deserve a beautiful place to live.',
                 style: TextStyle(fontFamily: 'serif',
                   fontSize: 19, height: 1.5, color: c.secondary),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 18),
               FilledButton.icon(
                 key: const ValueKey('explore-preview'),
                 onPressed: () => setState(() => _view = PreviewView.setup),
