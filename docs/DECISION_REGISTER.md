@@ -18,6 +18,7 @@
 | NJ-013 | Four-tab UX and the 18-screen detailed specification | DRAFTED 2026-11-13 | Requires usability and accessibility validation before sign-off |
 | NJ-014 | Light/dark semantic design tokens, type and spacing | DRAFTED 2026-11-13 | Proposed values contrast-checked in principle; actual component/device review pending |
 
+| NJ-015 | Original marks F1 Folded Page, F2 Quiet Leaf, F3 Memory Window | EXPLORATION 2026-11-13 | Three original SVGs and responsive comparison page committed; F1 recommended only; user approval pending |
 ## Pending high-impact decisions
 
 - Final consumer brand and logo; screen-level visual review and accessibility validation.
