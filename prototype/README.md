@@ -54,3 +54,7 @@ Use `npm run check:extended` to run the Chromium checks for the text-size select
 ## Keyboard and focus regression suite
 
 Run `npm run check:keyboard` in the `prototype` folder. On 2026-11-13, 33/33 focus/keyboard checks passed across a 360px phone, 768px tablet and 1024px tablet viewport. Tests cover skip link, re-rendered navigation focus, `aria-current`, Ctrl+K search focus, dialog focus trapping and Escape focus return. This is not equivalent to TalkBack or VoiceOver testing; see [manual device test runbook](../docs/DEVICE_UX_TEST_RUNBOOK.md).
+
+## Brand identity study (approval pending)
+
+Open `brand-study.html` to compare three original SVG candidates in writing/memory contexts, at 28px and 48px, with a light/dark toggle. The page is independent of the journaling prototype. Run `npm run check:brand` for Chromium selection/visual checks. Latest [verified CI run 43393618241](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43393618241): **52/52** brand checks passed. See [brand QA report](../docs/QA_STAGE3_BRAND_2026-11-13.md). No consumer-facing logo is approved and there is no journal storage.
