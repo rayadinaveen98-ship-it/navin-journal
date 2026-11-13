@@ -4,11 +4,11 @@ Open **stage3-ux-preview.html** in a desktop or mobile browser after downloading
 
 ## What you can review
 
-- Welcome -> Today -> one-tap writing concept.
-- Journals library -> journal detail -> sample Reader.
+- Welcome -> first-journal setup (simulation) -> Today -> one-tap writing concept.
+- Journals library -> journal detail -> journal-aware Writer; sample Reader with tablet list/detail layout.
 - Memories -> timeline/calendar/gallery -> sample entry.
 - Discover -> sample full-text search and reader navigation.
-- Settings -> light/dark theme parity, conceptual security/backup and Trash states.
+- Settings -> light/dark theme parity, navigable simulated lock/backup states (including restore rejection), and Trash.
 - Responsive phone/tablet/desktop adaptation; basic keyboard shortcut Ctrl/Cmd+K for Discover.
 
 ## Important limitations
@@ -32,3 +32,9 @@ Open **stage3-ux-preview.html** in a desktop or mobile browser after downloading
 6. List anything that feels too busy, visually weak, or inconsistent with the A + C hybrid.
 
 Keep all feedback scoped to UX/design during Stage 3. Engineering begins after the design and data-integrity gates are approved.
+
+## JavaScript smoke checks
+
+Run `node prototype/tests/smoke.mjs` from the repository root (requires Node.js). The 20 checks simulate navigation and read the rendered HTML strings with a mocked DOM. They do **not** verify actual browser rendering, keyboard input, screen reader operation, saving, security, accessibility, or network behavior.
+
+**Finding (2026-11-13):** a JavaScript syntax error in the original Discover placeholder prevented the prototype script from parsing. Fixed; a syntax assertion and interaction smoke checks were then performed before later refinements.
