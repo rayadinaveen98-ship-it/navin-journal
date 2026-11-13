@@ -1,6 +1,6 @@
 # Navin Journal
 
-**Status:** Stage 3 physical-device/user signoff is open. Stage 4 A2.4 Flutter→Android Keystore→encrypted SQLite proof passed 14 Flutter contract and 2 Android emulator integration tests. A3.1–A3.4 state-machine, encrypted SQLite transaction, off-main-isolate and OS-kill tests passed **44 Linux tests (including three real SIGKILL recovery checks)**. A3.4 **Android emulator force-stop/relaunch recovery passed** across two acknowledged fictional versions. A4.1–A4.3.2 authenticated archive, staged restore and complete logical snapshot encryption passed **56 Linux tests**. No production diary APK, real-device security validation, final journal-schema backup, or clean-device recovery exists.  
+**Status:** Stage 3 physical-device/user signoff is open. Stage 4 A2.4 Flutter→Android Keystore→encrypted SQLite proof passed 14 Flutter contract and 2 Android emulator integration tests. A3.1–A3.4 state-machine, encrypted SQLite transaction, off-main-isolate and OS-kill tests passed **44 Linux tests (including three real SIGKILL recovery checks)**. A3.4 **Android emulator force-stop/relaunch recovery passed** across two acknowledged fictional versions. A4.1–A4.3.2 authenticated archive, staged restore and complete logical snapshot encryption passed **56 Linux tests**. **APK 01 visual-only Flutter preview built with 6/6 widget checks**, but no production diary APK, real-device security validation, final journal-schema backup, or clean-device recovery exists.  
 **Project name:** Navin Journal is the internal working title, not the approved consumer brand.  
 **Repository:** `rayadinaveen98-ship-it/navin-journal`
 
@@ -43,6 +43,7 @@ These are priorities, **not delivered functionality**. Product and technical dec
 - [Physical-device UX, Telugu IME and screen-reader test guide](docs/DEVICE_UX_TEST_RUNBOOK.md)
 - [Stage 3 Chromium QA report (13 Nov 2026)](docs/QA_STAGE3_2026-11-13.md)
 - [Stage 3 extended 200% type/Telugu UX QA](docs/QA_STAGE3_EXTENDED_2026-11-13.md)
+- [APK 01 native Flutter visual preview](preview_app/README.md) — **6/6 widget checks and Android debug build passed** in [CI run 43441554960](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43441554960). Fictional entries only, no saving or user data security.
 - [Stage 3 navigable design preview](prototype/stage3-ux-preview.html) (sample content; no real storage or security)
 - [Connected journal management & recovery UX preview](prototype/journal-recovery-review.html) (fictional examples, in-memory only)
 - [Journal and recovery UX validation report](docs/UX_RECOVERY_STAGE3.md)
