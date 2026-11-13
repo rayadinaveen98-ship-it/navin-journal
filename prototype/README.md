@@ -46,3 +46,7 @@ Run `node prototype/tests/smoke.mjs` from the repository root (requires Node.js)
 ## Accessibility smoke audit
 
 Use `npm run check:a11y` after installing dependencies. This injects axe-core into seven simulated screens and saves `artifacts/accessibility-audit.json`. Automated checks found no violations in the sampled states on 2026-11-13. This is **not** a native accessibility certification; human screen-reader and enlarged-text reviews remain necessary.
+
+## 200% typography and bilingual preview
+
+Use `npm run check:extended` to run the Chromium checks for the text-size selector (100/125/150/200%), journal-aware editing, Telugu–English/emoji content, large-title wrapping, simulated reduced-height keyboard viewport and modal focus restoration. Latest passing run: [43391287664](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43391287664). This **does not** validate native Telugu IME or persistent data.
