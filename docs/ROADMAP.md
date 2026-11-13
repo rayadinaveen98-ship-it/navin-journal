@@ -1,6 +1,6 @@
 # Roadmap — Navin Journal
 
-**Current phase:** Stage 3 physical-device/user signoff is still open. Stage 4 isolated engineering spikes are active: A1 transactional SQLite (18 Linux tests) and A2 encrypted-file feasibility (13 Linux tests) passed. Platform key management, autosave, verified backup and native app remain unfinished.
+**Current phase:** Stage 3 physical-device/user signoff is still open. Stage 4 isolated engineering spikes are active: A1 transactional SQLite (18 Linux tests), A2 encrypted-file feasibility (13 Linux tests), and A2.2 key-envelope protocol (14 Linux tests) passed; staged Android Keystore wrapper compiles. Production device-bound security, autosave, verified backup and native app remain unfinished.
 
 ## Stage 1 — Competitive review [DONE: research-only]
 
@@ -40,7 +40,9 @@ Product promise, P0/P1/P2 boundary, proposed navigation, data-trust contract and
 
 - [x] Build an **unencrypted Dart/SQLite reference store** with transactional journal/entry writes, stable IDs, previous revisions, explicit version conflict detection, event dates, archive/Trash and restore. **18/18 tests** and Dart analysis passed on Linux in [CI run 43405129229](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43405129229). Do not enter real diary data; this is neither autosave nor a secure vault. [Stage 4 report](STAGE4_ENGINEERING_SPIKE.md).
 - [x] **A2 file-encryption feasibility (Linux only):** SQLite3MultipleCiphers with verified key handling, independent ordinary-SQLite rejection, test-sentinel checks in database/WAL, revision rollback and legacy-plaintext rejection. **13/13 encrypted tests passed** in [CI run 43408840728](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43408840728). See [A2 spike README](../spikes/encrypted_store/README.md).
-- [ ] **A2 production key lifecycle/security gate:** Android Keystore/iOS Keychain, vault-key recovery and rotation, attachment/index/cache protection, reboot/reinstall test, native release build and independent review. Test key in the Linux spike is **not** secure production key storage.
+- [x] **A2.2 key-envelope rotation protocol (Linux):** stage → verify → promote → finalize a replacement AES-GCM wrapping key while preserving the encrypted SQLite database key; failure injection, lost-key and tamper rejection. **14/14 tests passed** in [run 43410218147](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43410218147). Uses a **software fake device protector**, not production device security. [Full report](../spikes/key_lifecycle/README.md).
+- [x] **A2.2 staged Android Keystore source compiles:** Kotlin AES-GCM wrapper compiled against API 35 in [run 43410753987](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43410753987). No Android runtime or Flutter integration.
+- [ ] **A2 production key lifecycle/security gate:** actual Android Keystore runtime tests, iOS Keychain parity, separate recoverable backup, key loss/reinstall/reboot handling, authenticated metadata hardening, attachment/index/cache protection, device build and independent security review. Linux fake-provider tests and source compilation **do not** meet this gate.
 - [ ] Implement bounded autosave and actually recover after force-stop/interrupted write on target devices.
 - [ ] Test attachment import atomically; verify error behavior for malformed media and full storage.
 - [ ] Demonstrate authenticated backup creation, integrity validation and clean-device staged restore.
