@@ -77,7 +77,7 @@ click({ view: 'settings' });
 click({ action: 'privacy' });
 check('Privacy page discloses no encryption', app.innerHTML.includes('No encryption, authentication'));
 click({ action: 'toggleVault' });
-check('Simulated lock state switches', app.innerHTML.includes('Locked state selected'));
+check('Simulated lock state switches', app.innerHTML.includes('Locked appearance selected'));
 check('Clearly labelled design preview', html.includes('Not a working diary') && html.includes('Nothing is saved to disk'));
 check('Tablet layout CSS present', html.includes('@media(min-width:900px)') && html.includes('reader-layout'));
 
