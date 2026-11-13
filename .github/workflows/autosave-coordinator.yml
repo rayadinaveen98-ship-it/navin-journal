@@ -1,0 +1,33 @@
+name: Stage 4 A3.1 Autosave State Machine
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'spikes/autosave_coordinator/**'
+      - '.github/workflows/autosave-coordinator.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  autosave-unit-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Resolve test dependencies
+        working-directory: spikes/autosave_coordinator
+        run: dart pub get
+      - name: Normalize source formatting
+        working-directory: spikes/autosave_coordinator
+        run: dart format .
+      - name: Analyze autosave source and tests
+        working-directory: spikes/autosave_coordinator
+        run: dart analyze --fatal-infos
+      - name: Run deterministic fictional autosave scenarios
+        working-directory: spikes/autosave_coordinator
+        run: dart test --reporter expanded
