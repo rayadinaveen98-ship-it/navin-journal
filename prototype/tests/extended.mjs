@@ -67,6 +67,8 @@ try{
   await page.screenshot({path:path.join(out,name+'-today-200pct.png'),fullPage:true});
   await page.locator('[data-action="write"]:visible').first().click();
   await noOverflow(page,name+' Writer at 200 percent');
+  const titleHeight=await page.locator('#draftTitle').evaluate(el=>({scroll:el.scrollHeight,client:el.clientHeight,wrap:el.scrollHeight>80}));
+  check(titleHeight.scroll<=titleHeight.client+3,name+' enlarged multiline title remains fully visible');
   check(await page.locator('#draftBody').inputValue()===sampleText(),name+' temporary sample content retained at 200 percent');
   await page.screenshot({path:path.join(out,name+'-writing-200pct.png'),fullPage:true});
   await page.locator('[data-action="closeEditor"]').first().click();
