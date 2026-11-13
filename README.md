@@ -1,6 +1,6 @@
 # Navin Journal
 
-**Status:** Stage 3 physical-device/user signoff is open. Stage 4 A2.4 Flutter→Android Keystore→encrypted SQLite proof passed 14 Flutter contract and 2 Android emulator integration tests. A3.1–A3.4 state-machine, encrypted SQLite transaction, off-main-isolate and OS-kill tests passed **44 Linux tests (including three real SIGKILL recovery checks)**. A3.4 **Android emulator force-stop/relaunch recovery passed** across two acknowledged fictional versions. A4.1/A4.2 authenticated archive and newly encrypted vault restoration passed **34 Linux tests**. No production diary APK, real-device security validation, final journal-schema backup, or clean-device recovery exists.  
+**Status:** Stage 3 physical-device/user signoff is open. Stage 4 A2.4 Flutter→Android Keystore→encrypted SQLite proof passed 14 Flutter contract and 2 Android emulator integration tests. A3.1–A3.4 state-machine, encrypted SQLite transaction, off-main-isolate and OS-kill tests passed **44 Linux tests (including three real SIGKILL recovery checks)**. A3.4 **Android emulator force-stop/relaunch recovery passed** across two acknowledged fictional versions. A4.1–A4.3.2 authenticated archive, staged restore and complete logical snapshot encryption passed **56 Linux tests**. No production diary APK, real-device security validation, final journal-schema backup, or clean-device recovery exists.  
 **Project name:** Navin Journal is the internal working title, not the approved consumer brand.  
 **Repository:** `rayadinaveen98-ship-it/navin-journal`
 
@@ -60,6 +60,7 @@ These are priorities, **not delivered functionality**. Product and technical dec
 - [A3.4 Android ADB force-stop/relaunch test harness](docs/STAGE4_A3_4_ANDROID_FORCE_STOP.md) (dedicated debug-only emulator fixture; runtime verification open)
 - [A4.1/A4.2 independently recoverable encrypted archive and clean-vault restore](spikes/recovery_archive/README.md) (**34/34 Linux tests passed**; test-only new-vault restoration)
 - [A4.2 verified staged restore and outstanding security gates](docs/STAGE4_A4_2_CLEAN_RESTORE.md)
+- [A4.3.1/A4.3.2 whole-journal logical snapshot and encrypted v2 archive](docs/STAGE4_A4_3_PRODUCT_ARCHIVE.md) (**56/56 combined A4 Linux tests passed**; no production live-vault export or Android v2 restore)
 - [Stage 3 brand comparison preview](prototype/brand-study.html) (option 01 Folded Page selected)
 - [Adaptive launcher-mask visual review](prototype/brand/adaptive-preview.html) (design-only)
 - [Prototype usage and limits](prototype/README.md)
