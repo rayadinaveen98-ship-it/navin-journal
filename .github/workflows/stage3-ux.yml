@@ -49,6 +49,9 @@ jobs:
       - name: Connected journal create, Trash, restore and backup UX checks
         working-directory: prototype
         run: npm run check:recovery
+      - name: Connected writing-to-recovery user journeys
+        working-directory: prototype
+        run: npm run check:journey
       - name: Automated HTML accessibility scan
         working-directory: prototype
         run: npm run check:a11y
