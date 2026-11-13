@@ -335,9 +335,8 @@ class _JournalPreviewAppState extends State<JournalPreviewApp> {
     ];
     return Container(
       width: expanded ? 228 : 86,
-      color: c.paper,
       padding: const EdgeInsets.fromLTRB(12, 22, 12, 16),
-      decoration: BoxDecoration(border: Border(right: BorderSide(color: c.stroke))),
+      decoration: BoxDecoration(color: c.paper, border: Border(right: BorderSide(color: c.stroke))),
       child: Column(
         crossAxisAlignment: expanded ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
@@ -495,7 +494,7 @@ class _JournalPreviewAppState extends State<JournalPreviewApp> {
       final wide = constraints.maxWidth >= 760;
       final artwork = ScenicArt(
         variation: 0,
-        height: wide ? constraints.maxHeight : 210,
+        height: wide ? 620 : 210,
         radius: BorderRadius.zero,
       );
       final copy = Padding(
