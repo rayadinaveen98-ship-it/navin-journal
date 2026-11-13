@@ -112,6 +112,11 @@ jobs:
         run: |
           cd "$APK02_LIBRARY_ROOT"
           flutter test test/preview_widget_test.dart test/connected_writing_studio_test.dart --reporter expanded --concurrency=1 --timeout=90s
+      - name: Full encrypted-worker Flutter navigation widget integration
+        shell: bash
+        run: |
+          cd "$APK02_LIBRARY_ROOT"
+          flutter test test/fictional_journal_library_test.dart --reporter expanded --concurrency=1 --timeout=40s
       - name: Compile standalone Android Library / Reader / Writer debug APK
         shell: bash
         run: |
