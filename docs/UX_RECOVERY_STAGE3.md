@@ -76,3 +76,7 @@ Before enabling any real private writing:
 6. No sensitive journal content in logs, analytics or remote requests by default.
 
 **Do not call the Stage 3 browser prototype a secure or persistent diary.** The technical proof of concept is a separate Stage 4 task.
+
+## Connected Writing Studio addendum — 13 November 2026
+
+The separate recovery UX page now includes a fully connected **fictional sample** journey (write, read, edit, discard confirmation, delete, restore), along with auto-expanding Telugu/English fields and a focused mobile Writing Studio without fixed navigation overlay. [Verified run 43403054214](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43403054214) passed 41/41 new browser journey checks and 80/80 original recovery checks. The writing is added **only to temporary browser memory** after a demo button; it is neither autosaved nor encrypted. See [the detailed connected journey report](UX_CONNECTED_JOURNEY_STAGE3.md).
