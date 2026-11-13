@@ -162,7 +162,7 @@ void _storageWorker(List<Object> args) async {
   final key = TestVaultKey.fromBytes(input);
   input.fillRange(0, input.length, 0);
   final incoming = ReceivePort();
-  EncryptedDraftStore? db;
+  late final EncryptedDraftStore db;
   try {
     db = EncryptedDraftStore.open(filename, key: key, create: create);
     key.destroy();
