@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108" role="img" aria-labelledby="title desc"><title id="title">Folded Page — adaptive foreground candidate</title><desc id="desc">Book and bookmark centered within the 66 by 66 design safe area; transparent outer area.</desc><g transform="translate(9.8 9.8) scale(0.7)">
+<path d="M25 37C39 30 51 32 63 39V94C51 87 38 87 25 93V37Z" fill="#FFFCF7"/>
+<path d="M65 39C77 32 89 30 103 37V93C90 87 77 87 65 94V39Z" fill="#EFE8DE"/>
+<path d="M64 39V96" fill="none" stroke="#D6CFBD" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M36 48C43 46 50 47 55 50M36 58C43 56 50 57 55 60M74 50C80 47 87 46 93 48M74 60C80 57 87 56 93 58" fill="none" stroke="#A8AA97" stroke-width="2" stroke-linecap="round"/>
+<path d="M83 30H95V49L89 45L83 49V30Z" fill="#C58B6D"/></g></svg>
