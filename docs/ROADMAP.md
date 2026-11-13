@@ -20,7 +20,7 @@ Product promise, P0/P1/P2 boundary, proposed navigation, data-trust contract and
 - [x] Specify 18 screens including critical empty/loading/error/permission states and all core journeys.
 - [x] Author a standalone navigable HTML Stage 3 prototype: first-journal setup, sample writing/reading, journal-aware context, Memories/Search, simulated app-lock and backup/error states, light/dark and responsive tablet reader. Not a working diary.
 - [x] Fix initial JavaScript syntax bug and pass 20 mocked-DOM navigation/safety-state smoke checks.
-- [x] Run actual Chromium navigation/render QA across 360/430/768/1024px: 90 checks passed and 24 screenshots generated (2026-11-13). See [QA report](QA_STAGE3_2026-11-13.md).
+- [x] Run actual Chromium navigation/render QA across 360/430/768/1024px: 90 checks passed and 24 screenshots generated (2026-11-13). Automated axe-core scan found no WCAG A/AA violations in seven sampled HTML screens. See [QA report](QA_STAGE3_2026-11-13.md).
 - [ ] Perform remaining real-device keyboard, screen-reader, enlarged-text and visual fidelity review; address findings before completing Stage 3.
 - [ ] Validate phone and tablet mockups with representative tasks.
 - [x] Record approved hybrid and draft design tokens in GitHub.
