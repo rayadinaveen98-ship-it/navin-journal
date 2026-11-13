@@ -1,6 +1,6 @@
 # Navin Journal
 
-**Status:** Stage 3 physical-device/user signoff is open. Stage 4 A2.4 Flutter→Android Keystore→encrypted SQLite proof passed 14 Flutter contract and 2 Android emulator integration tests. A3.1–A3.3 state-machine, encrypted SQLite transaction and off-main-isolate tests passed **41 Linux tests**. No production diary APK, device-verified security/backup, or Android lifecycle autosave exists.  
+**Status:** Stage 3 physical-device/user signoff is open. Stage 4 A2.4 Flutter→Android Keystore→encrypted SQLite proof passed 14 Flutter contract and 2 Android emulator integration tests. A3.1–A3.3 state-machine, encrypted SQLite transaction and off-main-isolate tests passed **44 Linux tests (including three real SIGKILL recovery checks)**. No production diary APK, device-verified security/backup, or Android lifecycle autosave exists.  
 **Project name:** Navin Journal is the internal working title, not the approved consumer brand.  
 **Repository:** `rayadinaveen98-ship-it/navin-journal`
 
@@ -56,6 +56,7 @@ These are priorities, **not delivered functionality**. Product and technical dec
 - [A2.4 engineering handoff](docs/STAGE4_A2_4_FLUTTER_BRIDGE.md)
 - [A3 autosave + encrypted background worker](spikes/autosave_coordinator/README.md) (**41 Linux tests passed**; Android editor lifecycle validation pending)
 - [A3.3 Flutter diagnostic editor and acceptance report](docs/STAGE4_A3_3_ANDROID_EDITOR.md)
+- [A3.4 Linux crash/kill recovery evidence](docs/STAGE4_A3_4_CRASH_RECOVERY.md) (three OS SIGKILL checks; Android force-stop remains open)
 - [Stage 3 brand comparison preview](prototype/brand-study.html) (option 01 Folded Page selected)
 - [Adaptive launcher-mask visual review](prototype/brand/adaptive-preview.html) (design-only)
 - [Prototype usage and limits](prototype/README.md)
