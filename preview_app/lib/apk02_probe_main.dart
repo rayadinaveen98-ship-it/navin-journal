@@ -4,6 +4,8 @@
 ///
 /// DEBUG ONLY. All saved data is fixed fictional test content. Not an app
 /// for real private writing; no production recovery or safe autosave yet.
+library;
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
