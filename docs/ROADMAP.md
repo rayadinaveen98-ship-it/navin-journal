@@ -1,6 +1,6 @@
 # Roadmap — Navin Journal
 
-**Current phase:** Stage 3 manual device/user signoff is open. Stage 4 isolated storage engineering spike is active (unencrypted SQLite A1 validated on Linux). No production journaling app or APK exists.
+**Current phase:** Stage 3 physical-device/user signoff is still open. Stage 4 isolated engineering spikes are active: A1 transactional SQLite (18 Linux tests) and A2 encrypted-file feasibility (13 Linux tests) passed. Platform key management, autosave, verified backup and native app remain unfinished.
 
 ## Stage 1 — Competitive review [DONE: research-only]
 
@@ -39,7 +39,8 @@ Product promise, P0/P1/P2 boundary, proposed navigation, data-trust contract and
 ## Stage 4 — Engineering proof of concept [ACTIVE; isolated tests only]
 
 - [x] Build an **unencrypted Dart/SQLite reference store** with transactional journal/entry writes, stable IDs, previous revisions, explicit version conflict detection, event dates, archive/Trash and restore. **18/18 tests** and Dart analysis passed on Linux in [CI run 43405129229](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43405129229). Do not enter real diary data; this is neither autosave nor a secure vault. [Stage 4 report](STAGE4_ENGINEERING_SPIKE.md).
-- [ ] Demonstrate **encrypted SQLite vault** with key recovery model, no plaintext WAL/index/cache leaks and clean lock/unlock across process restarts.
+- [x] **A2 file-encryption feasibility (Linux only):** SQLite3MultipleCiphers with verified key handling, independent ordinary-SQLite rejection, test-sentinel checks in database/WAL, revision rollback and legacy-plaintext rejection. **13/13 encrypted tests passed** in [CI run 43408840728](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43408840728). See [A2 spike README](../spikes/encrypted_store/README.md).
+- [ ] **A2 production key lifecycle/security gate:** Android Keystore/iOS Keychain, vault-key recovery and rotation, attachment/index/cache protection, reboot/reinstall test, native release build and independent review. Test key in the Linux spike is **not** secure production key storage.
 - [ ] Implement bounded autosave and actually recover after force-stop/interrupted write on target devices.
 - [ ] Test attachment import atomically; verify error behavior for malformed media and full storage.
 - [ ] Demonstrate authenticated backup creation, integrity validation and clean-device staged restore.
