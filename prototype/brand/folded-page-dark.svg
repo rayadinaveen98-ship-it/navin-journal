@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="title desc"><title id="title">Folded Page — dark mode mark</title><desc id="desc">Open notebook and a bookmark on a graphite square.</desc><rect width="128" height="128" rx="31" fill="#25313A"/>
+<path d="M25 37C39 30 51 32 63 39V94C51 87 38 87 25 93V37Z" fill="#F8F5EE"/>
+<path d="M65 39C77 32 89 30 103 37V93C90 87 77 87 65 94V39Z" fill="#CFD8D0"/>
+<path d="M64 39V96" fill="none" stroke="#9AA69C" stroke-width="2.5" stroke-linecap="round"/>
+<path d="M36 48C43 46 50 47 55 50M36 58C43 56 50 57 55 60M74 50C80 47 87 46 93 48M74 60C80 57 87 56 93 58" fill="none" stroke="#7E8D80" stroke-width="2" stroke-linecap="round"/>
+<path d="M83 30H95V49L89 45L83 49V30Z" fill="#DDA083"/></svg>
