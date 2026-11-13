@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- STAGE-4 SECURITY POLICY STUDY; not installed into a production manifest.
+     Exclude device-bound encrypted vault and key-envelope state from default
+     OS backup/transfer until independently recoverable archives exist. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" path="."/>
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" path="."/>
+    </device-transfer>
+</data-extraction-rules>
