@@ -5,10 +5,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.security.GeneralSecurityException
 import java.security.KeyStore
 import java.security.SecureRandom
 import java.util.UUID
-import javax.crypto.AEADBadTagException
 import javax.crypto.SecretKey
 import javax.crypto.SecretKeyFactory
 
@@ -85,7 +85,7 @@ class AndroidKeystoreInstrumentedTest {
         val blob = protector.wrap(name, fakeDek(), fakeAad())
         val tag = blob.tag.clone().also { it[0] = (it[0].toInt() xor 1).toByte() }
         val changed = blob.copy(tag = tag)
-        assertThrows(Exception::class.java) {
+        assertThrows(GeneralSecurityException::class.java) {
             protector.unwrap(name, changed, fakeAad())
         }
     }
@@ -94,7 +94,7 @@ class AndroidKeystoreInstrumentedTest {
     fun mismatchedAssociatedDataCannotDecrypt() = withAlias { name, protector ->
         protector.provision(name)
         val blob = protector.wrap(name, fakeDek(), fakeAad())
-        assertThrows(Exception::class.java) {
+        assertThrows(GeneralSecurityException::class.java) {
             protector.unwrap(name, blob, "another-vault-id".toByteArray())
         }
     }
@@ -106,7 +106,7 @@ class AndroidKeystoreInstrumentedTest {
         val payload = blob.ciphertext.clone().also {
             it[it.size - 1] = (it.last().toInt() xor 1).toByte()
         }
-        assertThrows(Exception::class.java) {
+        assertThrows(GeneralSecurityException::class.java) {
             protector.unwrap(name, blob.copy(ciphertext = payload), fakeAad())
         }
     }
