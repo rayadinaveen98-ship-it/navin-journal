@@ -1,0 +1,38 @@
+name: APK 02 Editor to Encrypted Journal Core
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/journal_editor/**'
+      - '.github/workflows/journal-editor.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: navin-journal-editor-main
+  cancel-in-progress: true
+
+jobs:
+  test-editor-core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Resolve tested autosave and encrypted SQLite3MC engine
+        working-directory: packages/journal_editor
+        run: dart pub get
+      - name: Format Dart source
+        working-directory: packages/journal_editor
+        run: dart format lib test
+      - name: Strict Dart static analysis
+        working-directory: packages/journal_editor
+        run: dart analyze --fatal-infos
+      - name: Real journal encrypted editor contract tests
+        working-directory: packages/journal_editor
+        run: dart test --reporter expanded
