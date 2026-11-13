@@ -12,8 +12,10 @@ void sizePhone(WidgetTester tester) {
 Future<void> startSample(WidgetTester tester) async {
   await tester.pumpWidget(const JournalPreviewApp());
   await tester.pumpAndSettle();
+  await tester.ensureVisible(find.byKey(const ValueKey('explore-preview')));
   await tester.tap(find.byKey(const ValueKey('explore-preview')));
   await tester.pumpAndSettle();
+  await tester.ensureVisible(find.byKey(const ValueKey('start-preview')));
   await tester.tap(find.byKey(const ValueKey('start-preview')));
   await tester.pumpAndSettle();
 }
@@ -26,9 +28,11 @@ void main() {
     await tester.pumpWidget(const JournalPreviewApp());
     expect(find.textContaining('DESIGN PREVIEW'), findsWidgets);
     expect(find.byKey(const ValueKey('explore-preview')), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const ValueKey('explore-preview')));
     await tester.tap(find.byKey(const ValueKey('explore-preview')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('journal-name-field')), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const ValueKey('start-preview')));
     await tester.tap(find.byKey(const ValueKey('start-preview')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('nav-today')), findsOneWidget);
