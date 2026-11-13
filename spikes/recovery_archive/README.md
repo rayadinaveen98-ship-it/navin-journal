@@ -2,13 +2,15 @@
 
 **Verified:** [GitHub Actions run 43430251517](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43430251517) — **16/16 Dart tests passed**; analyzer clean.
 
-**Status:** A4.1 **isolated archive encryption and verification proof DONE**, using **fictional journal entries and media only**. **A4 production verified backup/restore NOT DONE**.
+**Status:** A4.1 verified archive and A4.2 staged encrypted clean-vault restore **LINUX TESTED (34/34)**, using fictional entries and media only. **A4 production backup and Android clean-device recovery NOT DONE**.
 
 ## Implemented
 
 - [Portable authenticated archive codec](lib/recovery_archive.dart)
 - [16 automated security/format tests](test/recovery_archive_test.dart)
 - [Reproducible CI workflow](../../.github/workflows/recovery-archive.yml)
+- [A4.2 encrypted new-vault restore](lib/staged_restore.dart) and [18 new restore tests](test/staged_restore_test.dart)
+- [A4.2 verification report](../../docs/STAGE4_A4_2_CLEAN_RESTORE.md), [CI 43433845516](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43433845516)
 
 A4.1 creates a fresh **random 256-bit recovery key** distinct from any Android Keystore wrapping key or database encryption key. The key can be exported as a 43-character URL-safe, base64 encoded *offline recovery secret*. The archive itself is an AES-256-GCM authenticated container using the established `cryptography` package.
 
@@ -51,3 +53,7 @@ The *A4.1* archive has **no ZIP entries and no decompression step**. Its manifes
 **Keep archive-key material and real diary content out of the diagnostic harness.** This package is test-only.
 
 Related: [Stage 4 engineering report](../../docs/STAGE4_ENGINEERING_SPIKE.md), [privacy and recovery requirements](../../docs/DATA_PRIVACY_RELIABILITY.md).
+
+## A4.2 addendum — staged encrypted restoration
+
+The archive verifier now feeds an isolated [A4.2 new-vault restore](lib/staged_restore.dart). The importer checks the AES-GCM archive **before any staging**, writes all fictional entries and attachment bytes inside one encrypted SQLite3MultipleCiphers transaction using a separate 256-bit destination key, closes and reopens the database to check all IDs/content/hashes, then publishes only into a previously nonexistent target folder. Failure injection and late target collision leave no published partial vault; the existing target is not intentionally overwritten. **34/34 tests passed** in [run 43433845516](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43433845516). This does **not** establish race-free no-clobber publication, fsync/power-loss durability, Android re-key/restore, real journal schema, user-held password UX or production security. [Full A4.2 report](../../docs/STAGE4_A4_2_CLEAN_RESTORE.md).
