@@ -33,6 +33,12 @@ The Android integration tests use [the existing A2.4 Flutter workflow](../.githu
 | Production secure key backup / restore | Not built |
 | Native Flutter app integrating approved visual design | Not built |
 
+## Android test-runner reliability update
+
+The [CI run 43422522118](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43422522118) passed Flutter static analysis, 14 mocked MethodChannel tests and Android debug APK compilation, but **both runtime test files could not install the APK**: the emulator returned `Can't find service: package`. Thus the A3.3 Android widget/lifecycle assertions did **not** execute in that run.
+
+We committed a [device-readiness script](../spikes/flutter_bridge_probe/ci/run_android_integration.sh) that probes `sys.boot_completed` **and** Android's package manager before installation; it runs the two Flutter integration suites sequentially. The [updated workflow](../.github/workflows/flutter-keystore-bridge.yml) uses a cold boot and cancels superseded concurrent runs. Passing the Linux/A3.4 process-kill tests does **not** bypass the A3.3 Android integration gate.
+
 ## Key limitations
 
 - The editor surface is deliberately sparse and diagnostic. **Do not judge it as our approved Stage 3 premium design**, and do not ship it.
