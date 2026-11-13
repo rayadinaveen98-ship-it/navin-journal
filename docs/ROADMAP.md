@@ -23,6 +23,7 @@ Product promise, P0/P1/P2 boundary, proposed navigation, data-trust contract and
 - [ ] Compile staged launcher XML with AAPT2 and inspect adaptive/themed icon masks on physical Android devices (Stage 4 integration).
 - [x] Specify 18 screens including critical empty/loading/error/permission states and all core journeys.
 - [x] Author a standalone navigable HTML Stage 3 prototype: first-journal setup, sample writing/reading, journal-aware context, Memories/Search, simulated app-lock and backup/error states, light/dark and responsive tablet reader. Not a working diary.
+- [x] Add connected in-memory journal creation, rename, archive/unarchive, entry/journal Trash, restoration, permanent-deletion confirmation and backup-state review. **80/80 browser checks passed** in [CI run 43400897845](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43400897845). See [UX Recovery Report](UX_RECOVERY_STAGE3.md). No persistent data or real backup.
 - [x] Fix initial JavaScript syntax bug and pass 20 mocked-DOM navigation/safety-state smoke checks.
 - [x] Run actual Chromium navigation/render QA across 360/430/768/1024px: 90 checks passed and 24 screenshots generated (2026-11-13). Automated axe-core scan found no WCAG A/AA violations in seven sampled HTML screens. See [QA report](QA_STAGE3_2026-11-13.md).
 - [x] Run extended Chromium large-text/bilingual UX checks: 84/84, across four viewport sizes, including 200% text reflow and Telugu–English/emoji. See [extended QA report](QA_STAGE3_EXTENDED_2026-11-13.md).
