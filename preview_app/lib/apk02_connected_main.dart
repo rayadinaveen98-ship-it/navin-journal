@@ -256,7 +256,7 @@ class _Apk02ConnectedTestAppState extends State<Apk02ConnectedTestApp> {
       // while keeping the primary editor isolate alive.
       final bytes = await fixture.envelope.unlock(
         databasePath: fixture.databasePath);
-      JournalEditorWorker? verifier;
+      late final JournalEditorWorker verifier;
       try {
         final key = TestVaultKey.fromBytes(bytes);
         try {
