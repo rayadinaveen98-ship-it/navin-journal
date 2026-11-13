@@ -39,6 +39,28 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Flutter testWidgets runs with fake async; background isolate I/O
+  /// must be awaited within the binding's real async zone instead.
+  Future<T> workerCall<T>(
+    WidgetTester tester, Future<T> Function() operation,
+  ) async {
+    final output = await tester.runAsync(operation);
+    if (output == null) throw StateError('Encrypted worker gave no result');
+    return output;
+  }
+
+  Future<void> workerVoid(
+    WidgetTester tester, Future<void> Function() operation,
+  ) async {
+    final completed = await tester.runAsync(() async {
+      await operation();
+      return true;
+    });
+    if (completed != true) {
+      throw StateError('Encrypted worker did not complete');
+    }
+  }
+
   Future<void> mount(WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(home: FictionalJournalLibrary(
       worker: worker, journalId: journal,
@@ -64,7 +86,7 @@ void main() {
     await tapVisible(tester, 'insert-fictional-sample');
     expect(find.text('Saved locally · version 1'), findsOneWidget);
     await tapVisible(tester, 'connected-back');
-    final entries = await worker.listEntries(journalId: journal);
+    final entries = await workerCall(tester, () => worker.listEntries(journalId: journal));
     expect(entries.length, 1);
     expect(entries.single['title'], 'A quiet afternoon');
     expect(entries.single['version'], 1);
@@ -76,14 +98,14 @@ void main() {
 
   testWidgets('reader shows actual encrypted entry; editing preserves revision',
       (tester) async {
-    final page = await worker.startSession(journalId: journal);
+    final page = await workerCall(tester, () => worker.startSession(journalId: journal));
     page.controller.update(
       title: 'A quiet afternoon',
       body: 'First fictional memory. తెలుగు sample · an imagined day. 🌿',
     );
-    await page.save();
-    final id = (await page.persistedEntryId())!;
-    expect(await page.closeSafely(), isTrue);
+    await workerVoid(tester, page.save);
+    final id = (await workerCall(tester, page.persistedEntryId))!;
+    expect(await workerCall(tester, page.closeSafely), isTrue);
 
     await mount(tester);
     await tapVisible(tester, 'library-open-' + id);
@@ -96,11 +118,11 @@ void main() {
     await tapVisible(tester, 'library-open-' + id);
     expect(find.text('Encrypted version 2'), findsOneWidget);
     expect(find.textContaining('Second fictional memory'), findsOneWidget);
-    final revisions = await worker.readRevisions(id);
+    final revisions = await workerCall(tester, () => worker.readRevisions(id));
     expect(revisions.length, 1);
     expect(revisions.single['version'], 1);
     expect(revisions.single['body'], contains('First fictional memory'));
-    expect((await worker.readEntry(id))!['version'], 2);
+    expect((await workerCall(tester, () => worker.readEntry(id)))!['version'], 2);
     await tapVisible(tester, 'reader-back');
     expect(find.text('Saved pages'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -109,16 +131,16 @@ void main() {
 
   testWidgets('library reload after independent encrypted worker reopen',
       (tester) async {
-    final session = await worker.startSession(journalId: journal);
+    final session = await workerCall(tester, () => worker.startSession(journalId: journal));
     session.controller.update(
       title: 'Original fictional entry',
       body: 'Nothing personal or private',
     );
-    await session.save();
-    final id = (await session.persistedEntryId())!;
-    expect(await session.closeSafely(), isTrue);
-    await worker.close();
-    worker = await JournalEditorWorker.open(path, key: key);
+    await workerVoid(tester, session.save);
+    final id = (await workerCall(tester, session.persistedEntryId))!;
+    expect(await workerCall(tester, session.closeSafely), isTrue);
+    await workerVoid(tester, worker.close);
+    worker = await workerCall(tester, () => JournalEditorWorker.open(path, key: key));
     await mount(tester);
     await tapVisible(tester, 'library-open-' + id);
     expect(find.text('Original fictional entry'), findsOneWidget);
