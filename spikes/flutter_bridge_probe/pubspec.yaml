@@ -11,6 +11,8 @@ dependencies:
     path: ../key_lifecycle
   navin_journal_encrypted_spike:
     path: ../encrypted_store
+  navin_journal_autosave_spike:
+    path: ../autosave_coordinator
 dev_dependencies:
   flutter_test:
     sdk: flutter
