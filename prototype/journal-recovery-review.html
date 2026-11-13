@@ -14,6 +14,17 @@ h1,h2,h3{font-family:Georgia,serif;line-height:1.15;font-weight:500;letter-spaci
 .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:99;display:grid;place-items:center;padding:18px}.modal{width:min(460px,100%);background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:27px;box-shadow:0 24px 90px rgba(0,0,0,.25)}.modal h2{margin:12px 0}.modal .actions{justify-content:flex-end;margin-bottom:0}
 .mobile{display:none}
 @media(max-width:780px){.shell{display:block}.side{display:none}.main{padding:17px 17px 112px}.mobile{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));position:fixed;z-index:50;bottom:0;left:0;right:0;background:var(--paper);border-top:1px solid var(--line);padding:8px 5px max(8px,env(safe-area-inset-bottom))}.mobile button{min-height:51px;border:0;background:none;border-radius:10px;font-size:12px}.mobile button.active{background:var(--muted);font-weight:750;color:var(--pine)}}@media(max-width:450px){.grid{grid-template-columns:1fr}.item{flex-direction:column;align-items:stretch}.modal{padding:22px}}@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+
+/* Writing remains page-like; this review never saves to disk or encrypts. */
+.writer{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:clamp(20px,4vw,42px);max-width:790px}
+.writer label{display:block;margin:14px 0 7px;font-size:13px;font-weight:700;color:var(--sub)}
+.writer select{min-height:48px;max-width:100%;padding:10px 13px;border-radius:12px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+.writerTitle,.writerBody{width:100%;background:transparent;color:var(--ink);resize:vertical;border:0;display:block;min-width:0;border-bottom:1px solid var(--line);outline-offset:4px;overflow-wrap:break-word}
+.writerTitle{font:500 clamp(28px,4vw,42px)/1.22 Georgia,serif;min-height:72px;padding:12px 0}
+.writerBody{font:18px/1.8 Georgia,serif;min-height:240px;padding:18px 0}
+.writer .error[hidden]{display:none}
+.writer .actions{justify-content:space-between}
+@media(max-width:780px){.writer{padding:22px 18px}.writerTitle{font-size:30px}}
 </style></head>
 <body data-theme="light"><a class="skip" href="#main">Skip to main content</a><div class="demo">STAGE 3 DEMO · Fictional data · Changes disappear on reload · No encrypted storage</div><div id="root"></div>
 <script>
@@ -22,23 +33,58 @@ const root=document.getElementById('root');
 const journals=[{id:'j1',name:'Personal',archived:false},{id:'j2',name:'Travel',archived:false},{id:'j3',name:'Reflections',archived:false}];
 const entries=[{id:'e1',jid:'j1',title:'An ordinary evening worth remembering',body:'The sun was setting when I stepped outside. I wanted to keep this quiet moment.',date:'12 Nov 2026',trashed:false},{id:'e2',jid:'j2',title:'The trip I’ll always remember',body:'The hills, the clouds and the silence of a different place.',date:'10 Nov 2026',trashed:false},{id:'e3',jid:'j3',title:'A late night thought',body:'Some things feel clearer when the world is quiet.',date:'9 Nov 2026',trashed:false}];
 const trash=[];
-let route='journals',dark=false,selectedJournal='j1',selectedEntry='e1',nextJ=4,backup='none',dialog=null;
+let route='journals',dark=false,selectedJournal='j1',selectedEntry='e1',nextJ=4,nextE=4,backup='none',dialog=null;
+let writerState={mode:'new',entryId:null,journalId:'j1',title:'',body:'',returnRoute:'journal'};
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const btn=(label,action,variant='')=>'<button class="btn '+variant+'" type="button" data-action="'+action+'">'+label+'</button>';
 const journal=id=>journals.find(j=>j.id===id);
 const count=id=>entries.filter(e=>e.jid===id&&!e.trashed).length;
 const jName=id=>journal(id)?.name||'Deleted journal';
-const activeTab=()=>['journal','create','rename','reader','archives'].includes(route)?'journals':route;
+const activeTab=()=>['journal','create','rename','reader','writer','archives'].includes(route)?'journals':route;
 function nav(){return [['journals','Journals'],['trash','Trash'],['backup','Backup review']].map(([id,label])=>'<button type="button" data-route="'+id+'" class="'+(activeTab()===id?'active':'')+'" '+(activeTab()===id?'aria-current="page"':'')+'>'+label+'</button>').join('')}
 function wrap(content,title){return '<div class="shell"><aside class="side"><div class="brand"><img src="brand/folded-page-'+(dark?'dark':'approved')+'.svg" alt=""><span>Navin Journal<small>Design simulation</small></span></div><nav aria-label="Recovery demo" class="nav">'+nav()+'</nav><a href="stage3-ux-preview.html">Back to full UX preview</a></aside><main id="main" tabindex="-1" class="main"><div class="top"><span class="eyebrow">'+esc(title)+'</span>'+btn(dark?'Light theme':'Dark theme','theme')+'</div><div class="content">'+content+'</div></main><nav aria-label="Mobile recovery demo" class="mobile">'+nav()+'</nav></div>'}
 function journalsPage(){return wrap('<div class="eyebrow">Your personal collection</div><h1>Your journals</h1><p class="lead">Separate books for the different parts of life.</p><div class="actions">'+btn('＋ Create journal','create','primary')+btn('Archived journals','archives')+'</div><div class="grid">'+journals.filter(j=>!j.archived).map(j=>'<article class="card"><div class="book" aria-hidden="true">'+esc(j.name.charAt(0).toUpperCase())+'</div><h3>'+esc(j.name)+'</h3><p>'+count(j.id)+' sample '+(count(j.id)===1?'entry':'entries')+'</p>'+btn('Open journal','open:'+j.id)+'</article>').join('')+'</div>'+(journals.some(j=>!j.archived)?'':'<div class="empty">No active journals</div>')+'<div class="soft"><strong>Demo only:</strong> all changes exist in temporary browser memory. Reloading resets the sample library.</div>','Journal library')}
-function detailPage(){const j=journal(selectedJournal);if(!j)return journalsPage();const es=entries.filter(e=>e.jid===j.id&&!e.trashed);return wrap('<button class="back" data-route="journals">‹ Journals</button><h1>'+esc(j.name)+'</h1><div class="stats"><div class="stat"><strong>'+es.length+'</strong>example entries</div><div class="stat"><strong>'+(j.archived?'Archived':'Active')+'</strong>journal status</div></div><div class="actions">'+btn('Rename','rename')+btn(j.archived?'Unarchive':'Archive','archive')+btn('Move journal to Trash','deleteJournal','danger')+'</div><h2>Entries</h2><div class="list">'+es.map(e=>'<article class="item"><div class="item-text"><span class="eyebrow">'+esc(e.date)+'</span><h3>'+esc(e.title)+'</h3><p>'+esc(e.body)+'</p></div>'+btn('Read','read:'+e.id)+'</article>').join('')+'</div>'+(es.length?'':'<div class="empty">No sample entries in this journal</div>')+'<div class="soft">In the real app, these relationships must survive offline use and complete backup/restore. This is only a UI review.</div>','Journal detail')}
+function detailPage(){const j=journal(selectedJournal);if(!j)return journalsPage();const es=entries.filter(e=>e.jid===j.id&&!e.trashed);return wrap('<button class="back" data-route="journals">‹ Journals</button><h1>'+esc(j.name)+'</h1><div class="stats"><div class="stat"><strong>'+es.length+'</strong>example entries</div><div class="stat"><strong>'+(j.archived?'Archived':'Active')+'</strong>journal status</div></div><div class="actions">'+(j.archived?'':btn('＋ Write a demo entry','newEntry','primary'))+btn('Rename','rename')+btn(j.archived?'Unarchive':'Archive','archive')+btn('Move journal to Trash','deleteJournal','danger')+'</div><h2>Entries</h2><div class="list">'+es.map(e=>'<article class="item"><div class="item-text"><span class="eyebrow">'+esc(e.date)+'</span><h3>'+esc(e.title)+'</h3><p>'+esc(e.body)+'</p></div>'+btn('Read','read:'+e.id)+'</article>').join('')+'</div>'+(es.length?'':'<div class="empty">No sample entries in this journal</div>')+'<div class="soft">In the real app, these relationships must survive offline use and complete backup/restore. This is only a UI review.</div>','Journal detail')}
 function formPage(){const rename=route==='rename';const j=journal(selectedJournal);return wrap('<button class="back" data-route="'+(rename?'journal':'journals')+'">‹ Cancel</button><h1>'+(rename?'Rename journal':'Create a journal')+'</h1><p class="lead">Give this collection a name. Covers and individual privacy settings are specified separately.</p><form id="journalForm" novalidate><div class="field"><label for="journalName">Journal name</label><input id="journalName" maxlength="48" value="'+(rename?esc(j?.name):'')+'" placeholder="For example: My travels" required><span id="nameError" class="error" role="alert" hidden></span></div><div class="actions"><button type="submit" class="btn primary">'+(rename?'Save name':'Create demo journal')+'</button>'+btn('Cancel','cancel')+'</div></form><div class="soft">This is not a permanent journal. Changes are cleared on reload.</div>','Journal form')}
-function readerPage(){const e=entries.find(e=>e.id===selectedEntry&&!e.trashed);if(!e)return detailPage();return wrap('<button class="back" data-route="journal">‹ '+esc(jName(e.jid))+'</button><article class="reader"><span class="eyebrow">'+esc(e.date)+' · '+esc(jName(e.jid))+'</span><h1>'+esc(e.title)+'</h1><div class="body">'+esc(e.body)+'</div><div class="actions">'+btn('Move entry to Trash','deleteEntry','danger')+'</div></article><div class="soft">Fictional entry. The production reader will handle real revisions, media and accessibility settings.</div>','Reader')}
+function readerPage(){const e=entries.find(e=>e.id===selectedEntry&&!e.trashed);if(!e)return detailPage();return wrap('<button class="back" data-route="journal">‹ '+esc(jName(e.jid))+'</button><article class="reader"><span class="eyebrow">'+esc(e.date)+' · '+esc(jName(e.jid))+'</span><h1>'+esc(e.title)+'</h1><div class="body">'+esc(e.body)+'</div><div class="actions">'+btn('Edit sample entry','editEntry')+btn('Move entry to Trash','deleteEntry','danger')+'</div></article><div class="soft">Fictional entry. The production reader will handle real revisions, media and accessibility settings.</div>','Reader')}
+
+function writerPage(){
+ const options=journals.filter(j=>!j.archived || j.id===writerState.journalId);
+ return wrap('<button type="button" class="back" data-action="leaveWriter">‹ Back</button>'+
+ '<div class="writer"><span class="eyebrow">Writing Studio · Demo memory only</span><h1>'+(writerState.mode==='edit'?'Edit a sample entry':'A page of your own')+'</h1>'+
+ '<p class="small">This preview has no autosave, encryption or persistent storage. Use fictional writing only. Keep a sample entry in memory to review reading and recovery.</p>'+
+ '<form id="entryForm" novalidate><label for="entryJournal">Journal</label><select id="entryJournal">'+options.map(j=>'<option value="'+esc(j.id)+'" '+(j.id===writerState.journalId?'selected':'')+'>'+esc(j.name)+'</option>').join('')+'</select>'+
+ '<label for="entryTitle">Title (optional)</label><textarea class="writerTitle" id="entryTitle" rows="2" placeholder="Give this page a title">'+esc(writerState.title)+'</textarea>'+
+ '<label for="entryBody">Your thoughts</label><textarea class="writerBody" id="entryBody" rows="7" placeholder="Begin anywhere…">'+esc(writerState.body)+'</textarea>'+
+ '<p id="entryError" class="error" role="alert" hidden></p><div class="actions"><button type="submit" class="btn primary">'+(writerState.mode==='edit'?'Update in demo memory':'Add to demo journal')+'</button>'+btn('Cancel','leaveWriter')+'</div></form></div>'+
+ '<div class="soft">Your changes exist in temporary page memory only and disappear when this preview reloads. This is not a safe place for real private writing.</div>',
+ 'Writing Studio')
+}
+function beginWriting(mode){
+ if(mode==='edit'){
+  const e=entries.find(e=>e.id===selectedEntry&&!e.trashed);if(!e)return;
+  writerState={mode:'edit',entryId:e.id,journalId:e.jid,title:e.title,body:e.body,returnRoute:'reader'};
+ }else{
+  writerState={mode:'new',entryId:null,journalId:selectedJournal,title:'',body:'',returnRoute:'journal'};
+ }
+ move('writer');
+}
+function leaveWriting(){
+ const e=writerState.mode==='edit'?entries.find(x=>x.id===writerState.entryId):null;
+ const hasChanges=writerState.mode==='edit'
+   ? Boolean(e&&(writerState.title!==e.title||writerState.body!==e.body||writerState.journalId!==e.jid))
+   : Boolean(writerState.title.trim()||writerState.body.trim());
+ if(hasChanges){
+  confirmBox({category:'Unsaved demo changes',title:'Discard this draft?',message:'The draft only exists in temporary browser memory. Leaving will discard this unsaved sample text.',confirmText:'Discard demo draft',action:'discardDraft'});
+  return;
+ }
+ move(writerState.returnRoute);
+}
+
 function archivesPage(){const js=journals.filter(j=>j.archived);return wrap('<button class="back" data-route="journals">‹ Journals</button><h1>Archived journals</h1><p class="lead">Archive is not deletion: entries stay in their journal.</p><div class="list">'+js.map(j=>'<article class="item"><div class="item-text"><h3>'+esc(j.name)+'</h3><p>'+count(j.id)+' example entries</p></div>'+btn('Open','open:'+j.id)+'</article>').join('')+'</div>'+(js.length?'':'<div class="empty">Nothing archived yet</div>'),'Archive')}
 function trashPage(){return wrap('<h1>Trash</h1><p class="lead">Recoverable entries and journals appear here until permanently deleted.</p><div class="stats"><div class="stat"><strong>'+trash.length+'</strong>recoverable items</div><div class="stat"><strong>'+trash.filter(t=>t.kind==='journal').length+'</strong>journals</div><div class="stat"><strong>'+trash.filter(t=>t.kind==='entry').length+'</strong>entries</div></div><div class="list" style="margin:20px 0">'+trash.map(t=>'<article class="item"><div class="item-text"><span class="eyebrow">'+(t.kind==='entry'?'ENTRY':'JOURNAL')+' · Trash demo</span><h3>'+esc(t.name)+'</h3><p>'+(t.kind==='journal'?t.eids.length+' entries contained':'From '+esc(jName(t.jid)))+'</p></div><div class="actions">'+btn('Restore','restore:'+t.id)+btn('Delete permanently','purge:'+t.id,'danger')+'</div></article>').join('')+'</div>'+(trash.length?'':'<div class="empty"><h2>Nothing in Trash</h2><p>Delete a fictional entry or journal to try the recovery journey.</p>'+btn('Open Journals','journals','primary')+'</div>')+'<div class="soft">Deleting here only changes temporary sample data. Real backups may retain copies even after permanent local deletion. Reload resets this entire preview.</div>','Trash')}
 function backupPage(){const summary={journals:journals.length,entries:entries.filter(e=>!e.trashed).length,trash:trash.length};return wrap('<div class="eyebrow">Data recovery</div><h1>Backup and restore</h1><p class="lead">Saved locally, backed up and verified are three different states. No files or keys are handled by this demo.</p><div class="soft" role="status"><strong>Simulated state: '+({none:'Not backed up',invalid:'Verification failed',verified:'Verification passed (example only)'})[backup]+'</strong><p>No actual archive exists and nothing has been restored.</p></div><div class="stats"><div class="stat"><strong>'+summary.journals+'</strong>journals</div><div class="stat"><strong>'+summary.entries+'</strong>entries</div><div class="stat"><strong>'+summary.trash+'</strong>Trash items</div></div><h2>Review possible outcomes</h2><div class="actions">'+btn('Invalid archive','invalid','danger')+btn('Verified archive','verified','primary')+btn('Reset','resetBackup')+'</div>'+(backup==='invalid'?'<div class="card" role="status"><h3>This archive could not be verified</h3><p>Your existing journal must remain unchanged. Do not apply this archive.</p></div>':backup==='verified'?'<div class="card" role="status"><h3>Verified archive (simulation)</h3><p>In production, inspect verified journal and media counts, stage the restore and confirm before applying.</p>'+btn('Review final confirmation','confirmBackup')+'</div>':'')+'<div class="soft">Simulated success is not evidence of a backup engine. A verified restore still needs Stage 4 engineering and fault tests.</div>','Backup review')}
-function render(){document.body.dataset.theme=dark?'dark':'light';root.innerHTML=route==='journals'?journalsPage():route==='journal'?detailPage():route==='reader'?readerPage():route==='create'||route==='rename'?formPage():route==='archives'?archivesPage():route==='trash'?trashPage():backupPage();if(dialog){root.insertAdjacentHTML('beforeend','<div class="modal-back"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><span class="eyebrow">'+esc(dialog.category)+'</span><h2 id="modalTitle">'+esc(dialog.title)+'</h2><p>'+esc(dialog.message)+'</p>'+(dialog.destination?'<div class="field"><label for="restoreDestination">Restore into journal</label><select id="restoreDestination">'+journals.map(j=>'<option value="'+j.id+'">'+esc(j.name)+'</option>').join('')+'</select></div>':'')+'<div class="actions">'+btn('Cancel','cancelModal')+btn(dialog.confirmText,'confirmModal',dialog.destination?'primary':'danger')+'</div></section></div>');root.querySelector(dialog.destination?'#restoreDestination':'[data-action="cancelModal"]')?.focus()}if(route==='create'||route==='rename')root.querySelector('#journalName')?.focus()}
+function render(){document.body.dataset.theme=dark?'dark':'light';root.innerHTML=route==='journals'?journalsPage():route==='journal'?detailPage():route==='reader'?readerPage():route==='writer'?writerPage():route==='create'||route==='rename'?formPage():route==='archives'?archivesPage():route==='trash'?trashPage():backupPage();if(dialog){root.insertAdjacentHTML('beforeend','<div class="modal-back"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><span class="eyebrow">'+esc(dialog.category)+'</span><h2 id="modalTitle">'+esc(dialog.title)+'</h2><p>'+esc(dialog.message)+'</p>'+(dialog.destination?'<div class="field"><label for="restoreDestination">Restore into journal</label><select id="restoreDestination">'+journals.map(j=>'<option value="'+j.id+'">'+esc(j.name)+'</option>').join('')+'</select></div>':'')+'<div class="actions">'+btn('Cancel','cancelModal')+btn(dialog.confirmText,'confirmModal',dialog.destination?'primary':'danger')+'</div></section></div>');root.querySelector(dialog.destination?'#restoreDestination':'[data-action="cancelModal"]')?.focus()}if(route==='create'||route==='rename')root.querySelector('#journalName')?.focus();if(route==='writer')root.querySelector('#entryBody')?.focus()}
 function move(routeName){route=routeName;render();if(typeof window!=='undefined')window.scrollTo?.(0,0)}
 function confirmBox(data){dialog={...data,returnAction:document.activeElement?.dataset?.action||''};render()}
 function dismiss(){const r=dialog?.returnAction;dialog=null;render();if(r)root.querySelector('[data-action="'+r+'"]')?.focus()}
@@ -51,6 +97,7 @@ else if(action==='deleteJournal'){const j=journal(selectedJournal);if(j){const e
 else if(action.startsWith('purge:')){const id=action.slice(6),idx=trash.findIndex(t=>t.id===id);if(idx>=0){const t=trash.splice(idx,1)[0];const ids=t.kind==='entry'?[t.eid]:t.eids;for(const eid of ids){const pos=entries.findIndex(e=>e.id===eid);if(pos>=0)entries.splice(pos,1)}}route='trash'}
 else if(action.startsWith('restoreOrphan:')){const id=action.slice('restoreOrphan:'.length),t=trash.find(x=>x.id===id),e=t&&entries.find(x=>x.id===t.eid);if(e&&journal(targetJournal)){e.jid=targetJournal;e.trashed=false;trash.splice(trash.indexOf(t),1)}route='trash'}
 else if(action==='noDestination'){route='trash'}
+else if(action==='discardDraft'){route=writerState.returnRoute}
 else if(action==='confirmBackup'){route='backup'}
 render()}
 root.addEventListener('click',event=>{const b=event.target.closest('button');if(!b)return;const act=b.dataset.action||'';
@@ -64,6 +111,9 @@ if(act==='journals'){move('journals');return}
 if(act.startsWith('open:')){selectedJournal=act.slice(5);move('journal');return}
 if(act.startsWith('read:')){selectedEntry=act.slice(5);move('reader');return}
 if(act==='rename'){move('rename');return}
+if(act==='newEntry'){beginWriting('new');return}
+if(act==='editEntry'){beginWriting('edit');return}
+if(act==='leaveWriter'){leaveWriting();return}
 if(act==='archive'){const j=journal(selectedJournal);if(j){j.archived=!j.archived;move('journal')}return}
 if(act==='deleteEntry'){const e=entries.find(x=>x.id===selectedEntry);confirmBox({category:'Move to Trash',title:'Delete this entry?',message:'“'+e.title+'” will move to Trash and can be restored.',confirmText:'Move to Trash',action:'deleteEntry'});return}
 if(act==='deleteJournal'){const j=journal(selectedJournal);const n=count(j.id);confirmBox({category:'Move to Trash',title:'Delete '+j.name+'?',message:'This will move the journal and '+n+' '+(n===1?'entry':'entries')+' to Trash. They remain recoverable.',confirmText:'Move journal to Trash',action:'deleteJournal'});return}
@@ -76,7 +126,26 @@ if(act==='verified'){backup='verified';render();return}
 if(act==='resetBackup'){backup='none';render();return}
 if(act==='confirmBackup'){confirmBox({category:'Restore confirmation',title:'Apply a verified archive?',message:'In production, restoration must be staged and checked before applying. This simulation changes nothing.',confirmText:'Acknowledge simulation',action:'confirmBackup'})}
 });
-root.addEventListener('submit',event=>{if(event.target.id!=='journalForm')return;event.preventDefault();
+root.addEventListener('change',event=>{if(event.target.id==='entryJournal')writerState.journalId=event.target.value});
+root.addEventListener('input',event=>{if(event.target.id==='entryTitle')writerState.title=event.target.value;if(event.target.id==='entryBody')writerState.body=event.target.value});
+root.addEventListener('submit',event=>{
+ if(event.target.id==='entryForm'){
+  event.preventDefault();
+  const t=writerState.title.trim(),body=writerState.body.trim(),dest=journal(writerState.journalId);
+  const error=root.querySelector('#entryError');
+  if(!dest){error.textContent='Choose an existing journal.';error.hidden=false;return}
+  if(!t&&!body){error.textContent='Write a title or a thought before adding an example entry.';error.hidden=false;return}
+  if(writerState.mode==='edit'){
+   const e=entries.find(x=>x.id===writerState.entryId&&!x.trashed);
+   if(!e){error.textContent='This sample entry is no longer available.';error.hidden=false;return}
+   e.title=t||'Untitled entry';e.body=body;e.jid=dest.id;selectedEntry=e.id;selectedJournal=dest.id;
+  }else{
+   const e={id:'e'+nextE++,jid:dest.id,title:t||'Untitled entry',body,date:'13 Nov 2026 · demo date',trashed:false};
+   entries.push(e);selectedEntry=e.id;selectedJournal=dest.id;
+  }
+  move('reader');return;
+ }
+ if(event.target.id!=='journalForm')return;event.preventDefault();
 const name=root.querySelector('#journalName').value.trim(),error=root.querySelector('#nameError');
 if(!name){error.hidden=false;error.textContent='Enter a journal name.';return}
 if(name.length>48){error.hidden=false;error.textContent='Name must be 48 characters or fewer.';return}
