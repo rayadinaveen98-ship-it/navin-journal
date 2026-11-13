@@ -37,6 +37,7 @@ These are priorities, **not delivered functionality**. Product and technical dec
 - [Full screen specification](docs/SCREEN_SPECIFICATION_V1.md)
 - [Interaction contracts and critical states](docs/INTERACTION_CONTRACTS_V1.md)
 - [UX validation matrix](docs/UX_VALIDATION_MATRIX.md)
+- [Physical-device UX, Telugu IME and screen-reader test guide](docs/DEVICE_UX_TEST_RUNBOOK.md)
 - [Stage 3 Chromium QA report (13 Nov 2026)](docs/QA_STAGE3_2026-11-13.md)
 - [Stage 3 extended 200% type/Telugu UX QA](docs/QA_STAGE3_EXTENDED_2026-11-13.md)
 - [Stage 3 navigable design preview](prototype/stage3-ux-preview.html) (sample content; no real storage or security)
