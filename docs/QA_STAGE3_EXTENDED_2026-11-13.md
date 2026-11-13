@@ -64,3 +64,7 @@ npm run check:a11y
 ```
 
 The [workflow](../.github/workflows/stage3-ux.yml) runs the same suites on GitHub Actions and uploads screenshots/audit output for review.
+
+## Navigation and focus addendum — 13 November 2026
+
+[GitHub Actions 43392361821](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43392361821) passed **20 mocked-DOM + 90 core Chromium + 84 extended Chromium + 33 keyboard/focus checks**, with the sampled automated HTML accessibility audit passing. This pass introduces skip-to-content navigation, explicit main landmarks, `aria-current` on navigation, visible-button focus restoration after a route render, keyboard shortcut isolation while a modal is open, improved minimum control sizes and reduced-motion CSS. These are browser checks, not actual native screen-reader validation. See [device runbook](DEVICE_UX_TEST_RUNBOOK.md).
