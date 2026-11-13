@@ -40,6 +40,12 @@ jobs:
       - name: Brand identity visual browser checks
         working-directory: prototype
         run: npm run check:brand
+      - name: Approved mark in UI and adaptive mask browser review
+        working-directory: prototype
+        run: npm run check:approved-brand
+      - name: Android staged icon XML and safe zone source checks
+        working-directory: prototype
+        run: python3 tests/icon_xml.py
       - name: Automated HTML accessibility scan
         working-directory: prototype
         run: npm run check:a11y
