@@ -19,6 +19,7 @@
 | NJ-014 | Light/dark semantic design tokens, type and spacing | DRAFTED 2026-11-13 | Proposed values contrast-checked in principle; actual component/device review pending |
 
 | NJ-015 | F1 Folded Page approved as primary visual mark | APPROVED 2026-11-13 | User selected “01”; retain A + C visual language and B dark theme. Final consumer name, legal availability and production launcher QA remain open |
+| NJ-016 | Connected Journal Management/Trash/Recovery UX | DESIGN-VALIDATED 2026-11-13 | Simulated create/rename/archive/delete/restore, explicit orphan destination, fake backup states; 80 Chromium checks passed; no real storage or recovery engine |
 ## Pending high-impact decisions
 
 - Final consumer brand name, trademark/availability review and production launcher/splash approval; Folded Page direction approved.
