@@ -1,0 +1,17 @@
+name: navin_journal_bridge_probe
+description: Isolated Flutter-to-AndroidKeyStore bridge proof. Fictional data only.
+publish_to: none
+version: 0.0.1
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  navin_journal_key_lifecycle_spike:
+    path: ../key_lifecycle
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+flutter:
+  uses-material-design: true
