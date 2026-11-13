@@ -1,6 +1,6 @@
 # Navin Journal
 
-**Status:** Stage 3 physical-device/user signoff is open. Stage 4 A2.4 Flutter→Android Keystore→encrypted SQLite proof passed 14 Flutter contract and 2 Android emulator integration tests. A3.1–A3.4 state-machine, encrypted SQLite transaction, off-main-isolate and OS-kill tests passed **44 Linux tests (including three real SIGKILL recovery checks)**. No production diary APK, device-verified security/backup, or Android lifecycle autosave exists.  
+**Status:** Stage 3 physical-device/user signoff is open. Stage 4 A2.4 Flutter→Android Keystore→encrypted SQLite proof passed 14 Flutter contract and 2 Android emulator integration tests. A3.1–A3.4 state-machine, encrypted SQLite transaction, off-main-isolate and OS-kill tests passed **44 Linux tests (including three real SIGKILL recovery checks)**. The A4.1 user-held recovery-key archive proof passed 16 Linux tests; no production diary APK, restored backup, physical-device security validation, or Android force-stop signoff exists.  
 **Project name:** Navin Journal is the internal working title, not the approved consumer brand.  
 **Repository:** `rayadinaveen98-ship-it/navin-journal`
 
@@ -58,6 +58,7 @@ These are priorities, **not delivered functionality**. Product and technical dec
 - [A3.3 Flutter diagnostic editor and acceptance report](docs/STAGE4_A3_3_ANDROID_EDITOR.md)
 - [A3.4 Linux crash/kill recovery evidence](docs/STAGE4_A3_4_CRASH_RECOVERY.md) (three OS SIGKILL checks; Android force-stop remains open)
 - [A3.4 Android ADB force-stop/relaunch test harness](docs/STAGE4_A3_4_ANDROID_FORCE_STOP.md) (dedicated debug-only emulator fixture; runtime verification open)
+- [A4.1 independently recoverable encrypted archive experiment](spikes/recovery_archive/README.md) (**16/16 Linux tests passed**, verify-only; no vault restore)
 - [Stage 3 brand comparison preview](prototype/brand-study.html) (option 01 Folded Page selected)
 - [Adaptive launcher-mask visual review](prototype/brand/adaptive-preview.html) (design-only)
 - [Prototype usage and limits](prototype/README.md)
