@@ -29,6 +29,7 @@
 | NJ-023 | A3 autosave-state coordinator plus encrypted transaction experiment | LINUX TESTED 2026-11-13 | 33/33 tests passed; separates pending vs acknowledged writes, prevents stale overwrite, handles lost ACK, transaction rollback and SQLite reopen; Android lifecycle and unified product vault remain pending |
 | NJ-024 | Stage 4 A3.3 one-owner encrypted SQLite isolate and diagnostic Flutter editor | LINUX STORAGE TESTED 2026-11-13 | 41/41 Dart tests pass; Android debug writer/lifecycle checks pending CI; not physical-device crash-safe autosave, user diary or final visual design |
 | NJ-025 | Stage 4 A3.4 encrypted WAL recovery after real Linux SIGKILL | LINUX PROCESS-KILL TESTED 2026-11-13 | 44/44 total A3 checks passed including midtransaction rollback, post-COMMIT lost ACK and post-ACK recovery; Android ADB force-stop, restart and physical phone remain OPEN |
+| NJ-026 | A4.1 independent random recovery-key authenticated portable archive | LINUX TESTED 2026-11-13 | 16/16 Dart tests passed for AES-256-GCM verify-only fictional export, tamper, schema and path limits. NOT a password KDF, production backup, clean-device restore or release-security claim |
 ## Pending high-impact decisions
 
 - Final consumer brand name, trademark/availability review and production launcher/splash approval; Folded Page direction approved.
