@@ -4,12 +4,18 @@
 
 ## Implemented sources
 
-- [Flutter diagnostic Writing Studio](../preview_app/lib/apk02_probe_main.dart) reuses approved Folded Page primitives. Its fields are read-only scripted fictional Telugu/English/emoji samples.
+- [Connected Flutter diagnostic Writing Studio](../preview_app/lib/apk02_connected_main.dart) and [reusable screen](../preview_app/lib/connected_writing_studio.dart) use approved Folded Page primitives and the live encrypted editor worker. All test entry fields are read-only scripted fictional Telugu/English/emoji samples. The earlier `apk02_probe_main.dart` remains a previous proof entrypoint, but is not the active CI build.
 - FictionalJournalBridgeService uses the [existing A2.4 Flutter KeyStore bridge](../spikes/flutter_bridge_probe/lib/android_key_bridge.dart) and [native AndroidKeyStore implementation](../spikes/flutter_bridge_probe/native/MainActivity.kt). No hard-coded database key or plaintext SQLite fallback.
-- All SQLite3MultipleCiphers creation, journal/entry writes, version/revision reads and reopen checks run on separate Dart isolates through [journal_core](../packages/journal_core/lib/journal_vault.dart), off the render isolate.
+- The [encrypted editor worker](../packages/journal_editor/lib/journal_editor_isolate.dart) uses [journal_core](../packages/journal_core/lib/journal_vault.dart) and SQLite3MultipleCiphers off the Flutter render isolate. The 23 encrypted worker contract tests, 13 deterministic Flutter tests, and 4 full encrypted Library/Reader/Writer widget tests have passed on Linux; none substitutes for the Android Keystore test.
 - Three scripted Android app launches: create and verify fictional v1; reopen and commit fictional v2 with historical revision; reopen v2 and verify exact history after real process termination.
 - [ADB emulator script](../preview_app/ci/apk02_android_roundtrip.sh) performs two actual Android force-stops. Only a disposable debug app is reset before the very first phase.
-- [CI workflow](../.github/workflows/apk02-android-vertical.yml) runs strict Flutter analysis, six UI tests, Android APK compilation and the API-35 emulator. It uploads the diagnostic APK only when all stages pass.
+- [CI workflow](../.github/workflows/apk02-android-vertical.yml) runs strict Flutter analysis, 13 deterministic UI tests, 23 encrypted editor-worker integration tests, Android debug APK compilation and a **currently rerunning API-34** emulator crash-recovery gate. The experimental APK is uploaded only when all stages pass.
+
+## Emulator-host failure and remediation (13 November 2026)
+
+- [Failed run 43463736400](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43463736400) passed all its Flutter/code gates and **compiled its Android debug APK**, but the third-party Android emulator runner failed while configuring the host image: `adb shell input keyevent 82` returned **broken pipe / exit 224** shortly after `sys.boot_completed=1`. The app never reached the journal-recovery script. This is **not evidence of success or failure of journal process recovery**.
+- To isolate the host/boot issue, the next emulator run uses **API 34** with the host animation toggle disabled, an explicit emulator boot timeout, and constrained 2-core/3072-MB emulator resources. [New run 43478692397](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43478692397) is **in validation**.
+- Continue to block any Android recovery success claim until `ACK_V1`, `ACK_V2` and `RECOVERED_V2` are actually emitted from three Android app launches, including two verified process force-stops. Mere `sys.boot_completed`, APK compilation, or a Linux DB reopen is insufficient.
 
 ## Open validation gates
 
