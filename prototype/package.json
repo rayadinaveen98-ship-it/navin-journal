@@ -8,7 +8,8 @@
     "check:browser": "node tests/browser.mjs",
     "check:a11y": "node tests/a11y.mjs",
     "check:extended": "node tests/extended.mjs",
-    "check:keyboard": "node tests/keyboard.mjs"
+    "check:keyboard": "node tests/keyboard.mjs",
+    "check:brand": "node tests/brand.mjs"
   },
   "devDependencies": {
     "playwright": "1.56.1",
