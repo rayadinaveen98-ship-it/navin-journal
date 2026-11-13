@@ -79,6 +79,7 @@ class JournalPreviewApp extends StatefulWidget {
 }
 
 class _JournalPreviewAppState extends State<JournalPreviewApp> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
   PreviewView _view = PreviewView.welcome;
   PreviewView _rootTab = PreviewView.today;
   MemoryMode _memoryMode = MemoryMode.timeline;
@@ -138,7 +139,7 @@ class _JournalPreviewAppState extends State<JournalPreviewApp> {
     if (_view == PreviewView.writer &&
         (_draftTitle.text.trim().isNotEmpty || _draftBody.text.trim().isNotEmpty)) {
       final discard = await showDialog<bool>(
-        context: context,
+        context: _navigatorKey.currentContext ?? context,
         builder: (ctx) => AlertDialog(
           title: const Text('Leave this preview page?'),
           content: const Text(
@@ -171,7 +172,7 @@ class _JournalPreviewAppState extends State<JournalPreviewApp> {
 
   void _explain(String title, String explanation) {
     showDialog<void>(
-      context: context,
+      context: _navigatorKey.currentContext ?? context,
       builder: (ctx) => AlertDialog(
         title: Text(title),
         content: Text(explanation),
@@ -189,6 +190,7 @@ class _JournalPreviewAppState extends State<JournalPreviewApp> {
     final brightness = _dark ? Brightness.dark : Brightness.light;
     return MaterialApp(
       title: 'Navin Journal · Design preview',
+      navigatorKey: _navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -710,7 +712,7 @@ class _JournalPreviewAppState extends State<JournalPreviewApp> {
             crossAxisCount: columns,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            mainAxisExtent: 227,
+            mainAxisExtent: 258,
           ),
           itemBuilder: (context, i) => InkWell(
             key: ValueKey('journal-' + i.toString()),
@@ -871,7 +873,7 @@ class _JournalPreviewAppState extends State<JournalPreviewApp> {
         itemCount: 4,
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: columns, mainAxisSpacing: 12,
-          crossAxisSpacing: 12, mainAxisExtent: 232,
+          crossAxisSpacing: 12, mainAxisExtent: 256,
         ),
         itemBuilder: (context, index) => InkWell(
           key: ValueKey('gallery-' + index.toString()),
