@@ -35,6 +35,10 @@ This is materially different from exception fault-injection in the same process.
 - The database key is a temporary test secret. The process kill test passes it through test-only stdin; there is **no** secure portable recovery mechanism.
 - No production Flutter writing screen, app-data location contract, encrypted attachments, native icon or finished APK exists. The A3.3 Android widget/lifecycle emulator suite is a separate gate.
 
+## Android ADB harness progress
+
+A separate [A3.4 Android force-stop test harness](STAGE4_A3_4_ANDROID_FORCE_STOP.md) and [CI workflow](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/workflows/android-force-stop-recovery.yml) have been implemented. They must reopen the **same app-private encrypted DB and AndroidKeyStore-wrapped DEK across two actual ADB force-stops**; the Android result remains unverified until CI passes. This does not supersede Linux SIGKILL evidence or physical-device validation.
+
 ## Next acceptance gates
 
 1. Resolve [A3.3 Android emulator installation/lifecycle CI](STAGE4_A3_3_ANDROID_EDITOR.md); a previous run [43422522118](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43422522118) compiled the debug APK but **failed to install** because the emulator package manager was unavailable. The CI now waits for Android package-manager readiness and runs integration suites sequentially.
