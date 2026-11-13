@@ -42,3 +42,7 @@ Run `cd prototype && npm install && npx playwright install chromium && npm run c
 Run `node prototype/tests/smoke.mjs` from the repository root (requires Node.js). The 20 checks simulate navigation and read the rendered HTML strings with a mocked DOM. They do **not** verify actual browser rendering, keyboard input, screen reader operation, saving, security, accessibility, or network behavior.
 
 **Finding (2026-11-13):** a JavaScript syntax error in the original Discover placeholder prevented the prototype script from parsing. Fixed; a syntax assertion and interaction smoke checks were then performed before later refinements.
+
+## Accessibility smoke audit
+
+Use `npm run check:a11y` after installing dependencies. This injects axe-core into seven simulated screens and saves `artifacts/accessibility-audit.json`. Automated checks found no violations in the sampled states on 2026-11-13. This is **not** a native accessibility certification; human screen-reader and enlarged-text reviews remain necessary.
