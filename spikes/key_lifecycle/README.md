@@ -6,7 +6,7 @@
 
 - [Linux key-envelope and encrypted SQLite tests](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43410218147): **14/14 Dart tests passed**, plus static analysis.
 - [Android API-35 Kotlin compilation](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43410753987): **successful `compileDebugKotlin`**, no device or emulator execution.
-- [Android API-35 emulator runtime instrumentation](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43412815431): **12/12 tests passed** with the actual AndroidKeyStore framework provider. See [A2.3 QA matrix](../../docs/STAGE4_A2_3_ANDROID_RUNTIME.md).
+- [Android API-35 emulator runtime instrumentation](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413956404): **12/12 tests passed** with the actual AndroidKeyStore framework provider. See [A2.3 QA matrix](../../docs/STAGE4_A2_3_ANDROID_RUNTIME.md).
 - [A2 encrypted-file baseline](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43408840728): **13/13 checks passed** for file encryption and wrong-key rejection.
 - [A1 transactional SQLite baseline](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43405223151): **18/18 tests passed**, not a native app.
 
