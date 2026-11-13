@@ -33,30 +33,39 @@ The reference database contains **plaintext entries and revisions**. SQLite WAL,
 
 A1 does **not** meet requirements R-002 (force-stop midtyping), R-009 (full disk), R-010/011 (backup/restore), R-012 (app unlock), R-018 (new device restore), or R-020 (full readable export).
 
-## A2 — Encrypted vault and key lifecycle [NEXT: NOT IMPLEMENTED]
+## A2 — Encrypted SQLite file feasibility [LINUX TESTS PASS; KEY LIFECYCLE PENDING]
 
-Current research candidates, **not approved dependencies**:
+**Verified CI:** [13/13 encrypted-storage tests passed on 13 November 2026](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43408840728), including Dart static analysis. **This does not complete A2's production-security gate.**
 
-- Dart `sqlite3` 3.x native SQLCipher/SQLite3MultipleCiphers hook integration. The older `sqlcipher_flutter_libs` package is obsolete on 3.x and **must not** be used as the implementation plan.
-- `drift` 2.x for future typed queries, schema migration and background execution. Do not add before measuring this simpler reference implementation.
-- Platform-backed key protection, e.g. Android Keystore and Apple Keychain through reviewed Flutter plugins. A device keystore unlock is not a portable recovery key.
+Source: [isolated sqlite3mc test package](../spikes/encrypted_store/README.md).
 
-Required proof before handling real content:
+The Dart `sqlite3: 3.9.1` build hook selects `source: sqlite3mc` (SQLite3MultipleCiphers). The demonstration uses a freshly generated **32-byte random test key**, selects the `chacha20` cipher, supplies `PRAGMA hexkey`, rejects absent cipher support, and verifies an actual schema read before trusting the key. The application marker is checked **before enabling WAL** on existing files.
 
-1. Construct an encrypted database **from first open** with an encryption-capable native library; use fresh high-entropy vault key, never a literal key committed to source.
-2. Attempt to open the encrypted file with ordinary SQLite. It must fail to decode table schema and actual journal text must not be discoverable in raw database/WAL/temporary files.
-3. Validate that correct key permits access, wrong/lost key fails without resetting the vault, and key lifecycle across lock, app restart and device reboot is explained.
-4. Test title/body and deleted revisions, indexes/search data, media caches, thumbnails, attachments and any backup copy for plaintext leakage.
-5. Simulate Android reinstall, storage migration, biometric changes and device replacement. Do not silently delete data or reset security metadata on key unwrap errors.
-6. Design an independent, user-controlled **recovery process** for exported encrypted archives. Biometric unlock alone cannot restore an archive on a new device.
-7. Have the encryption and key recovery design reviewed; no "secure" marketing claims until runtime evidence exists on supported devices.
+Passing tests cover:
 
-Related sources (must be reverified before implementation):
-- https://pub.dev/packages/sqlite3
-- https://pub.dev/packages/sqlcipher_flutter_libs (obsolete with sqlite3 3.x)
-- https://pub.dev/packages/drift
-- https://pub.dev/packages/flutter_secure_storage
-- https://www.sqlite.org/pragma.html
+1. Encrypted database created, reopened with the correct key, and checked for SQLite integrity.
+2. Wrong key and missing key cannot read the encrypted schema; independently running ordinary Python SQLite also fails.
+3. Unicode/Telugu/English/emoji survives encrypted reopen.
+4. Test-only plaintext markers do not appear in raw database or WAL/SHM content scanned during active revision writes.
+5. Encrypted revision history retains prior content and injected mid-transaction failures roll back.
+6. Unexpected new schema is rejected without reset; cannot overwrite an existing vault or silently create a missing/empty one.
+7. **Pre-existing plaintext database rejected without overwriting or erasing it.**
+8. Destroyed key material fails early; test key `toString` is redacted.
+
+**Limitations:** The test key is held in Dart memory and a temporary SQL string; clearing the input bytes does not guarantee all native/runtime copies are wiped. No device keychain, recovery code, safe key rotation, encryption of attachments/thumbnails/search indexes, actual app lock, Android/iOS build, accessibility review, or independent security assessment is provided.
+
+**Still blocking A2 production approval:**
+
+- Reviewed Android Keystore / iOS Keychain wrapping of the randomly generated vault key; biometric change, reboot, reinstall and device loss.
+- User-controlled encrypted backup recovery **independent** of the device-only key.
+- No plaintext data in logs, OS snapshot previews, attachments, search indexes, temp files or exports; targeted sentinel scans are not a full audit.
+- Key rotation fault injection and recovery without silent reinitialization.
+- Native dependency/license review and real device validation.
+
+Upstream references:
+- https://pub.dev/documentation/sqlite3/latest/topics/hook-topic.html
+- https://utelle.github.io/SQLite3MultipleCiphers/docs/configuration/config_sql_pragmas/
+- https://utelle.github.io/SQLite3MultipleCiphers/docs/faq/faq_overview/
 
 ## A3 — Autosave coordinator [NOT STARTED]
 
