@@ -1,0 +1,113 @@
+name: Navin Journal Visual Preview APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'preview_app/**'
+      - 'prototype/brand/android/**'
+      - '.github/workflows/journal-preview-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: navin-journal-visual-preview-main
+  cancel-in-progress: true
+
+jobs:
+  build-preview-apk:
+    name: Flutter UI smoke and Android debug APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Generate disposable Android harness from approved preview source
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET="$GITHUB_WORKSPACE/preview_app/_generated"
+          flutter create --org com.navinjournal --project-name navin_journal_preview \
+            --platforms=android "$TARGET"
+
+          cp "$GITHUB_WORKSPACE/preview_app/lib/"*.dart "$TARGET/lib/"
+          rm -f "$TARGET/test/widget_test.dart"
+          cp "$GITHUB_WORKSPACE/preview_app/test/"*.dart "$TARGET/test/"
+
+          RES="$TARGET/android/app/src/main/res"
+          mkdir -p "$RES/drawable" "$RES/mipmap-anydpi-v26"
+          BRAND="$GITHUB_WORKSPACE/prototype/brand/android"
+          cp "$BRAND/drawable/navin_journal_launcher_foreground.xml" "$RES/drawable/"
+          cp "$BRAND/drawable/navin_journal_launcher_bg.xml" "$RES/drawable/"
+          cp "$BRAND/drawable/navin_journal_launcher_monochrome.xml" "$RES/drawable/"
+          cp "$BRAND/mipmap-anydpi-v26/navin_journal_ic_launcher.xml" "$RES/mipmap-anydpi-v26/ic_launcher.xml"
+
+          # Original staged resource points to the same drawable paths, with
+          # only the launcher definition renamed to the Flutter harness target.
+          python3 - "$TARGET/android/app/src/main/AndroidManifest.xml" <<'PY'
+          import sys
+          from pathlib import Path
+          path = Path(sys.argv[1])
+          xml = path.read_text(encoding="utf-8")
+          xml = xml.replace('android:label="navin_journal_preview"',
+                            'android:label="Navin Journal Preview"')
+          path.write_text(xml, encoding="utf-8")
+          PY
+          echo "NJ_PREVIEW_ROOT=$TARGET" >> "$GITHUB_ENV"
+
+      - name: Resolve dependencies and format disposable source
+        shell: bash
+        run: |
+          cd "$NJ_PREVIEW_ROOT"
+          flutter pub get
+          dart format lib test
+
+      - name: Analyze all Flutter preview source
+        shell: bash
+        run: |
+          cd "$NJ_PREVIEW_ROOT"
+          flutter analyze --no-pub
+
+      - name: Phone and tablet navigation widget tests
+        shell: bash
+        run: |
+          cd "$NJ_PREVIEW_ROOT"
+          flutter test --reporter expanded
+
+      - name: Build installable Android debug preview APK
+        shell: bash
+        run: |
+          cd "$NJ_PREVIEW_ROOT"
+          flutter build apk --debug
+          test -s build/app/outputs/flutter-apk/app-debug.apk
+
+      - name: Display build checksum and size
+        shell: bash
+        run: |
+          cd "$NJ_PREVIEW_ROOT"
+          sha256sum build/app/outputs/flutter-apk/app-debug.apk
+          ls -lh build/app/outputs/flutter-apk/app-debug.apk
+
+      - name: Upload APK for phone and tablet visual review
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: navin-journal-apk-01-VISUAL-DEMO-NO-SAVING
+          path: preview_app/_generated/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
