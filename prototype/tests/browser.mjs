@@ -18,6 +18,7 @@ function verify(condition,label){assert.ok(condition,label);checks++;console.log
 try{
  for(const [name,width,height] of sizes){
   const page=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
+  page.setDefaultTimeout(7000);
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(url);
   verify(await page.locator('[data-action="start"]').count()===1,name+' welcome');
@@ -29,7 +30,7 @@ try{
   await page.screenshot({path:path.join(out,name+'-today.png'),fullPage:true});
   let overflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
   verify(overflow<=2,name+' Today horizontal overflow '+overflow);
-  await page.locator('[data-action="write"]').first().click();
+  await page.locator('[data-action="write"]:visible').first().click();
   const area=page.locator('#draftBody');
   verify(await area.isVisible(),name+' Writing Studio visible');
   verify(await area.evaluate(el=>document.activeElement===el),name+' editor focus');
@@ -39,12 +40,12 @@ try{
   overflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
   verify(overflow<=2,name+' editor horizontal overflow '+overflow);
   await page.locator('[data-action="closeEditor"]').first().click();
-  await page.locator('[data-view="journals"]').last().click();
+  await page.locator('[data-view="journals"]:visible').last().click();
   await page.locator('[data-journal="Travel"]').click();
-  await page.locator('[data-action="write"]').first().click();
+  await page.locator('[data-action="write"]:visible').first().click();
   verify((await page.locator('.editor-head').textContent()).includes('Travel'),name+' journal context');
   await page.locator('[data-action="closeEditor"]').first().click();
-  await page.locator('[data-view="memories"]').last().click();
+  await page.locator('[data-view="memories"]:visible').last().click();
   await page.locator('[data-memory="gallery"]').click();
   await page.screenshot({path:path.join(out,name+'-memories.png'),fullPage:true});
   await page.locator('[data-entry="1"]').first().click();
@@ -53,7 +54,7 @@ try{
   verify((await page.locator('.reader-siblings').isVisible())===(width>=900),name+' reader layout');
   await page.locator('[data-action="goBack"]').first().click();
   verify(await page.locator('.memory-grid').count()===1,name+' Back from Reader');
-  await page.locator('[data-view="discover"]').last().click();
+  await page.locator('[data-view="discover"]:visible').last().click();
   await page.locator('#journalSearch').fill('trip');
   verify(await page.locator('#searchResults .entry').count()===1,name+' search matches');
   await page.locator('#journalSearch').fill('nothingmatcheswhatevers');
@@ -61,7 +62,7 @@ try{
   await page.locator('[data-action="theme"]').first().click();
   verify(await page.locator('body').getAttribute('data-theme')==='dark',name+' dark theme');
   await page.screenshot({path:path.join(out,name+'-dark.png'),fullPage:true});
-  await page.locator('[data-view="settings"]').last().click();
+  await page.locator('[data-view="settings"]:visible').last().click();
   await page.locator('[data-action="backup"]').click();
   await page.locator('[data-backup-state="failed"]').click();
   verify((await page.locator('main').textContent()).includes('Verification failed'),name+' backup failure review');
