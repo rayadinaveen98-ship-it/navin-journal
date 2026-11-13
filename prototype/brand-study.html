@@ -82,7 +82,7 @@ let selected='folded';
 function paint(){
  const src=document.querySelector('.candidate[data-id="'+selected+'"] .mark').outerHTML;
  for(const area of previews)area.innerHTML=src;
- for(const card of document.querySelectorAll('.candidate'))card.dataset.selected=String(card.dataset.id===selected);
+ for(const card of document.querySelectorAll('.candidate')){card.dataset.selected=String(card.dataset.id===selected);const sizes=card.querySelector('.sample-size');sizes.querySelectorAll('svg').forEach(e=>e.remove());const reference=card.querySelector('.mark');const tiny=reference.cloneNode(true);tiny.removeAttribute('role');tiny.setAttribute('aria-hidden','true');tiny.classList.add('mini');const normal=reference.cloneNode(true);normal.removeAttribute('role');normal.setAttribute('aria-hidden','true');normal.classList.add('big');sizes.append(tiny,normal)}
  for(const btn of choices)btn.setAttribute('aria-pressed',String(btn.dataset.pick===selected));
 }
 for(const button of choices)button.addEventListener('click',()=>{selected=button.dataset.pick;paint()});
