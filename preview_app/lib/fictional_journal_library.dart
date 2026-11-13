@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings
+// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings, curly_braces_in_flow_control_structures
 /// APK02: fictional-only Library → Reader → Writing Studio integration.
 ///
 /// Reads actual encrypted journal rows through JournalEditorWorker. Scripted
@@ -7,7 +7,6 @@ library;
 
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:navin_journal_autosave_spike/draft_autosave.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
 import 'connected_writing_studio.dart';
 import 'visuals.dart';
