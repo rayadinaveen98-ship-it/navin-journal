@@ -18,8 +18,9 @@ Product promise, P0/P1/P2 boundary, proposed navigation, data-trust contract and
 - [x] Draft semantic color tokens, typography, grids, motion, iconography and responsive guidance.
 - [ ] Approve consumer-facing brand name and final logo.
 - [x] Specify 18 screens including critical empty/loading/error/permission states and all core journeys.
-- [x] Author a standalone navigable HTML Stage 3 prototype with sample flows, light/dark mode and responsive layout (not browser-validated; no persistence).
-- [ ] Validate connected phone/tablet screenshots against design tokens and refine visual alignment.
+- [x] Author a standalone navigable HTML Stage 3 prototype: first-journal setup, sample writing/reading, journal-aware context, Memories/Search, simulated app-lock and backup/error states, light/dark and responsive tablet reader. Not a working diary.
+- [x] Fix initial JavaScript syntax bug and pass 20 mocked-DOM navigation/safety-state smoke checks.
+- [ ] Run actual Chromium/device screenshot and accessibility review across phone/tablet sizes, including keyboard overlap, scroll, input, theme contrast and focus.
 - [ ] Validate phone and tablet mockups with representative tasks.
 - [x] Record approved hybrid and draft design tokens in GitHub.
 - [ ] User-test first-write, discovery, Trash, restore, theme parity and accessibility; resolve blockers.
