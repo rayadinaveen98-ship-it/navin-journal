@@ -1,0 +1,8 @@
+.dart_tool/
+.flutter-plugins*
+.packages
+.pub/
+build/
+android/.gradle/
+*.apk
+*.aab
