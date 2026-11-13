@@ -110,18 +110,18 @@ class EncryptedJournalSpike {
         throw VaultUnlockFailed();
       }
 
-      // These are applied *after* successful key activation and schema read.
+      // On existing files, validate our encrypted identity and schema before
+      // changing journal mode or any settings that could write to the file.
+      final store = EncryptedJournalSpike._(db, failureHook);
+      if (!create) store._verifyAppMarker();
+
+      // Only after verified key + identity, enable transactional protections.
       db.execute('PRAGMA foreign_keys = ON');
       db.execute('PRAGMA busy_timeout = 5000');
       db.execute('PRAGMA journal_mode = WAL');
       db.execute('PRAGMA synchronous = FULL');
 
-      final store = EncryptedJournalSpike._(db, failureHook);
-      if (create) {
-        store._initialize();
-      } else {
-        store._verifyAppMarker();
-      }
+      if (create) store._initialize();
       return store;
     } catch (_) {
       db?.close();
