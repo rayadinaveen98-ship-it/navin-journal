@@ -49,7 +49,7 @@ Score each 1–5 after observation; collect verbatim comments:
 | 18-screen full UX specification | Drafted; stakeholder and user review pending |
 | Journey contracts and failure states | Drafted; engineering feasibility pending |
 | Connected screen mockup study | Concept generated; not pixel-verified |
-| Interactive flow prototype | HTML review prototype refined; 20 mocked-DOM checks passed; browser/device testing not yet done |
+| Interactive flow prototype | 20 mocked-DOM + 90 real-Chromium checks passed across four viewport sizes; physical-device testing outstanding |
 | Actual user validation | Not started |
 | Brand/consumer name and logo approval | Not started |
 | Engineering spike for text editor and encryption | Not started (Stage 4) |
@@ -73,3 +73,7 @@ No Stage 3 completion claim without the checks above.
 - Added first-journal setup flow and backup/app-lock design-only screens with verification failure copy.
 - Ran 20 mocked-DOM state/handler smoke checks on the committed prototype source. A matching Node test was committed to `prototype/tests/smoke.mjs`.
 - **Not yet tested:** actual browser rendering, touchscreen input, keyboard/responsive clipping, accessibility tree, full screenshot comparisons, persistence/security functionality. All simulated statuses are clearly labeled.
+
+## Chromium verification evidence — 2026-11-13
+
+Successful run: https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43388070399 — **90 browser checks**, 24 screenshots. See [the full Stage 3 QA report](QA_STAGE3_2026-11-13.md). Real-device, accessibility, actual user testing, and all production security/storage functionality remain outstanding.
