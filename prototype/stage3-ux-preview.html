@@ -91,7 +91,7 @@ const sample=[
 ];
 const tabs=[['today','home','Today'],['journals','book','Journals'],['memories','calendar','Memories'],['discover','search','Discover']];
 let s={view:'welcome',theme:'light',selected:0,journal:'Personal',activeJournal:'Personal',editorReturn:'today',typeScale:1,demoVault:'unlocked',demoBackup:'none',memory:'timeline',search:'',draftTitle:'',draft:'',returnView:'today'};
-let dialog=null;
+let dialog=null;let dialogReturnAction=null;
 
 const iconPaths={
  home:'M3 10.5 12 3l9 7.5V21h-7v-7h-4v7H3z',
@@ -137,7 +137,8 @@ function privacyScreen(){return shell('<button class="link-btn" data-view="setti
 function trash(){return shell('<button class="link-btn" data-view="settings">‹ Settings</button><section class="hero"><h1>Trash</h1><p>Deleted entries can be restored here before permanent removal.</p></section><div class="notice">There are no deleted sample items. In the real app, this page will show deletion date, exact number of items, Restore and Permanent delete actions, with clear backup-retention warnings.</div>','Trash')}
 function paintResults(){const node=document.getElementById('searchResults');if(node){let q=s.search.trim().toLowerCase();let a=sample.filter(e=>(e.title+' '+e.text+' '+e.journal).toLowerCase().includes(q));node.innerHTML=a.length?list(a):'<div class="notice">No entries matched this search. Try a different word.</div>'}}
 function draw(){document.body.setAttribute('data-theme',s.theme);document.body.setAttribute('data-view',s.view);document.body.setAttribute('data-type-scale',String(s.typeScale));document.documentElement?.style?.setProperty('--type-scale',String(s.typeScale));let v=s.view;el.innerHTML= v==='welcome'?welcome():v==='setup'?setup():v==='backup'?backupScreen():v==='privacy'?privacyScreen():v==='today'?today():v==='journals'?journals():v==='journalDetail'?journalDetail():v==='writer'?writer():v==='reader'?reader():v==='memories'?memories():v==='discover'?discover():v==='trash'?trash():settings();if(dialog){let d=dialog;el.insertAdjacentHTML('beforeend','<div class="dialog-cover" role="presentation"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><h2 id="dialogTitle">'+esc(d.title)+'</h2><p>'+esc(d.text)+'</p>'+`<button id="dialogDismiss" class="btn primary" data-action="dismiss">Got it</button>`+'</section></div>')};if(v==='discover')paintResults();if(v==='writer'){const title=document.getElementById('draftTitle');if(title?.style){title.style.height='auto';title.style.height=Math.max(56,title.scrollHeight)+'px'}const area=document.getElementById('draftBody');if(area&&area.style){area.style.height='auto';area.style.height=Math.max(320,area.scrollHeight)+'px'}}}
-function info(title,text){dialog={title,text};draw();document.getElementById('dialogDismiss')?.focus()}
+function info(title,text){dialogReturnAction=document.activeElement?.dataset?.action||null;dialog={title,text};draw();document.getElementById('dialogDismiss')?.focus()}
+function dismissDialog(){dialog=null;draw();if(dialogReturnAction){const target=document.querySelector?.('[data-action="'+dialogReturnAction+'"]');target?.focus?.();dialogReturnAction=null}}
 el.addEventListener('click',function(ev){let b=ev.target.closest('button');if(!b)return;
 if(b.dataset.view){s.view=b.dataset.view;dialog=null;draw();return}
 if(b.dataset.entry!==undefined){s.selected=Number(b.dataset.entry);if(s.view!=='reader')s.returnView=s.view;s.view='reader';draw();return}
@@ -151,7 +152,7 @@ if(a==='write'){s.editorReturn=s.view;s.activeJournal=s.view==='journalDetail'?s
 if(a==='closeEditor'){s.view=s.editorReturn||'today';draw()}
 if(a==='goBack'){s.view=s.returnView||'today';draw()}
 if(a==='edit'){s.editorReturn='reader';s.draftTitle=sample[s.selected].title;s.draft=sample[s.selected].text;s.activeJournal=sample[s.selected].journal;s.view='writer';draw();document.getElementById('draftBody')?.focus()}
-if(a==='dismiss'){dialog=null;draw()}
+if(a==='dismiss'){dismissDialog()}
 if(a==='calendar'){let day=Number(b.dataset.day);s.selected=day===12?0:day===10?1:day===9?2:3;s.returnView='memories';s.view='reader';draw()}
 if(a==='backup'){s.view='backup';draw()}if(a==='restoreFail')info('Restore rejected — simulation','This archive cannot be verified. Your current journal should remain unchanged. No files were read or modified in this preview.');
 if(a==='privacy'){s.view='privacy';draw()}if(a==='toggleVault'){s.demoVault=s.demoVault==='locked'?'unlocked':'locked';draw()}
@@ -160,7 +161,7 @@ if(a==='accessibility')info('Accessibility requirements','Text reflow, screen re
 });
 el.addEventListener('change',function(e){if(e.target.id==='journalSelect')s.activeJournal=e.target.value});
 el.addEventListener('input',function(e){if(e.target.id==='draftTitle'){s.draftTitle=e.target.value;if(e.target.style){e.target.style.height='auto';e.target.style.height=Math.max(56,e.target.scrollHeight)+'px'}}if(e.target.id==='draftBody'){s.draft=e.target.value;if(e.target.style){e.target.style.height='auto';e.target.style.height=Math.max(320,e.target.scrollHeight)+'px'}}if(e.target.id==='journalSearch'){s.search=e.target.value;paintResults()}});
-document.addEventListener('keydown',function(e){if(e.key==='Escape'&&dialog){dialog=null;draw()}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();s.view='discover';draw();document.getElementById('journalSearch')?.focus()}});
+document.addEventListener('keydown',function(e){if(dialog&&e.key==='Escape'){e.preventDefault();dismissDialog();return}if(dialog&&e.key==='Tab'){e.preventDefault();document.getElementById('dialogDismiss')?.focus();return}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();s.view='discover';draw();document.getElementById('journalSearch')?.focus()}});
 draw();
 })();
 </script>
