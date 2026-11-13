@@ -1,0 +1,6 @@
+.dart_tool/
+.pub/
+coverage/
+*.njr
+*.key
+*.archive
