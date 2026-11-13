@@ -16,7 +16,7 @@
 - [Successful APK 02 fictional Library debug build](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43457857948): **23/23 encrypted Dart/editor worker integration tests** passed, **13/13 stable Flutter visual/save-status widget tests** passed, strict Dart and Flutter analysis clean, and a standalone Android debug APK compiled and uploaded as artifact ID **14054687841**.
 - APK SHA-256: `da678c40cd8cf621e1211b362d3678cc2856d00d5678ea1795b54bf1eb31f6cd`, verified against the downloaded artifact.
 - APK 01 remains a **separate application package** and is not replaced by this diagnostic.
-- The newly authored Flutter widget tests that exercise a real Dart background isolate from a widget test are still **NOT VERIFIED**: the combined test runner stalled. Build CI therefore runs the proven encrypted worker tests and the stable UI widget tests separately. These independent passes do not prove the combined UI/isolate journey on an emulator or handset.
+- **Four real encrypted-worker Flutter UI integration tests PASSED** in [focused run 43463736435](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43463736435). The earlier fake-async deadlock was resolved by properly awaiting worker operations using WidgetTester.runAsync; full UI tests then caught and led to a Material/ink feedback fix on encrypted saved-page cards. This is **Flutter test-runner evidence only**, not an Android emulator or physical-device runtime test.
 - Android Keystore force-stop/relaunch, clean-device key-loss recovery, real-device accessibility and security signoff remain open.
 
 ## User-visible fictional test journey
