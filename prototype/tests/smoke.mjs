@@ -49,7 +49,7 @@ click({ journal: 'Travel' });
 check('Travel journal visible', app.innerHTML.includes('Your collection'));
 click({ action: 'write' });
 check('Write inherits Travel journal and receives focus',
-  app.innerHTML.includes('Travel · 13 Nov 2026') && state.focused > 0);
+  app.innerHTML.includes('<option value="Travel" selected>Travel</option>') && state.focused > 0);
 click({ action: 'closeEditor' });
 click({ view: 'memories' });
 check('Timeline visible', app.innerHTML.includes('Memories'));
