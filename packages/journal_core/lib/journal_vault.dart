@@ -215,6 +215,19 @@ class JournalVault {
     return id;
   }
 
+  /// Read journal metadata from the encrypted database. Keep names in memory;
+  /// never build a plaintext library cache or app preferences mirror.
+  List<Map<String, dynamic>> listJournals({bool includeTrash = false}) {
+    _ensureOpen();
+    final rows = _db.select(
+      'SELECT * FROM journals '
+      'WHERE (?=1 OR deleted_at_ms IS NULL) '
+      'ORDER BY created_at_ms DESC, id',
+      [includeTrash ? 1 : 0],
+    );
+    return rows.map(_journal).toList(growable: false);
+  }
+
   void renameJournal(String id, String name) {
     final clean = _name(name);
     _transaction(() {
