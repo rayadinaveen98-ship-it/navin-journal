@@ -23,6 +23,7 @@ This is a **pure journaling application**. It is intentionally separate from pro
 ## Latest engineering slice — APK 02
 
 - [Shared encrypted journal core](packages/journal_core/README.md) — 21/21 Linux test cases, verified create/edit/close/reopen, version history, Trash, media, transactional snapshot and encrypted clean-vault restore using fictional data.
+- [Shared encrypted editor and isolate worker](packages/journal_editor/README.md) — **22/22 Linux integration tests**, reuses tested autosave save-state/IME logic; connects editor drafts to full encrypted journal schema via a background Dart isolate. **Android consumer UI connection and private-data beta are still open.**
 - [Stage 5 / APK 02 safety handoff](docs/STAGE5_APK02_CORE_HANDOFF.md) — exact completed scope, remaining Android/editor/key/durability gates. **No production APK 02 yet.**
 
 ## Working release strategy
