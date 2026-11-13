@@ -22,6 +22,7 @@
 | NJ-016 | Connected Journal Management/Trash/Recovery UX | DESIGN-VALIDATED 2026-11-13 | Simulated create/rename/archive/delete/restore, explicit orphan destination, fake backup states; 80 Chromium checks passed; no real storage or recovery engine |
 | NJ-017 | Stage 3 connected writing/recovery UX | DESIGN-VALIDATED 2026-11-13 | Fictional write/edit/discard/delete/restore flows pass 41 Chromium checks; mobile Writer nav overlap fixed; no production autosave/storage or security |
 | NJ-018 | Stage 4 A1 isolated unencrypted SQLite reference store | TESTED 2026-11-13 | 18/18 Linux Dart tests passed; confirms transaction/revision model only, not production engine, encryption, autosave or Flutter stack |
+| NJ-019 | Stage 4 A2 encrypted-file research implementation using SQLite3MultipleCiphers | LINUX FEASIBILITY TESTED 2026-11-13 | 13/13 tests pass; verify wrong/no key, encrypted revision, legacy file rejection; NOT a production key provider, Android vault or approved security architecture |
 ## Pending high-impact decisions
 
 - Final consumer brand name, trademark/availability review and production launcher/splash approval; Folded Page direction approved.
