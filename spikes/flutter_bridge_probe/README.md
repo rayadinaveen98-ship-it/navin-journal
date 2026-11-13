@@ -24,13 +24,17 @@ We do not commit a separate large Flutter template project or pretend this is a 
 5. The code is Android-only. iOS Keychain, hardware-backed key attestation, biometric gating, key invalidation behavior, portability, OS backup exclusions and a secure archive recovery mechanism remain unimplemented.
 6. The app contains **no real journal editor and no autosave**. A successful demo roundtrip does not establish safe process death, reboot, reinstall, full-disk, or clean-device recovery.
 
+## Verified Linux/Android emulator run
+
+[Run 43416837265](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43416837265) passed Flutter static analysis, **14/14 mocked-channel contract tests**, building a **debug-only Android APK**, and **2/2 actual Android API-35 emulator integration tests** (encrypted SQLite reopen and key rewrap; missing-alias failure). This establishes the engineering bridge proof only. No hardware security, production key management, recovery or end-user journaling has been demonstrated.
+
 ## Expected validation ladder
 
 - Flutter static analysis and 14 mocked channel tests.
 - Android debug APK compilation with SQLite3MultipleCiphers native library.
 - Android API 35 emulator: run two true Flutter→Kotlin→AndroidKeyStore and encrypted SQLite tests.
 - Then physical Android hardware, reboot/reinstall/biometric policy, Flutter lifecycle and manual security QA.
-- Only after the A2 device/recovery gate is satisfied, begin connecting A3 durable autosave and private editor storage.
+- An isolated A3 autosave/encrypted transaction spike is now tested separately; a real private editor must still wait for platform-key/recovery approval and physical-device lifecycle validation.
 
 ### Running the CLI experiment
 
