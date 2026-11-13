@@ -30,18 +30,27 @@ void main() {
     if (temp.existsSync()) temp.deleteSync(recursive: true);
   });
 
+  // The encrypted worker is a real Dart isolate, not a fake-async timer.
+  // Give the worker event loop a short real-async turn before settling frames.
+  Future<void> settleRealWorker(WidgetTester tester) async {
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 140));
+    });
+    await tester.pumpAndSettle();
+  }
+
   Future<void> mount(WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(home: FictionalJournalLibrary(
       worker: worker, journalId: journal,
     )));
-    await tester.pumpAndSettle();
+    await settleRealWorker(tester);
   }
 
   Future<void> tapVisible(WidgetTester tester, String key) async {
     final finder = find.byKey(ValueKey(key));
     await tester.ensureVisible(finder);
     await tester.tap(finder);
-    await tester.pumpAndSettle();
+    await settleRealWorker(tester);
   }
 
   testWidgets('empty encrypted library opens fictional studio and saves',
