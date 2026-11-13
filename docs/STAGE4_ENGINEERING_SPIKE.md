@@ -67,6 +67,16 @@ Upstream references:
 - https://utelle.github.io/SQLite3MultipleCiphers/docs/configuration/config_sql_pragmas/
 - https://utelle.github.io/SQLite3MultipleCiphers/docs/faq/faq_overview/
 
+## A2.2 — Device-wrapping-key lifecycle [PROTOCOL TESTED; NATIVE SOURCE COMPILED]
+
+**Evidence:** [14/14 Linux key-envelope tests](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43410218147) and [successful Android API-35 Kotlin compilation](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43410753987). Detailed code/security notes: [A2.2 key lifecycle README](../spikes/key_lifecycle/README.md).
+
+An isolated Dart coordinator creates an authenticated AES-GCM-wrapped **device-bound envelope** around the existing 32-byte database encryption key. Staged key rotation writes two aliases, verifies that the new device key unwraps the same DEK, promotes it, then removes and retires the previous alias in a separate step. Failure injection demonstrates recoverability at key checkpoints without resetting the encrypted journal database. The 14 tests use a **software AES-GCM test double**, not Android's real secure hardware.
+
+The [Android candidate wrapper](../spikes/key_lifecycle/android/src/main/kotlin/com/navinjournal/security/spike/AndroidKeystoreKeyProtector.kt) uses AndroidKeyStore, AES-256-GCM and fail-closed alias handling. It **compiles** as an Android library but has not executed on a device or emulator. Its `setUserAuthenticationRequired(false)` is explicitly experimental; biometric/app-lock policy is not implemented. Portable recovery, iOS Keychain parity, backup exclusions, directory-fsync/multiprocess hardening, data-key rotation, and independent security review remain undone.
+
+**A2 production gate stays OPEN.** Do not store real journal data or claim biometric/hardware-backed protection from compilation and software-model tests.
+
 ## A3 — Autosave coordinator [NOT STARTED]
 
 Target is a user-visible state machine: `pristine → dirty → saving → saved` and `error/retry`. Use a bounded debounce and lifecycle flush, but never mark a draft "saved locally" until the commit has succeeded. Explicitly test force-stop between keystrokes and commits, interruptions, full disk and IME composition.
