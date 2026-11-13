@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+<title id="title">Memory Window — Navin Journal visual identity study</title>
+<desc id="desc">Three layered sheets with a small landscape scene, representing collected memories.</desc>
+<rect width="128" height="128" rx="31" fill="#25313A"/>
+<rect x="26" y="33" width="61" height="76" rx="7" fill="#8A9B83" transform="rotate(-10 26 33)"/>
+<rect x="38" y="24" width="67" height="83" rx="7" fill="#F8F5EE"/>
+<rect x="45" y="31" width="53" height="44" rx="4" fill="#D7C6AC"/>
+<path d="M45 66L61 51L72 61L83 46L98 63V75H45Z" fill="#7E9880"/>
+<circle cx="84" cy="44" r="6" fill="#CB8E70"/>
+<path d="M47 84H88M47 93H78" stroke="#9C9B8F" stroke-width="3" stroke-linecap="round"/>
+</svg>
