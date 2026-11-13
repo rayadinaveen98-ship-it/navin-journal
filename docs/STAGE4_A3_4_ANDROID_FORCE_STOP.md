@@ -1,6 +1,6 @@
 # Stage 4 A3.4 — Android process force-stop / encrypted recovery test
 
-**Status (13 Nov 2026):** Automated Android ADB test harness **IMPLEMENTED; CI runtime verification still pending**. **Do not mark A3.4 Android as passed without a successful GitHub Actions run.**
+**Status (13 Nov 2026): ANDROID API-35 EMULATOR VERIFIED.** [Passing GitHub Actions run 43427287021](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43427287021) recorded **ACK_V1 → ADB force-stop → ACK_V2 → ADB force-stop → RECOVERED_V2**, then cleanly removed the fictional test fixture. Physical-device, power-loss, reinstall and clean-device restore remain OPEN.
 
 ## Why this is a separate test
 
@@ -35,4 +35,4 @@ Even if CI turns green, this only shows **two already-acknowledged fictional sav
 - Hardware-backed/StrongBox key storage, biometric policy, secure memory wiping, or independent recoverable backups.
 - The approved premium journal UI is connected, a production database schema is finalized, or a safe release APK exists.
 
-**A3.4 status will remain OPEN until both the Android emulator ADB process-termination script and the A3.3 Flutter editor/lifecycle suite pass.** Android physical-device and authenticated backup/restore gates remain open afterward.
+**A3.4 dedicated Android emulator process-restart proof PASSED.** **A3.3 Flutter editor widget/lifecycle integration remains a separate pending gate**; physical-device security, reinstall/power-loss and authenticated clean-device backup/restore are not yet verified.
