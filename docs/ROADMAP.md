@@ -1,6 +1,6 @@
 # Roadmap — Navin Journal
 
-**Current phase:** Stage 3, in progress; approved visual direction and detailed UX documents committed. No production journaling app or APK yet. A navigable HTML UX prototype has automated browser checks.
+**Current phase:** Stage 3 manual device/user signoff is open. Stage 4 isolated storage engineering spike is active (unencrypted SQLite A1 validated on Linux). No production journaling app or APK exists.
 
 ## Stage 1 — Competitive review [DONE: research-only]
 
@@ -36,12 +36,15 @@ Product promise, P0/P1/P2 boundary, proposed navigation, data-trust contract and
 - [x] Record approved hybrid and draft design tokens in GitHub.
 - [ ] User-test first-write, discovery, Trash, restore, theme parity and accessibility; resolve blockers.
 
-## Stage 4 — Engineering proof of concept [NOT STARTED]
+## Stage 4 — Engineering proof of concept [ACTIVE; isolated tests only]
 
-- [ ] Validate Flutter + editor accessibility/performance alternatives.
-- [ ] Test encrypted local database, attachment import, durable writing.
-- [ ] Demonstrate backup archive creation and restore on clean device.
-- [ ] Threat-model lock/key handling, caches, exports.
+- [x] Build an **unencrypted Dart/SQLite reference store** with transactional journal/entry writes, stable IDs, previous revisions, explicit version conflict detection, event dates, archive/Trash and restore. **18/18 tests** and Dart analysis passed on Linux in [CI run 43405129229](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43405129229). Do not enter real diary data; this is neither autosave nor a secure vault. [Stage 4 report](STAGE4_ENGINEERING_SPIKE.md).
+- [ ] Demonstrate **encrypted SQLite vault** with key recovery model, no plaintext WAL/index/cache leaks and clean lock/unlock across process restarts.
+- [ ] Implement bounded autosave and actually recover after force-stop/interrupted write on target devices.
+- [ ] Test attachment import atomically; verify error behavior for malformed media and full storage.
+- [ ] Demonstrate authenticated backup creation, integrity validation and clean-device staged restore.
+- [ ] Validate Flutter + native editor accessibility/performance alternatives and Android build viability.
+- [ ] Threat-model lock/key handling, caches, exports and migration, with appropriate independent review.
 - [ ] Decide sync backend, cost ceiling and cross-platform build plan.
 
 ## Stage 5 — Functional build [NOT STARTED]
