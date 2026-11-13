@@ -89,3 +89,7 @@ Latest [extended QA evidence](QA_STAGE3_EXTENDED_2026-11-13.md): 84/84 Chromium 
 ## Keyboard navigation and screen-reader-oriented checks — 2026-11-13
 
 [Run 43392361821](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43392361821): 33/33 Chromium keyboard navigation tests passed on phone/tablet dimensions. Skip link, main landmark, current navigation semantics, focus restoration, Ctrl+K search and modal isolation were checked. Manual human screen-reader navigation and actual soft-keyboard/Telugu IME behavior are still unverified. [Device QA guide](DEVICE_UX_TEST_RUNBOOK.md) is ready.
+
+## Connected journal management/recovery tests — 2026-11-13
+
+[CI run 43400897845](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43400897845): 80/80 Chromium checks passed for a separate [in-memory recovery UX preview](../prototype/journal-recovery-review.html). Flows: create/rename/archive, entry and journal Trash, restore, explicit destination selection for orphaned entry, permanent delete warnings, backup outcomes and reload memory reset. See [full report](UX_RECOVERY_STAGE3.md). These are **UX state checks only**, not tests of persistent storage, encryption, or real backups.
