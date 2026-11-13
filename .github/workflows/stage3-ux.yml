@@ -34,6 +34,9 @@ jobs:
       - name: Extended bilingual and large-text browser QA
         working-directory: prototype
         run: npm run check:extended
+      - name: Keyboard and screen-reader-oriented focus checks
+        working-directory: prototype
+        run: npm run check:keyboard
       - name: Automated HTML accessibility scan
         working-directory: prototype
         run: npm run check:a11y
