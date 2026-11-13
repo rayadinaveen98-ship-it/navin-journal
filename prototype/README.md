@@ -19,7 +19,7 @@ Open **stage3-ux-preview.html** in a desktop or mobile browser after downloading
 - All images are CSS illustrations; they are not user photos.
 - Encryption, local storage, account management, synchronization, backup, restore, media import, journal creation and deletion are **not implemented**.
 - Some buttons intentionally open explanatory concept dialogs rather than perform real actions.
-- There has not yet been browser/device/screen-reader testing. Do not infer reliability or accessible operation from the presence of markup alone.
+- Automated Chromium screenshot/navigation suites and sampled HTML accessibility scans have passed. Real physical-device behavior, native IME composition and manual screen-reader testing remain outstanding.
 - The HTML is a UX artifact; the real application technical stack remains to be validated.
 
 ## Review checklist
@@ -66,3 +66,9 @@ The owner approved Folded Page on 2026-11-13. The core preview now includes the 
 ## Connected Journal and Recovery UX
 
 Open [journal-recovery-review.html](journal-recovery-review.html) to explore creating/renaming journals, archiving and unarchiving, moving entry or journal to Trash, restoring content, choosing a destination when the original journal is missing, permanent deletion warnings, and simulated backup verification. All data are **fictional and held only in browser memory**; refresh clears changes. Never type a private real journal entry here. Run `npm run check:recovery` to execute [80 Chromium checks](../docs/UX_RECOVERY_STAGE3.md) across a small phone and tablet. This is not a secure backup engine or native app.
+
+## Connected Writing → Read → Edit → Trash → Restore
+
+The [journal recovery review](journal-recovery-review.html) now supports composing a fictional sample entry and navigating its full lifecycle within **one browser page**. The Writer inherits journal context, validates empty input, preserves Telugu/English sample text during theme changes, confirms discarding edited drafts and keeps a consistent entry identity through edit/Trash/restore. The mobile Writer hides bottom navigation to keep the text unobstructed. Its demo button stores content **only in temporary JavaScript memory**—this is not the production autosave UX. Use only imaginary/example content.
+
+Run `npm run check:journey` for the 41 Chromium user-journey checks at phone/tablet sizes. The latest [passing full CI run 43403054214](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43403054214) also includes the preceding suites and expanded HTML accessibility scan (14 sampled screens). Full handoff: [connected journey QA](../docs/UX_CONNECTED_JOURNEY_STAGE3.md).
