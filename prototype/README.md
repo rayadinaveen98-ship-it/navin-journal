@@ -62,3 +62,7 @@ Open `brand-study.html` to compare three original SVG candidates in writing/memo
 ## Approved visual mark — Folded Page (option 01)
 
 The owner approved Folded Page on 2026-11-13. The core preview now includes the selected logo on Welcome, Setup, desktop sidebar and compact mobile header, with light/dark SVG variants. The focused editor remains unbranded. Preview [adaptive masks](brand/adaptive-preview.html) and run `npm run check:approved-brand` to exercise SVG loads, selected UI screens, native-mask **simulations**, and dark mode. The staged Android XML is structurally checked with `python3 tests/icon_xml.py`; there is still no Android app or AAPT2 compilation. See [asset handoff](../docs/BRAND_ASSET_HANDOFF.md).
+
+## Connected Journal and Recovery UX
+
+Open [journal-recovery-review.html](journal-recovery-review.html) to explore creating/renaming journals, archiving and unarchiving, moving entry or journal to Trash, restoring content, choosing a destination when the original journal is missing, permanent deletion warnings, and simulated backup verification. All data are **fictional and held only in browser memory**; refresh clears changes. Never type a private real journal entry here. Run `npm run check:recovery` to execute [80 Chromium checks](../docs/UX_RECOVERY_STAGE3.md) across a small phone and tablet. This is not a secure backup engine or native app.
