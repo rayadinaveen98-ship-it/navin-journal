@@ -123,6 +123,18 @@ jobs:
           cd "$APK02_ROOT"
           flutter build apk --debug -t lib/apk02_connected_main.dart
           test -s build/app/outputs/flutter-apk/app-debug.apk
+      - name: Enable Android emulator KVM acceleration when available
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -c /dev/kvm ]]; then
+            echo "KVM device present; granting CI runner access"
+            sudo chmod a+rw /dev/kvm
+            test -r /dev/kvm && test -w /dev/kvm
+            ls -l /dev/kvm
+          else
+            echo "::warning::/dev/kvm unavailable; emulator may use slow software virtualization"
+          fi
       # Android API 35 images on GitHub-hosted runners intermittently reached
       # sys.boot_completed then lost the ADB input service before this script.
       # Use API 34 for an independent recovery gate, with no fragile host-side
