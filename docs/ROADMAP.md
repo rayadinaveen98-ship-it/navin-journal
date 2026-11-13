@@ -62,7 +62,10 @@ Product promise, P0/P1/P2 boundary, proposed navigation, data-trust contract and
 - [ ] Threat-model lock/key handling, caches, exports and migration, with appropriate independent review.
 - [ ] Decide sync backend, cost ceiling and cross-platform build plan.
 
-## Stage 5 — Functional build [NOT STARTED]
+## Stage 5 — Functional build [VISUAL APK 01 DONE; FUNCTIONAL APP NOT STARTED]
+
+- [x] **APK 01 · visual-only Flutter walkthrough:** approved A+C / Midnight Archive theme, Folded Page emblem, welcome/setup, Today, Journals, Reader, demo Writing Studio, Memories, Discover, Settings, simulated recovery/Trash. **6/6 Flutter phone/tablet widget tests passed, Android debug APK compiled and artifact uploaded** in [run 43441554960](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43441554960). Debug-only fictional sample content, **no persistence, app lock, real media, vault, autosave, backup or private-data security**. [Preview source and limitations](../preview_app/README.md). APK SHA-256: `c0f3b4923bcc69780f16271cb673976fe8717eb852c8d38fad636c5216367107`. Physical handset/tablet and adaptive-mask review pending.
+- [ ] **APK 02 · functional private beta:** do not enable real personal writing until encrypted whole-journal storage, autosave, independent backup/clean-device recovery and critical security gates are met.
 
 - [ ] Write/edit/versions/drafts, journals, search, calendar/timeline.
 - [ ] Media blocks, readable export, accessibility, personalization.
