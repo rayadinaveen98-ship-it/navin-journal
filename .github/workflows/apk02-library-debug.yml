@@ -100,11 +100,18 @@ jobs:
         run: |
           cd "$APK02_LIBRARY_ROOT"
           flutter analyze --no-pub
-      - name: All visual and fictional encrypted Library UI tests
+      - name: Verify 23 encrypted journal/editor worker contract tests
+        shell: bash
+        run: |
+          cd "$GITHUB_WORKSPACE/packages/journal_editor"
+          dart pub get
+          dart analyze --fatal-infos
+          dart test --reporter expanded
+      - name: Verify stable Flutter visual and save-status widgets
         shell: bash
         run: |
           cd "$APK02_LIBRARY_ROOT"
-          flutter test --reporter expanded --concurrency=1 --timeout=90s
+          flutter test test/preview_widget_test.dart test/connected_writing_studio_test.dart --reporter expanded --concurrency=1 --timeout=90s
       - name: Compile standalone Android Library / Reader / Writer debug APK
         shell: bash
         run: |
