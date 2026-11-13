@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:navin_journal_autosave_spike/draft_autosave.dart';
 import 'package:navin_journal_autosave_spike/encrypted_draft_store.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
+import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -229,21 +230,35 @@ void main() {
     expect(store.integrityCheck(), isTrue);
   });
 
-  test('unknown new schema is rejected without replacing vault', () async {
+  test('future schema is rejected without destroying encrypted journal', () async {
     await store.commit(
       entryId: 'fiction',
       expectedVersion: 0,
       content: const DraftContent(title: 'A', body: 'B'),
     );
     store.close();
-    // Avoid direct encrypted header manipulation; tamper via a keyed
-    // normal database connection would require a separate test hook.
-    final missing = filename + '.missing';
+    final newer = sqlite3.open(filename);
+    try {
+      newer.execute("PRAGMA cipher = 'chacha20'");
+      newer.execute("PRAGMA hexkey = '${key.hex}'");
+      newer.select('SELECT name FROM sqlite_master');
+      newer.userVersion = 99;
+    } finally {
+      newer.close();
+    }
     expect(
-      () => EncryptedDraftStore.open(missing, key: key),
+      () => EncryptedDraftStore.open(filename, key: key),
       throwsStateError,
     );
-    expect(File(missing).existsSync(), isFalse);
+    final restore = sqlite3.open(filename);
+    try {
+      restore.execute("PRAGMA cipher = 'chacha20'");
+      restore.execute("PRAGMA hexkey = '${key.hex}'");
+      restore.select('SELECT name FROM sqlite_master');
+      restore.userVersion = 1;
+    } finally {
+      restore.close();
+    }
     store = EncryptedDraftStore.open(filename, key: key);
     expect(store.read('fiction')?.body, 'B');
   });
@@ -258,6 +273,31 @@ void main() {
       throwsStateError,
     );
     expect(store.getVersion('fiction'), isNull);
+  });
+
+  test('changed content after lost ACK must not overwrite unknown revision',
+      () async {
+    store.close();
+    var first = true;
+    store = EncryptedDraftStore.open(
+      filename,
+      key: key,
+      failureHook: (checkpoint) {
+        if (checkpoint == 'after_commit_before_ack' && first) {
+          first = false;
+          throw StateError('Lost first save acknowledgement');
+        }
+      },
+    );
+    editor = DraftAutosaveController(entryId: 'fiction', storage: store);
+    editor!.update(title: '', body: 'Initial committed snapshot');
+    await editor!.flush();
+    expect(editor!.indicator.phase, SavePhase.error);
+    editor!.update(title: '', body: 'Newer unsaved local snapshot');
+    await editor!.flush();
+    expect(editor!.indicator.phase, SavePhase.conflict);
+    expect(store.read('fiction')?.body, 'Initial committed snapshot');
+    expect(store.getVersion('fiction'), 1);
   });
 
   test('same write after lost ACK is idempotent, different content conflicts',
