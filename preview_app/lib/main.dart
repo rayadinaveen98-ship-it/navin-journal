@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings
 // Navin Journal · Stage 5 entry visual preview (test-only Android shell).
 //
 // IMPORTANT: NO local persistence, no real vault, no encryption, no backup,
@@ -6,7 +7,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'visuals.dart';
 
