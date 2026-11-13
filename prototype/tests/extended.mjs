@@ -41,7 +41,7 @@ try{
   await noOverflow(page,name+' reduced viewport while writing');
   await page.setViewportSize({width,height});
   await page.screenshot({path:path.join(out,name+'-telugu-writer.png'),fullPage:true});
-  await page.locator('[data-action="closeEditor"]').click();
+  await page.locator('[data-action="closeEditor"]').first().click();
   check(await page.locator('.hero h1').textContent()==='Your pages, your pace.',name+' Writer returns to Today origin');
   await page.locator('[data-view="journals"]:visible').last().click();
   await page.locator('[data-journal="Travel"]').click();
@@ -49,11 +49,11 @@ try{
   check(await page.locator('#journalSelect').inputValue()==='Travel',name+' Journal Writer retains chosen origin');
   await page.locator('#journalSelect').selectOption('Ideas');
   check(await page.locator('#journalSelect').inputValue()==='Ideas',name+' Journal selector functions');
-  await page.locator('[data-action="closeEditor"]').click();
+  await page.locator('[data-action="closeEditor"]').first().click();
   check(await page.locator('.hero h1').textContent()==='Travel',name+' Writer returns to Journal Detail origin');
   await page.locator('[data-entry="1"]').click();
   await page.locator('[data-action="edit"]').click();
-  await page.locator('[data-action="closeEditor"]').click();
+  await page.locator('[data-action="closeEditor"]').first().click();
   check(await page.locator('.reader h1').textContent()==='The trip I’ll always remember',name+' Edit exits back to Reader');
   await page.locator('[data-action="goBack"]').click();
   check(await page.locator('.hero h1').textContent()==='Travel',name+' Reader returns to Journal Detail');
@@ -69,7 +69,7 @@ try{
   await noOverflow(page,name+' Writer at 200 percent');
   check(await page.locator('#draftBody').inputValue()===sampleText(),name+' temporary sample content retained at 200 percent');
   await page.screenshot({path:path.join(out,name+'-writing-200pct.png'),fullPage:true});
-  await page.locator('[data-action="closeEditor"]').click();
+  await page.locator('[data-action="closeEditor"]').first().click();
   await page.locator('[data-view="settings"]:visible').last().click();
   for(let i=0;i<3;i++)await page.locator('[data-action="typeDown"]').click();
   check(await page.locator('[data-type-scale="1"]').count()===1,name+' type scale returns to standard');
