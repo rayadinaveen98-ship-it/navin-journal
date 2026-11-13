@@ -102,11 +102,21 @@ jobs:
         run: |
           cd "$APK02_ROOT"
           flutter analyze --no-pub
-      - name: Existing six visual UI widget tests
+      # The real-worker Flutter widget interaction suite is tracked
+      # independently: it requires runAsync around worker-bound futures.
+      # Do not block an actual Android OS force-stop test on fake-async hangs.
+      - name: Deterministic visual and connected save-state widget tests
         shell: bash
         run: |
           cd "$APK02_ROOT"
-          flutter test --reporter expanded
+          flutter test test/preview_widget_test.dart test/connected_writing_studio_test.dart --reporter expanded --concurrency=1 --timeout=90s
+      - name: Full encrypted editor worker contract tests
+        shell: bash
+        run: |
+          cd "$GITHUB_WORKSPACE/packages/journal_editor"
+          dart pub get
+          dart analyze --fatal-infos
+          dart test --reporter expanded
       - name: Build APK 02 connected fictional Writing Studio debug fixture
         shell: bash
         run: |
