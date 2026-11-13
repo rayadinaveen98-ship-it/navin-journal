@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings
 /// Stage 4 A3.3 — debug-only fictional writing + autosave lifecycle probe.
 ///
 /// Not the approved Navin Journal UI. No real private content. A page for
