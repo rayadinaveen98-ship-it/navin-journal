@@ -237,6 +237,42 @@ void main() {
     expect(vault.integrityCheck(), isTrue);
   });
 
+  test('legacy plaintext database is rejected and left readable with ordinary SQLite', () {
+    final legacyPath = path + '.legacy';
+    final legacy = sqlite3.open(legacyPath);
+    try {
+      legacy.execute('CREATE TABLE unencrypted_example(note TEXT)');
+      legacy.execute('INSERT INTO unencrypted_example(note) VALUES (?)', [
+        'Fictional old plaintext content',
+      ]);
+    } finally {
+      legacy.close();
+    }
+    expect(
+      () => EncryptedJournalSpike.open(legacyPath, key: key),
+      throwsA(anyOf(isA<VaultUnlockFailed>(), isA<SqliteException>())),
+    );
+    final verify = sqlite3.open(legacyPath);
+    try {
+      expect(
+        verify.select('SELECT note FROM unencrypted_example').single['note'],
+        'Fictional old plaintext content',
+      );
+    } finally {
+      verify.close();
+    }
+  });
+
+  test('empty existing file is not silently converted to a new vault', () {
+    final empty = File(path + '.empty');
+    empty.writeAsBytesSync([]);
+    expect(
+      () => EncryptedJournalSpike.open(empty.path, key: key),
+      throwsA(anyOf(isA<VaultUnlockFailed>(), isA<StateError>())),
+    );
+    expect(empty.existsSync(), isTrue);
+  });
+
   test('test key redacts its string representation', () {
     final rendered = key.toString();
     expect(rendered, contains('REDACTED'));
