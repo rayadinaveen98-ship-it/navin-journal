@@ -36,6 +36,8 @@ try{
   verify(await area.evaluate(el=>document.activeElement===el),name+' editor focus');
   await page.locator('#draftTitle').fill('A private thought');
   await area.fill(('This is a sample entry during a browser design review.\n').repeat(9));
+  verify(await area.evaluate(el=>el.scrollHeight<=el.clientHeight+3),name+' writing canvas does not scroll internally');
+  if(width<760)verify(!(await page.locator('.mobile-nav').isVisible()),name+' mobile navigation hidden while writing');
   await page.screenshot({path:path.join(out,name+'-writing.png'),fullPage:true});
   overflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
   verify(overflow<=2,name+' editor horizontal overflow '+overflow);
