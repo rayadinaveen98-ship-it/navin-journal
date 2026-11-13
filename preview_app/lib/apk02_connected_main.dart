@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings, curly_braces_in_flow_control_structures
 /// APK02 real Flutter editor UI → AndroidKeyStore → encrypted journal worker.
 ///
 /// Scripted fictional journal fixtures ONLY; read-only text fields and a
