@@ -238,7 +238,7 @@ Future<void> _editorStorageWorker(List<Object> args) async {
   final key = TestVaultKey.fromBytes(raw);
   raw.fillRange(0, raw.length, 0);
   final incoming = ReceivePort();
-  JournalVault? vault;
+  late final JournalVault vault;
 
   try {
     vault = JournalVault.open(path, key: key, create: create);
