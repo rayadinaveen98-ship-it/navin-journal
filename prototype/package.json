@@ -11,7 +11,8 @@
     "check:keyboard": "node tests/keyboard.mjs",
     "check:brand": "node tests/brand.mjs",
     "check:approved-brand": "node tests/approved-brand.mjs",
-    "check:recovery": "node tests/recovery.mjs"
+    "check:recovery": "node tests/recovery.mjs",
+    "check:journey": "node tests/connected-journey.mjs"
   },
   "devDependencies": {
     "playwright": "1.56.1",
