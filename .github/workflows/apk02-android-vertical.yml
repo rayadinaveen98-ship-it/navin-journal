@@ -123,15 +123,20 @@ jobs:
           cd "$APK02_ROOT"
           flutter build apk --debug -t lib/apk02_connected_main.dart
           test -s build/app/outputs/flutter-apk/app-debug.apk
+      # Android API 35 images on GitHub-hosted runners intermittently reached
+      # sys.boot_completed then lost the ADB input service before this script.
+      # Use API 34 for an independent recovery gate, with no fragile host-side
+      # animation toggle before adb/package-manager readiness is established.
       - name: Actual Android Keystore, isolate, encrypted vault and force-stop proof
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 34
           target: google_apis
           arch: x86_64
           profile: pixel_6
-          disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -camera-back none -no-snapshot-load -no-snapshot-save
+          disable-animations: false
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -camera-back none -no-snapshot-load -no-snapshot-save -memory 3072 -cores 2
           script: bash "$GITHUB_WORKSPACE/preview_app/ci/apk02_android_roundtrip.sh"
       - name: Publish debug-only test harness after Android verification
         uses: actions/upload-artifact@v4
