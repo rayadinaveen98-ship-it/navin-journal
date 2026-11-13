@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Navin Journal — Stage 3 Brand Study</title>
+<style>
+:root{--bg:#F8F5EE;--paper:#FFFCF7;--ink:#282923;--sub:#56594F;--line:#DAD6CB;--pine:#475A43;--accent:#A45E42;--chip:#EFE8DE;--on:#F8F5EE}
+[data-theme=dark]{--bg:#15191C;--paper:#1D2226;--ink:#F1EDE4;--sub:#B9C0B9;--line:#3B4142;--pine:#AEBF9B;--accent:#D9A289;--chip:#272D31;--on:#15191C}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;line-height:1.5}button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.head{max-width:1170px;margin:auto;padding:30px 28px 25px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:24px;align-items:center;flex-wrap:wrap}
+.wordmark{font:500 24px/1.1 Georgia,'Times New Roman',serif;letter-spacing:-.04em}.wordmark small{display:block;font:600 10px system-ui;letter-spacing:.19em;text-transform:uppercase;color:var(--sub);margin-top:8px}
+.tag{font-size:11px;letter-spacing:.13em;text-transform:uppercase;font-weight:750;color:var(--sub)}
+.theme-toggle{border:1px solid var(--line);background:var(--paper);border-radius:12px;color:var(--ink);padding:11px 17px;min-height:48px}
+main{max-width:1170px;padding:48px 28px 100px;margin:auto}.intro{max-width:740px}.intro h1{font:500 clamp(38px,5.1vw,68px)/1.07 Georgia,serif;letter-spacing:-.046em;margin:13px 0 20px}.intro p{font:18px/1.7 Georgia,serif;color:var(--sub);margin:0 0 38px}
+.candidates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:19px}
+.candidate{border:1px solid var(--line);border-radius:22px;background:var(--paper);padding:24px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.candidate[data-selected=true]{outline:2px solid var(--pine);outline-offset:2px}
+.mark-area{height:172px;display:grid;place-items:center;background:var(--chip);border-radius:16px;margin-bottom:4px}
+.mark{width:112px;height:112px;display:block}
+.candidate h2{font:500 26px Georgia,serif;letter-spacing:-.035em;margin:3px 0 0}
+.candidate p{font-size:14px;color:var(--sub);margin:0 0 auto;min-height:70px}
+.sample-size{display:flex;align-items:center;gap:17px;border-top:1px solid var(--line);padding-top:15px}
+.sample-size span{font-size:11px;color:var(--sub);margin-right:auto}
+.sample-size svg{width:28px;height:28px}
+.sample-size svg.big{width:48px;height:48px}
+.choice{margin-top:8px;border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:11px;min-height:48px;font-weight:650}
+.choice[aria-pressed=true]{background:var(--pine);color:var(--on);border-color:var(--pine)}
+.section-label{margin:45px 0 14px;display:flex;justify-content:space-between;align-items:end;gap:16px}
+.section-label h2{font:500 30px Georgia,serif;margin:0}.section-label small{color:var(--sub)}
+.preview-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.preview{border:1px solid var(--line);border-radius:22px;padding:25px;min-height:320px;background:var(--paper)}
+.preview .preview-head{display:flex;gap:12px;align-items:center;justify-content:space-between;padding-bottom:24px;border-bottom:1px solid var(--line)}
+.preview .preview-head .cluster{display:flex;gap:12px;align-items:center}
+.preview .preview-head .mark{width:40px;height:40px}
+.preview .brand-title{font:500 22px Georgia,serif;letter-spacing:-.03em;line-height:1.1}
+.preview .brand-title small{font:600 9px system-ui;letter-spacing:.13em;text-transform:uppercase;color:var(--sub);display:block;margin-top:5px}
+.preview .reading-label{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);margin:25px 0 12px}
+.preview .reading-title{font:500 31px Georgia,serif;letter-spacing:-.035em;margin:0 0 13px}
+.preview .reading-copy{font:16px/1.7 Georgia,serif;color:var(--sub);margin:0}
+.bookmark{width:12px;height:19px;background:#C58B6D;clip-path:polygon(0 0,100% 0,100% 100%,50% 74%,0 100%)}
+.disclaimer{margin:28px 0 0;padding:18px 21px;border:1px solid var(--line);border-radius:14px;color:var(--sub);font-size:13px}
+@media(max-width:900px){.candidates{grid-template-columns:1fr}.candidate{display:grid;grid-template-columns:140px 1fr;gap:8px 18px}.mark-area{grid-row:span 5;height:100%;min-height:160px;margin:0}.candidate p{min-height:0}.sample-size{border:0;padding:0}.choice{grid-column:2}}
+@media(max-width:670px){main{padding:26px 18px 70px}.head{padding:17px 18px}.intro p{font-size:16px}.candidate{grid-template-columns:112px 1fr;padding:14px;gap:8px 12px}.mark-area{min-height:150px}.mark{width:82px;height:82px}.sample-size svg.big{width:40px;height:40px}.preview-grid{grid-template-columns:1fr}.preview{min-height:0}.section-label{margin-top:32px}.candidate h2{font-size:23px}}
+@media(max-width:390px){.candidate{display:flex}.mark-area{height:132px}.candidate p{min-height:0}.choice{grid-column:auto}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body data-theme="light">
+<header class="head"><div class="wordmark">Navin Journal<small>Internal product identity study</small></div><button class="theme-toggle" id="themeBtn" type="button" aria-label="Toggle between light and dark preview">Preview dark theme</button></header>
+<main>
+<div class="intro"><div class="tag">Stage 3 · Original vector explorations · Not approved</div><h1>One quiet identity.<br>Three expressions.</h1><p>A thoughtful journal should feel personal, timeless, and trustworthy. These three symbols explore that feeling without altering the writing-first experience.</p></div>
+<div class="candidates" id="candidates">
+<section class="candidate" data-id="folded" data-selected="true">
+<div class="mark-area"><svg class="mark" viewBox="0 0 128 128" role="img" aria-label="Folded Page: a cream open journal on sage with terracotta bookmark"><rect width="128" height="128" rx="31" fill="#475A43"/><path d="M25 37C39 30 51 32 63 39V94C51 87 38 87 25 93V37Z" fill="#FFFCF7"/><path d="M65 39C77 32 89 30 103 37V93C90 87 77 87 65 94V39Z" fill="#EFE8DE"/><path d="M64 39V96" stroke="#D6CFBD" stroke-width="2.5" stroke-linecap="round"/><path d="M36 48C43 46 50 47 55 50M36 58C43 56 50 57 55 60M74 50C80 47 87 46 93 48M74 60C80 57 87 56 93 58" fill="none" stroke="#A8AA97" stroke-width="2" stroke-linecap="round"/><path d="M83 30H95V49L89 45L83 49V30Z" fill="#C58B6D"/></svg></div>
+<div class="tag">01 · Writing first</div><h2>Folded Page</h2><p>An open notebook with a restrained memory tab. Most clearly communicates journaling at first glance.</p>
+<div class="sample-size"><span>Small-size study</span></div><button type="button" class="choice" data-pick="folded" aria-pressed="true">Preview this identity</button>
+</section>
+<section class="candidate" data-id="leaf" data-selected="false">
+<div class="mark-area"><svg class="mark" viewBox="0 0 128 128" role="img" aria-label="Quiet Leaf: a sage bookmark with leaf-like curve"><rect width="128" height="128" rx="31" fill="#EFE8DE"/><path d="M35 29H93C97 29 100 32 100 36V99L64 85L28 99V36C28 32 31 29 35 29Z" fill="#475A43"/><path d="M46 72C48 50 67 41 84 40C84 61 72 82 51 83C52 70 62 58 75 51" stroke="#F8F5EE" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="88" cy="88" r="6" fill="#C17A5E"/></svg></div>
+<div class="tag">02 · Quiet reflection</div><h2>Quiet Leaf</h2><p>Gentle and organic. The bookmark form suggests preserving an important page or thought.</p>
+<div class="sample-size"><span>Small-size study</span></div><button type="button" class="choice" data-pick="leaf" aria-pressed="false">Preview this identity</button>
+</section>
+<section class="candidate" data-id="window" data-selected="false">
+<div class="mark-area"><svg class="mark" viewBox="0 0 128 128" role="img" aria-label="Memory Window: layered pages with landscape thumbnail"><rect width="128" height="128" rx="31" fill="#25313A"/><rect x="26" y="33" width="61" height="76" rx="7" fill="#8A9B83" transform="rotate(-10 26 33)"/><rect x="38" y="24" width="67" height="83" rx="7" fill="#F8F5EE"/><rect x="45" y="31" width="53" height="44" rx="4" fill="#D7C6AC"/><path d="M45 66L61 51L72 61L83 46L98 63V75H45Z" fill="#7E9880"/><circle cx="84" cy="44" r="6" fill="#CB8E70"/><path d="M47 84H88M47 93H78" stroke="#9C9B8F" stroke-width="3" stroke-linecap="round"/></svg></div>
+<div class="tag">03 · Memories first</div><h2>Memory Window</h2><p>Layered cards and a remembered landscape. Stronger archive personality; more detailed at small sizes.</p>
+<div class="sample-size"><span>Small-size study</span></div><button type="button" class="choice" data-pick="window" aria-pressed="false">Preview this identity</button>
+</section>
+</div>
+<div class="section-label"><h2>In context</h2><small>Working name · No released logo</small></div>
+<div class="preview-grid">
+<section class="preview" id="previewWriting"><div class="preview-head"><div class="cluster"><div class="mark-container"></div><div class="brand-title">Navin Journal<small>A place to begin</small></div></div><span class="bookmark" aria-hidden="true"></span></div><div class="reading-label">Journal · Writing view</div><h3 class="reading-title">A quiet moment worth keeping.</h3><p class="reading-copy">Every story deserves a gentle place to begin. A page of your own, with room for everything that matters.</p></section>
+<section class="preview" id="previewMemories"><div class="preview-head"><div class="cluster"><div class="mark-container"></div><div class="brand-title">Navin Journal<small>Your memory library</small></div></div><span class="tag">Memories</span></div><div class="reading-label">13 November · Sample memory</div><h3 class="reading-title">The moments that remain.</h3><p class="reading-copy">A collection of photographs, words, and ordinary days that become extraordinary with time.</p></section>
+</div>
+<p class="disclaimer"><strong>Design study only.</strong> These are new SVG concepts and sample UI compositions. Buttons change this preview locally; they do not approve a final name or logo, save a journal entry, or create an app account. The user must still approve final branding and any store-ready icon.</p>
+</main>
+<script>
+const choices=[...document.querySelectorAll('[data-pick]')];
+const previews=[...document.querySelectorAll('.mark-container')];
+let selected='folded';
+function paint(){
+ const src=document.querySelector('.candidate[data-id="'+selected+'"] .mark').outerHTML;
+ for(const area of previews)area.innerHTML=src;
+ for(const card of document.querySelectorAll('.candidate'))card.dataset.selected=String(card.dataset.id===selected);
+ for(const btn of choices)btn.setAttribute('aria-pressed',String(btn.dataset.pick===selected));
+}
+for(const button of choices)button.addEventListener('click',()=>{selected=button.dataset.pick;paint()});
+document.getElementById('themeBtn').addEventListener('click',()=>{
+ const dark=document.body.dataset.theme!=='dark';
+ document.body.dataset.theme=dark?'dark':'light';
+ document.getElementById('themeBtn').textContent=dark?'Preview light theme':'Preview dark theme';
+});
+paint();
+</script>
+</body>
+</html>
