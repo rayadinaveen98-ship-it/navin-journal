@@ -17,7 +17,7 @@ const browser=await chromium.launch({headless:true});
 const viewports=[['phone',430,932],['tablet',1024,768]];
 let passed=0;
 const check=(condition,label)=>{assert.ok(condition,label);console.log('PASS '+label);passed++;};
-const imageReady=async image=>image.evaluate(img=>img.complete&&img.naturalWidth>0);
+const imageReady=async image=>image.evaluate(async img=>{try{if(typeof img.decode==='function')await img.decode()}catch{}return img.complete&&img.naturalWidth>0});
 try{
  for(const [name,width,height] of viewports){
   const page=await browser.newPage({viewport:{width,height}});
