@@ -32,7 +32,7 @@ h1,h2,h3,p{margin-top:0}h1,h2,h3,.serif{font-family:"Iowan Old Style","Palatino 
 @media(max-width:760px){
  body[data-view="writer"] .mobile-nav{display:none}
  body[data-view="writer"] .workspace{padding-bottom:28px}
- body[data-view="writer"] .editor-tools{position:sticky;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--line);padding:12px 0}
+ body[data-view="writer"] .editor-tools{position:static;z-index:auto;background:var(--bg);border-top:1px solid var(--line);padding:12px 0}
  .editor-head{row-gap:10px}
 }
 .glyph{display:inline-flex;align-items:center;justify-content:center}
@@ -109,7 +109,7 @@ if(b.dataset.journal){s.journal=b.dataset.journal;s.view='journalDetail';draw();
 if(b.dataset.memory){s.memory=b.dataset.memory;draw();return}if(b.dataset.backupState){s.demoBackup=b.dataset.backupState;draw();return}
 let a=b.dataset.action;
 if(a==='start'){s.view='setup';draw()}if(a==='createVault'){s.view='today';draw()}if(a==='backWelcome'){s.view='welcome';draw()}
-if(a==='theme'){s.theme=s.theme==='light'?'dark':'light';draw()}
+if(a==='theme'){const active=document.activeElement;const focusId=active&&(active.id==='draftBody'||active.id==='draftTitle')?active.id:null;const begin=focusId?active.selectionStart:null;const end=focusId?active.selectionEnd:null;const offset=typeof window!=='undefined'?window.scrollY:null;s.theme=s.theme==='light'?'dark':'light';draw();if(focusId){const field=document.getElementById(focusId);if(field){field.focus();if(begin!==null&&end!==null&&typeof field.setSelectionRange==='function')field.setSelectionRange(begin,end)}}if(offset!==null&&typeof window!=='undefined')window.scrollTo(0,offset)}
 if(a==='write'){s.activeJournal=s.view==='journalDetail'?s.journal:'Personal';s.view='writer';draw();document.getElementById('draftBody')?.focus()}
 if(a==='closeEditor'){s.view='today';draw()}
 if(a==='goBack'){s.view=s.returnView||'today';draw()}
