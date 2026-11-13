@@ -49,7 +49,7 @@ Score each 1–5 after observation; collect verbatim comments:
 | 18-screen full UX specification | Drafted; stakeholder and user review pending |
 | Journey contracts and failure states | Drafted; engineering feasibility pending |
 | Connected screen mockup study | Concept generated; not pixel-verified |
-| Interactive flow prototype | HTML review prototype committed; functionality not browser-tested |
+| Interactive flow prototype | HTML review prototype refined; 20 mocked-DOM checks passed; browser/device testing not yet done |
 | Actual user validation | Not started |
 | Brand/consumer name and logo approval | Not started |
 | Engineering spike for text editor and encryption | Not started (Stage 4) |
@@ -63,3 +63,13 @@ Score each 1–5 after observation; collect verbatim comments:
 5. Decision register updated with actual approvals and any technical risks.
 
 No Stage 3 completion claim without the checks above.
+
+## Stage 3 refinement verification (2026-11-13)
+
+- Fixed a pre-existing JavaScript parse error caused by unescaped apostrophes in the Discover placeholder.
+- Fixed the empty-journal preview incorrectly showing an unrelated sample entry.
+- Writer now inherits the originating journal context; opening Writer requests focus.
+- Tablet Reader now has a responsive list/detail layout, preserving the original Back destination while switching sample entries.
+- Added first-journal setup flow and backup/app-lock design-only screens with verification failure copy.
+- Ran 20 mocked-DOM state/handler smoke checks on the committed prototype source. A matching Node test was committed to `prototype/tests/smoke.mjs`.
+- **Not yet tested:** actual browser rendering, touchscreen input, keyboard/responsive clipping, accessibility tree, full screenshot comparisons, persistence/security functionality. All simulated statuses are clearly labeled.
