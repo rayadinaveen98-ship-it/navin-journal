@@ -38,6 +38,7 @@ These are priorities, **not delivered functionality**. Product and technical dec
 - [Interaction contracts and critical states](docs/INTERACTION_CONTRACTS_V1.md)
 - [UX validation matrix](docs/UX_VALIDATION_MATRIX.md)
 - [Stage 3 Chromium QA report (13 Nov 2026)](docs/QA_STAGE3_2026-11-13.md)
+- [Stage 3 extended 200% type/Telugu UX QA](docs/QA_STAGE3_EXTENDED_2026-11-13.md)
 - [Stage 3 navigable design preview](prototype/stage3-ux-preview.html) (sample content; no real storage or security)
 - [Prototype usage and limits](prototype/README.md)
 - [Mocked-DOM smoke tests](prototype/tests/smoke.mjs)
