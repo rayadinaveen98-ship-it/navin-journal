@@ -33,6 +33,7 @@ try{
   await page.locator('#draftTitle').fill('నా మొదటి ఆలోచన — First thought');
   await page.locator('#draftBody').fill(bilingual);
   check(await page.locator('#draftBody').inputValue()===bilingual,name+' mixed Telugu/English/emoji input exact');
+  check(await page.locator('#draftTitle').inputValue()==='నా మొదటి ఆలోచన — First thought',name+' mixed-language title exact');
   await page.locator('[data-action="theme"]:visible').click();
   check(await page.locator('#draftBody').inputValue()===bilingual,name+' Unicode content preserved across theme rerender');
   await page.locator('[data-action="theme"]:visible').click();
@@ -80,9 +81,10 @@ try{
   check(await page.locator('#dialogDismiss').evaluate(x=>document.activeElement===x),name+' modal gets keyboard focus');
   await page.keyboard.press('Escape');
   check(await page.locator('[role="dialog"]').count()===0,name+' Escape closes modal');
+  check(await page.locator('[data-action="restoreFail"]').evaluate(el=>document.activeElement===el),name+' focus returns to restore action');
   check(errors.length===0,name+' no uncaught page errors '+errors.join(';'));
   await page.close();
  }
  console.log('SUCCESS: '+checks+' extended browser checks');
 }finally{await browser.close()}
-function sampleText(){return 'The trip I’ll always remember'===null?'': 'The hills, the clouds, and the kind of silence you don’t get in the city. I felt like a small reset — the kind that stays with you.\n\nSome journeys become memories before they have even ended.';}
+function sampleText(){return 'The hills, the clouds, and the kind of silence you don’t get in the city. I felt like a small reset — the kind that stays with you.\n\nSome journeys become memories before they have even ended.';}
