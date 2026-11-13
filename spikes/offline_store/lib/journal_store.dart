@@ -145,12 +145,12 @@ class JournalStore {
       store._migrate();
       return store;
     } catch (_) {
-      db.dispose();
+      db.close();
       rethrow;
     }
   }
 
-  void close() => _db.dispose();
+  void close() => _db.close();
 
   void _inTransaction(void Function() work) {
     _db.execute('BEGIN IMMEDIATE');
