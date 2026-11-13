@@ -96,7 +96,7 @@ class ProductSnapshotCodec {
         throw const ProductSnapshotRejected();
       }
       if (row['archived'] is! bool) throw const ProductSnapshotRejected();
-      final created = _millis(row['createdAtMs']);
+      final created = _millis(row['createdAtMs'])!;
       final deleted = _millis(row['deletedAtMs'], nullable: true);
       if (deleted != null && deleted < created) {
         throw const ProductSnapshotRejected();
@@ -116,8 +116,8 @@ class ProductSnapshotCodec {
       }
       _string(row['title'], maxTextChars, allowEmpty: true);
       _string(row['body'], maxTextChars, allowEmpty: true);
-      final created = _millis(row['createdAtMs']);
-      final updated = _millis(row['updatedAtMs']);
+      final created = _millis(row['createdAtMs'])!;
+      final updated = _millis(row['updatedAtMs'])!;
       _millis(row['eventAtMs'], nullable: true, historical: true);
       final deleted = _millis(row['deletedAtMs'], nullable: true);
       if (updated < created || (deleted != null && deleted < created)) {
@@ -147,7 +147,7 @@ class ProductSnapshotCodec {
       _string(row['title'], maxTextChars, allowEmpty: true);
       _string(row['body'], maxTextChars, allowEmpty: true);
       _millis(row['eventAtMs'], nullable: true, historical: true);
-      final at = _millis(row['updatedAtMs']);
+      final at = _millis(row['updatedAtMs'])!;
       final dates = entryDates[entryId]!;
       if (at < dates.$1 || at > dates.$2) {
         throw const ProductSnapshotRejected();
