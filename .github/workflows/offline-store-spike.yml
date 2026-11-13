@@ -1,0 +1,34 @@
+name: Stage 4 Offline Store Spike
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "spikes/offline_store/**"
+      - ".github/workflows/offline-store-spike.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sqlite-transaction-spike:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Resolve Dart and SQLite dependencies
+        working-directory: spikes/offline_store
+        run: dart pub get
+      - name: Format spike source before validation
+        working-directory: spikes/offline_store
+        run: dart format .
+      - name: Static analyzer
+        working-directory: spikes/offline_store
+        run: dart analyze --fatal-infos
+      - name: Verify reopen, rollback, Unicode, and recovery tests
+        working-directory: spikes/offline_store
+        run: dart test --reporter expanded
