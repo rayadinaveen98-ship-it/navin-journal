@@ -1,10 +1,11 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, curly_braces_in_flow_control_structures, prefer_interpolation_to_compose_strings
 /// APK02 reusable real editor UI bound to the existing validated autosave
 /// controller. Strictly fictional fixtures until Android + recovery gates pass.
 library;
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:navin_journal_autosave_spike/draft_autosave.dart';
 
