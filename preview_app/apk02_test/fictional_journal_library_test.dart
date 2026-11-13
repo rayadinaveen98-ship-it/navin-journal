@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings
 // Full encrypted Library → Reader → Writer Flutter integration.
 // Fictional data and disposable SQLite3MultipleCiphers vault ONLY.
 import 'dart:io';
