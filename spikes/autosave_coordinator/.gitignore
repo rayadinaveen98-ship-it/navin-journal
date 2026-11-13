@@ -1,0 +1,5 @@
+.dart_tool/
+.pub/
+coverage/
+*.db
+*.db-*
