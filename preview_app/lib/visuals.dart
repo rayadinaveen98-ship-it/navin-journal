@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use
 // Navin Journal · Android design-preview visuals.
 // Matches the approved Stage 3 A+C / Midnight Archive semantic tokens.
 // Original programmatic artwork; no user photographs or external downloads.
