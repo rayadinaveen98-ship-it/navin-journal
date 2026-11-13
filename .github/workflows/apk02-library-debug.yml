@@ -48,6 +48,9 @@ jobs:
           rm -f "$TARGET/test/widget_test.dart"
           cp "$ROOT/preview_app/test/"*.dart "$TARGET/test/"
           cp "$ROOT/preview_app/apk02_test/"*.dart "$TARGET/test/"
+          # Test files import the preview package in other CI pipelines.
+          # Rewrite imports for this separate Android application package.
+          sed -i 's#package:navin_journal_preview/#package:navin_journal_library_probe/#g' "$TARGET/test/"*.dart
           NATIVE="$TARGET/android/app/src/main/kotlin"
           mkdir -p "$NATIVE/com/navinjournal/navin_journal_library_probe"
           mkdir -p "$NATIVE/com/navinjournal/security/spike"
