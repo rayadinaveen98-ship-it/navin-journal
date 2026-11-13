@@ -85,3 +85,7 @@ Axe-core reviewed seven representative screens against WCAG 2.0/2.1 A/AA rules i
 ## Extended typography and bilingual verification — 2026-11-13
 
 Latest [extended QA evidence](QA_STAGE3_EXTENDED_2026-11-13.md): 84/84 Chromium checks passed covering 200% text reflow, mixed Telugu–English input/emoji, journal picker, editor-origin Back navigation, dialog focus, and a reduced viewport (not a native soft keyboard). Manual device / accessibility / actual user research still pending.
+
+## Keyboard navigation and screen-reader-oriented checks — 2026-11-13
+
+[Run 43392361821](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43392361821): 33/33 Chromium keyboard navigation tests passed on phone/tablet dimensions. Skip link, main landmark, current navigation semantics, focus restoration, Ctrl+K search and modal isolation were checked. Manual human screen-reader navigation and actual soft-keyboard/Telugu IME behavior are still unverified. [Device QA guide](DEVICE_UX_TEST_RUNBOOK.md) is ready.
