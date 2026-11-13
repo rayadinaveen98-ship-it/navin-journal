@@ -1,0 +1,9 @@
+name: navin_journal_autosave_spike
+description: Fictional-data-only autosave state-machine reference. Not a journal or durable Android autosave.
+publish_to: none
+version: 0.0.1
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.0
