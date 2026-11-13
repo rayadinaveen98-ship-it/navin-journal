@@ -94,6 +94,32 @@ try{
   ok(await page.locator('body').getAttribute('data-theme')==='dark',name+' dark appearance');
   await verifyWidth(page,name+' backup/dark');
   await page.screenshot({path:path.join(out,name+'-management-dark.png'),fullPage:true});
+  // Edge case: the entry is in Trash and its original journal is deleted afterward.
+  // Restoring the entry must require an explicit destination, never an unannounced reassignment.
+  await page.locator('[data-route="journals"]:visible').last().click();
+  await page.locator('[data-action="open:j2"]').click();
+  await page.locator('[data-action="read:e2"]').click();
+  await page.locator('[data-action="deleteEntry"]').click();
+  await page.locator('[data-action="confirmModal"]').click();
+  await page.locator('[data-route="journals"]:visible').last().click();
+  await page.locator('[data-action="open:j2"]').click();
+  await page.locator('[data-action="deleteJournal"]').click();
+  await page.locator('[data-action="confirmModal"]').click();
+  ok(await page.locator('[data-action="restore:te2"]').count()===1,name+' orphan entry remains recoverable');
+  await page.locator('[data-action="restore:te2"]').click();
+  ok((await page.locator('[role="dialog"]').textContent()).includes('Original journal unavailable'),name+' orphan restore requests explicit destination');
+  ok(await page.locator('#restoreDestination').count()===1,name+' destination selector is present');
+  await page.locator('#restoreDestination').selectOption('j3');
+  await page.locator('[data-action="confirmModal"]').click();
+  ok(await page.locator('[data-action="restore:te2"]').count()===0,name+' entry removed from Trash after destination selection');
+  await page.locator('[data-route="journals"]:visible').last().click();
+  await page.locator('[data-action="open:j3"]').click();
+  ok(await page.locator('[data-action="read:e2"]').count()===1,name+' entry reappears in selected Reflections journal');
+  await page.locator('[data-route="trash"]:visible').last().click();
+  await page.locator('[data-action="restore:tj2"]').click();
+  await page.locator('[data-route="journals"]:visible').last().click();
+  await page.locator('[data-action="open:j2"]').click();
+  ok(await page.locator('[data-action="read:e2"]').count()===0,name+' original journal restore does not silently reclaim moved entry');
   await page.reload();
   ok(await page.locator('[data-action^="open:"]').count()===3,name+' reload resets temporary sample data');
   ok(await page.locator('[data-action="open:j4"]').count()===0,name+' temporary new journal does not persist');
