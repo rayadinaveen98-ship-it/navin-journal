@@ -31,11 +31,14 @@ jobs:
       - name: Actual browser rendering and navigation checks
         working-directory: prototype
         run: npm run check:browser
+      - name: Automated HTML accessibility scan
+        working-directory: prototype
+        run: npm run check:a11y
       - name: Upload screenshots for review
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: stage3-ux-screenshots
-          path: prototype/artifacts/*.png
+          path: prototype/artifacts/*
           retention-days: 7
           if-no-files-found: ignore
