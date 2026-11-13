@@ -17,7 +17,10 @@ Product promise, P0/P1/P2 boundary, proposed navigation, data-trust contract and
 - [x] Select A Still Pages + C Memory Atelier, with B Midnight Archive as dark theme (user approved 2026-11-13).
 - [x] Draft semantic color tokens, typography, grids, motion, iconography and responsive guidance.
 - [x] Explore three original brand marks (Folded Page, Quiet Leaf, Memory Window); create vector source and responsive light/dark identity review. **52/52 Chromium checks passed** on [run 43393618241](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43393618241). See [brand QA report](QA_STAGE3_BRAND_2026-11-13.md).
-- [ ] Approve consumer-facing brand name and final logo; candidate Folded Page recommended, not finalized.
+- [x] Approve Folded Page (option 01) as primary visual mark (user approved 2026-11-13); integrate on Welcome, setup, sidebar and mobile header.
+- [x] Prepare light/dark SVGs, 108dp adaptive layers, monochrome icon, Android VectorDrawable XML staging, and mask-review page. See [asset handoff](BRAND_ASSET_HANDOFF.md).
+- [ ] Approve consumer-facing product name, wordmark, native icon export and final splash assets; confirm name availability.
+- [ ] Compile staged launcher XML with AAPT2 and inspect adaptive/themed icon masks on physical Android devices (Stage 4 integration).
 - [x] Specify 18 screens including critical empty/loading/error/permission states and all core journeys.
 - [x] Author a standalone navigable HTML Stage 3 prototype: first-journal setup, sample writing/reading, journal-aware context, Memories/Search, simulated app-lock and backup/error states, light/dark and responsive tablet reader. Not a working diary.
 - [x] Fix initial JavaScript syntax bug and pass 20 mocked-DOM navigation/safety-state smoke checks.
