@@ -12,7 +12,7 @@ const url=pathToFileURL(path.join(root,'stage3-ux-preview.html')).href;
 const axeScript=readFileSync(path.join(root,'node_modules','axe-core','axe.min.js'),'utf8');
 const out=path.join(root,'artifacts');await mkdir(out,{recursive:true});
 const browser=await chromium.launch({headless:true});
-const page=await browser.newPage({viewport:{width:430,height:932}});
+let page=await browser.newPage({viewport:{width:430,height:932}});
 const reports=[];
 async function audit(name){
  await page.addScriptTag({content:axeScript});
@@ -43,6 +43,24 @@ try{
  await page.locator('[data-view="discover"]:visible').last().click();
  await page.locator('[data-action="theme"]').click();
  await audit('discover-dark');
+ await page.close();
+ page=await browser.newPage({viewport:{width:430,height:932}});
+ await page.goto(pathToFileURL(path.join(root,'journal-recovery-review.html')).href);
+ await audit('recovery-library');
+ await page.locator('[data-action="open:j1"]').click();
+ await audit('recovery-journal');
+ await page.locator('[data-action="newEntry"]').click();
+ await audit('recovery-writer');
+ await page.locator('[data-action="leaveWriter"]').first().click();
+ await page.locator('[data-action="read:e1"]').click();
+ await audit('recovery-reader');
+ await page.locator('[data-action="deleteEntry"]').click();
+ await audit('recovery-delete-confirmation');
+ await page.locator('[data-action="confirmModal"]').click();
+ await audit('recovery-trash');
+ await page.locator('[data-route="backup"]:visible').last().click();
+ await page.locator('[data-action="invalid"]').click();
+ await audit('recovery-backup-failure');
  const bad=reports.flatMap(r=>r.issues.filter(i=>['serious','critical'].includes(i.impact)).map(i=>({screen:r.screen,...i})));
  await writeFile(path.join(out,'accessibility-audit.json'),JSON.stringify({date:'2026-11-13',reports,seriousCriticalCount:bad.length},null,2));
  if(bad.length){console.error('Accessibility audit failed: '+bad.length+' serious/critical issue types across screens');process.exitCode=1}
