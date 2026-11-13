@@ -33,6 +33,10 @@ Open **stage3-ux-preview.html** in a desktop or mobile browser after downloading
 
 Keep all feedback scoped to UX/design during Stage 3. Engineering begins after the design and data-integrity gates are approved.
 
+## Real Chromium QA
+
+Run `cd prototype && npm install && npx playwright install chromium && npm run check:browser` or use the GitHub Actions `Stage 3 UX Chromium review` workflow. It captures 24 viewport screenshots and runs a set of real Chromium navigation/layout checks. Latest verified result: 90/90 browser checks on 13 November 2026; see `../docs/QA_STAGE3_2026-11-13.md`. These checks do not verify actual journaling storage, native device behavior, or accessibility end-to-end.
+
 ## JavaScript smoke checks
 
 Run `node prototype/tests/smoke.mjs` from the repository root (requires Node.js). The 20 checks simulate navigation and read the rendered HTML strings with a mocked DOM. They do **not** verify actual browser rendering, keyboard input, screen reader operation, saving, security, accessibility, or network behavior.
