@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+<title id="title">Quiet Leaf — Navin Journal visual identity study</title>
+<desc id="desc">A soft green bookmark page with a leaf-like cutout representing a personal story.</desc>
+<rect width="128" height="128" rx="31" fill="#EFE8DE"/>
+<path d="M35 29H93C97 29 100 32 100 36V99L64 85L28 99V36C28 32 31 29 35 29Z" fill="#475A43"/>
+<path d="M46 72C48 50 67 41 84 40C84 61 72 82 51 83C52 70 62 58 75 51" stroke="#F8F5EE" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="88" cy="88" r="6" fill="#C17A5E"/>
+</svg>
