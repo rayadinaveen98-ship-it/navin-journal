@@ -49,7 +49,7 @@ Score each 1–5 after observation; collect verbatim comments:
 | 18-screen full UX specification | Drafted; stakeholder and user review pending |
 | Journey contracts and failure states | Drafted; engineering feasibility pending |
 | Connected screen mockup study | Concept generated; not pixel-verified |
-| Interactive flow prototype | Not built |
+| Interactive flow prototype | HTML review prototype committed; functionality not browser-tested |
 | Actual user validation | Not started |
 | Brand/consumer name and logo approval | Not started |
 | Engineering spike for text editor and encryption | Not started (Stage 4) |
