@@ -112,6 +112,16 @@ class JournalEditorWorker implements DraftCommitPort {
     return r['journalId'] as String;
   }
 
+  Future<List<Map<String, Object?>>> listJournals({
+    bool includeTrash = false,
+  }) async {
+    final r = await _send('list_journals', {'includeTrash': includeTrash});
+    return [
+      for (final value in r['journals'] as List)
+        Map<String, Object?>.from(value as Map),
+    ];
+  }
+
   Future<List<Map<String, Object?>>> listEntries({
     String? journalId,
     bool includeTrash = false,
@@ -275,6 +285,11 @@ Future<void> _editorStorageWorker(List<Object> args) async {
         case 'create_journal':
           final journal = vault.createJournal(message['name'] as String);
           reply.send({'id': id, 'ok': true, 'journalId': journal});
+        case 'list_journals':
+          final journals = vault.listJournals(
+            includeTrash: message['includeTrash'] == true,
+          );
+          reply.send({'id': id, 'ok': true, 'journals': journals});
         case 'list_entries':
           final entries = vault.listEntries(
             journalId: message['journalId'] as String?,
