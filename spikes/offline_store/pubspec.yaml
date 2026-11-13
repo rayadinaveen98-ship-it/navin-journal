@@ -1,0 +1,11 @@
+name: navin_journal_storage_spike
+description: Experimental unencrypted SQLite transaction spike with fictional data. NOT a journal app.
+publish_to: none
+version: 0.0.1
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+dependencies:
+  sqlite3: 3.9.1
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.0
