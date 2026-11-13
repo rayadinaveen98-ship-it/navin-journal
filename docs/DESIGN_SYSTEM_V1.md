@@ -11,6 +11,10 @@
 
 Never use paper grain behind body text, ornamental elements behind buttons, or high-contrast photographic wallpaper inside the editor. Imagery belongs to covers, memories, and explicit media blocks. Writing always wins.
 
+## Selected identity — 13 November 2026
+
+**Option 01 / Folded Page** has been approved as the primary visual mark. The approved source is [folded-page-approved.svg](../prototype/brand/folded-page-approved.svg) with a dedicated [dark companion](../prototype/brand/folded-page-dark.svg). Apply to the Welcome screen, onboarding, left navigation and compact phone header. **Do not put a giant brand mark inside the editor.** The internal wordmark "Navin Journal" remains provisional until consumer name approval. Native launcher and monochrome sources are staged, not compiled; see [asset handoff](BRAND_ASSET_HANDOFF.md).
+
 ## Semantic color tokens
 
 | Semantic token | Light | Dark | Use |
