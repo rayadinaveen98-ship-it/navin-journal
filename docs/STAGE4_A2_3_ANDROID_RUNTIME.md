@@ -2,7 +2,7 @@
 
 **Date:** 13 November 2026  
 **Purpose:** Validate the actual Android `AndroidKeyStore` provider, beyond Kotlin compilation and Linux fake-provider tests.  
-**Verified status:** **12/12 Android API 35 emulator instrumented tests PASSED** on 13 November 2026 in [run 43412815431](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43412815431). Android test-source compilation also passed in [run 43413011445](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413011445). **A2 production security gate remains OPEN.**
+**Verified status:** **12/12 Android API 35 emulator instrumented tests PASSED** on 13 November 2026 in [run 43413956404](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413956404). Android test-source compilation also passed in [run 43413956366](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413956366). **A2 production security gate remains OPEN.**
 
 ## Source and execution
 
@@ -33,9 +33,9 @@ The instrumented tests use the real Android provider in an Android emulator, wit
 
 ## CI evidence and initial setup correction
 
-The initial emulator CI run failed before any test execution because the runner invoked Gradle at the repository root. The workflow now calls `gradle -p spikes/key_lifecycle/android connectedDebugAndroidTest` as a single command. The corrected run [43412815431](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43412815431) booted an emulator, reported **Starting 12 tests** and **Finished 12 tests** on Android API 35, and completed with **BUILD SUCCESSFUL**. Generated JUnit/HTML test reports are uploaded as a GitHub Actions artifact.
+The initial emulator CI run failed before any test execution because the runner invoked Gradle at the repository root. The workflow now calls `gradle -p spikes/key_lifecycle/android connectedDebugAndroidTest` as a single command. The corrected run [43413956404](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413956404) booted an emulator, reported **Starting 12 tests** and **Finished 12 tests** on Android API 35, and completed with **BUILD SUCCESSFUL**. Generated JUnit/HTML test reports are uploaded as a GitHub Actions artifact.
 
-The separate [Android test-source compilation run 43413011445](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413011445) succeeded. These are independently verifiable CI results, not a claim of physical-device tests.
+The separate [Android test-source compilation run 43413956366](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413956366) succeeded. These are independently verifiable CI results, not a claim of physical-device tests.
 
 ## Emulator vs physical Android
 
@@ -51,3 +51,7 @@ Emulator tests exercise real Android framework APIs but generally run against vi
 - Add A3 transactional autosave and A4 authenticated archive/clean-device restoration tests on real Android.
 
 **Do not enter real private diary content into these engineering test packages.**
+
+## Final assertion hardening
+
+After the first passing Android run, the three tag/ciphertext/AAD tamper tests were tightened to require **`GeneralSecurityException`**, rather than any exception. [Final successful instrumented rerun 43413956404](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413956404) again reported **12 tests started, 12 finished and BUILD SUCCESSFUL**. Android test-source compilation [43413956366](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413956366) also passed. These results remain emulator-only.
