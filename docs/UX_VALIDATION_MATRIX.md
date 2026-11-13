@@ -77,3 +77,7 @@ No Stage 3 completion claim without the checks above.
 ## Chromium verification evidence — 2026-11-13
 
 Successful run: https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43388070399 — **90 browser checks**, 24 screenshots. See [the full Stage 3 QA report](QA_STAGE3_2026-11-13.md). Real-device, accessibility, actual user testing, and all production security/storage functionality remain outstanding.
+
+## Automated HTML accessibility audit — 2026-11-13
+
+Axe-core reviewed seven representative screens against WCAG 2.0/2.1 A/AA rules in headless Chromium. **0 automated violation types were reported**. The audit JSON is in the same [GitHub Actions screenshot artifact](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43388845744). Manual screen-reader, keyboard/IME, text scaling and physical-device checks are still required.
