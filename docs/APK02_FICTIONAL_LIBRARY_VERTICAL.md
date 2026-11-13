@@ -19,6 +19,12 @@
 - **Four real encrypted-worker Flutter UI integration tests PASSED** in [focused run 43463736435](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43463736435). The earlier fake-async deadlock was resolved by properly awaiting worker operations using WidgetTester.runAsync; full UI tests then caught and led to a Material/ink feedback fix on encrypted saved-page cards. This is **Flutter test-runner evidence only**, not an Android emulator or physical-device runtime test.
 - Android Keystore force-stop/relaunch, clean-device key-loss recovery, real-device accessibility and security signoff remain open.
 
+## Updated testable APK (latest)
+
+- [APK 02 successful updated build run 43464148090](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43464148090): **23 encrypted worker, 13 stable Flutter UI and 4 true encrypted-worker navigation tests all passed**; standalone Android APK built and uploaded as artifact 14058260789.
+- Updated debug APK SHA-256: `623e115685eebdcf23603a655747e5357cc93254a9c841ff12a59e8040a65081` (verified byte-for-byte against GitHub Actions artifact).
+- Fixed saved-page Material/ink response; users can install the updated fictional-only debug build. Android Keystore runtime/OS force-stop validation still pending independently.
+
 ## User-visible fictional test journey
 
 1. Launch the **separately installed** library diagnostic. Its data store is not shared with APK 01.
