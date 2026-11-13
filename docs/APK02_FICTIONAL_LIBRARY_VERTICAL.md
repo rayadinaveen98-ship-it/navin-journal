@@ -1,0 +1,30 @@
+# APK 02 — Encrypted Fictional Library Vertical Slice
+
+**Engineering checkpoint:** 13 November 2026. This is a **fictional-data-only Android diagnostic**, not the private journaling beta.
+
+## New code committed
+
+- [Journal Library / Reader / Writing Studio UI](../preview_app/lib/fictional_journal_library.dart) uses our approved Still Pages / Memory Atelier design language, the original Folded Page mark, semantic colors and a responsive constrained layout.
+- [Android library app entrypoint](../preview_app/lib/apk02_library_main.dart) gets an Android app-private database directory and reuses the existing AndroidKeyStore wrapping bridge. On a new install it provisions an encrypted fixture; on reopen it authenticates the existing envelope and refuses to reset a mismatched or missing vault.
+- The existing [journal_editor worker](../packages/journal_editor/lib/journal_editor_isolate.dart) serializes complete encrypted journal creation, journal metadata, entry listing, reading and editing on a background Dart isolate. No plaintext journal index or preferences cache is created.
+- [Journal core](../packages/journal_core/lib/journal_vault.dart) now exposes direct encrypted journal listing without using a full backup snapshot.
+- [Flutter integration tests](../preview_app/apk02_test/fictional_journal_library_test.dart) test: empty library; scripted sample save; list refresh and encrypted reader; historical revision after editing; worker close/reopen with the same key; narrow phone and tablet layouts.
+- [Standalone debug APK CI](../.github/workflows/apk02-library-debug.yml) builds a separate Android application package. It runs strict analyzer, visual and fictional encrypted UI widget tests, then compiles the Library / Reader / Writer debug APK and uploads the artifact if every stage passes.
+
+## User-visible fictional test journey
+
+1. Launch the **separately installed** library diagnostic. Its data store is not shared with APK 01.
+2. Tap **Start a fictional page**; Writing Studio appears with read-only fields.
+3. Tap **Use fictional sample**, then **Save and verify** if needed. Check the state reads “Saved locally · version 1” only after a transaction acknowledgement.
+4. Use back navigation. The editor only closes when safe, and Library reloads rows from encrypted SQLite.
+5. Open the saved card in Reader; observe title, body and encrypted version.
+6. Tap **Edit fictional page**. The predefined fictional revision creates version 2; after safely leaving, the Reader shows the updated page and the worker retains the previous version.
+7. Force-stop and relaunch. The Android Keystore-wrapped database key must unlock the previously created fictional journal rather than resetting it. **This specific physical-device test has not yet been verified**.
+
+## Safety limits
+
+No real user typing is accepted by this debug build. A warning is visible on all screens. This is not production-ready key custody, app lock, signed release, account sync, private journal storage, independent recovery, or backup/restore. A lost device key may make the test data unrecoverable. Physical Android testing, full lifecycle/IME, durability, durable no-overwrite restore, power-loss/disk-full, migration, accessibility and independent security checks remain open.
+
+The separate Android emulator force-stop workflow is not an approved successful proof until its CI run explicitly passes. The Library debug build workflow only proves static, widget and Android compilation gates; it does not run on an Android emulator.
+
+**Never enter real private diary data.**
