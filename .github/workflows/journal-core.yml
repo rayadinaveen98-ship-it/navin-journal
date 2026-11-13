@@ -1,0 +1,41 @@
+name: Navin Journal Encrypted Core P0
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/journal_core/**'
+      - 'spikes/encrypted_store/**'
+      - 'spikes/recovery_archive/**'
+      - '.github/workflows/journal-core.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: navin-journal-core-p0-main
+  cancel-in-progress: true
+
+jobs:
+  encrypted-journal-core:
+    name: Encrypted journaling, revisions and consistent recovery snapshot
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Install dependency graph with SQLite3MultipleCiphers
+        working-directory: packages/journal_core
+        run: dart pub get
+      - name: Source formatting
+        working-directory: packages/journal_core
+        run: dart format lib test
+      - name: Strict static analysis
+        working-directory: packages/journal_core
+        run: dart analyze --fatal-infos
+      - name: Verify encrypted journal transactions and complete v2 archive
+        working-directory: packages/journal_core
+        run: dart test --reporter expanded
