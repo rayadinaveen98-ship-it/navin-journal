@@ -109,6 +109,14 @@ The [encrypted isolate store](../spikes/autosave_coordinator/lib/encrypted_isola
 
 A [test-only Flutter writing screen](../spikes/flutter_bridge_probe/lib/autosave_probe.dart) and [two Android emulator widget/lifecycle tests](../spikes/flutter_bridge_probe/integration_test/autosave_probe_integration_test.dart) are committed. The [A3.3 Android QA report](STAGE4_A3_3_ANDROID_EDITOR.md) separates Linux proof, Flutter Android debug compilation, emulator runtime, real Android lifecycle and physical IME gates. An emulator widget test does **not** demonstrate force-stop durability.
 
+## A3.4 — Real process termination [LINUX PASS; ANDROID FORCE-STOP OPEN]
+
+[Run 43425363790](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43425363790) passed **44/44** Linux Dart tests, including **three actual OS SIGKILL writer-process tests**. A separate process died (1) mid-WAL edit transaction, (2) after SQLite COMMIT but before acknowledgement, and (3) after acknowledgement. Fresh encrypted SQLite reopen preserved exact version/revisions in all cases. A lost acknowledgement of an already-committed snapshot was retried without duplicating the revision.
+
+This is stronger than simulated Dart exceptions, but **not** Android force-stop/reboot, physical hardware, full-storage or unsaved-keystroke recovery. See [A3.4 technical report](STAGE4_A3_4_CRASH_RECOVERY.md).
+
+The [A3.3 emulator editor run 43422522118](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43422522118) had compiled the Android debug APK but failed during **ADB installation** because Android's package manager was unavailable. The revised workflow now checks for `pm path android`, uses cold boot and runs the two Flutter integration suites sequentially; new runtime validation is pending. This is not a diagnosis of the editor's runtime correctness.
+
 ## A4 — Verified backup and clean-device restore [NOT STARTED]
 
 Archive must provide authenticated encryption, versioned manifest, media hashes, journal/entry counts and user-visible recovery instructions. Integrity verification must be performed *before* touching the destination vault. Invalid, tampered, missing-key or interrupted restores must leave the original vault intact.
