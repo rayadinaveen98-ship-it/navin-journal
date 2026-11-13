@@ -1,6 +1,6 @@
 # Navin Journal
 
-**Status:** Stage 3 physical-device/user signoff is open. Stage 4 A2.4 Flutter→Android Keystore→encrypted SQLite proof passed 14 Flutter contract and 2 Android emulator integration tests. A3.1–A3.4 state-machine, encrypted SQLite transaction, off-main-isolate and OS-kill tests passed **44 Linux tests (including three real SIGKILL recovery checks)**. A3.4 **Android emulator force-stop/relaunch recovery passed** across two acknowledged fictional versions. A4.1–A4.3.2 authenticated archive, staged restore and complete logical snapshot encryption passed **56 Linux tests**. **APK 01 visual-only Flutter preview built with 6/6 widget checks**, but no production diary APK, real-device security validation, final journal-schema backup, or clean-device recovery exists.  
+**Status:** Stage 3 physical-device/user signoff is open. Stage 4 A2.4 Flutter→Android Keystore→encrypted SQLite proof passed 14 Flutter contract and 2 Android emulator integration tests. A3.1–A3.4 state-machine, encrypted SQLite transaction, off-main-isolate and OS-kill tests passed **44 Linux tests (including three real SIGKILL recovery checks)**. A3.4 **Android emulator force-stop/relaunch recovery passed** across two acknowledged fictional versions. A4.1–A4.3.2 authenticated archive, staged restore and complete logical snapshot encryption passed **56 Linux tests**. **APK 01 visual-only Flutter preview built with 6/6 widget checks**. APK 02 shared whole-journal encrypted core (CRUD, revisions, Trash, media, consistent v2 export, full-schema staged restore) passed **21/21 Linux tests** in [run 43444827657](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43444827657). **This core is not connected to the Flutter UI, not approved for private user data; no functional diary APK, physical-device security proof, production-durable backup or real Android clean-device recovery exists.**  
 **Project name:** Navin Journal is the internal working title, not the approved consumer brand.  
 **Repository:** `rayadinaveen98-ship-it/navin-journal`
 
@@ -19,6 +19,11 @@ This is a **pure journaling application**. It is intentionally separate from pro
 5. **Revisiting matters.** Reading, searching and exploring memories are first-class.
 6. **Own your archive.** Users can export their entries and attached media using documented formats.
 7. **Platform consistency.** Core data semantics and behaviors are the same across supported devices.
+
+## Latest engineering slice — APK 02
+
+- [Shared encrypted journal core](packages/journal_core/README.md) — 21/21 Linux test cases, verified create/edit/close/reopen, version history, Trash, media, transactional snapshot and encrypted clean-vault restore using fictional data.
+- [Stage 5 / APK 02 safety handoff](docs/STAGE5_APK02_CORE_HANDOFF.md) — exact completed scope, remaining Android/editor/key/durability gates. **No production APK 02 yet.**
 
 ## Working release strategy
 
