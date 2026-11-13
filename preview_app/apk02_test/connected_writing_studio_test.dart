@@ -100,7 +100,7 @@ void main() {
       const ValueKey('insert-fictional-sample')));
     await tester.tap(find.byKey(const ValueKey('insert-fictional-sample')));
     await tester.pumpAndSettle();
-    expect(harness.port.stored, const DraftContent(
+    expect(harness.port.stored, DraftContent(
       title: fixture.title, body: fixture.body));
     expect(find.text('Saved locally · version 1'), findsOneWidget);
     expect(acknowledgements, 1);
