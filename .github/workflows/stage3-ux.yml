@@ -31,6 +31,9 @@ jobs:
       - name: Actual browser rendering and navigation checks
         working-directory: prototype
         run: npm run check:browser
+      - name: Extended bilingual and large-text browser QA
+        working-directory: prototype
+        run: npm run check:extended
       - name: Automated HTML accessibility scan
         working-directory: prototype
         run: npm run check:a11y
