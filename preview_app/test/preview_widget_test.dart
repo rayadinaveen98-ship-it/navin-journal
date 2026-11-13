@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use
 // Design-preview integration smoke tests. No private content or persistence.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
