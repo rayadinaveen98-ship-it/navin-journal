@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings, curly_braces_in_flow_control_structures
 /// APK 02 vertical slice: approved Writing Studio styling -> real
 /// AndroidKeyStore -> encrypted whole-journal SQLite on a worker isolate.
 ///
@@ -7,7 +7,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
