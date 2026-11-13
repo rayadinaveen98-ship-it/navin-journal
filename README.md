@@ -46,6 +46,7 @@ These are priorities, **not delivered functionality**. Product and technical dec
 - [Stage 3 navigable design preview](prototype/stage3-ux-preview.html) (sample content; no real storage or security)
 - [Connected journal management & recovery UX preview](prototype/journal-recovery-review.html) (fictional examples, in-memory only)
 - [Journal and recovery UX validation report](docs/UX_RECOVERY_STAGE3.md)
+- [Connected writing-to-recovery Stage 3 handoff](docs/UX_CONNECTED_JOURNEY_STAGE3.md)
 - [Stage 3 brand comparison preview](prototype/brand-study.html) (option 01 Folded Page selected)
 - [Adaptive launcher-mask visual review](prototype/brand/adaptive-preview.html) (design-only)
 - [Prototype usage and limits](prototype/README.md)
