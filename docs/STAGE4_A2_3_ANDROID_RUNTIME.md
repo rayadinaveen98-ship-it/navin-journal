@@ -2,7 +2,7 @@
 
 **Date:** 13 November 2026  
 **Purpose:** Validate the actual Android `AndroidKeyStore` provider, beyond Kotlin compilation and Linux fake-provider tests.  
-**Release status:** A2 security approval remains **OPEN**. The CI emulator run and physical-device verification are separate.
+**Verified status:** **12/12 Android API 35 emulator instrumented tests PASSED** on 13 November 2026 in [run 43412815431](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43412815431). Android test-source compilation also passed in [run 43413011445](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413011445). **A2 production security gate remains OPEN.**
 
 ## Source and execution
 
@@ -30,6 +30,12 @@ The instrumented tests use the real Android provider in an Android emulator, wit
 | Repeated wrapping | Fresh random nonce and different ciphertext |
 | Invalid key, nonce, tag, empty AAD | Rejected before decryption |
 | AndroidKeyStore key characteristics | AES-256, secret not exportable as raw key, test policy has no user-authentication requirement |
+
+## CI evidence and initial setup correction
+
+The initial emulator CI run failed before any test execution because the runner invoked Gradle at the repository root. The workflow now calls `gradle -p spikes/key_lifecycle/android connectedDebugAndroidTest` as a single command. The corrected run [43412815431](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43412815431) booted an emulator, reported **Starting 12 tests** and **Finished 12 tests** on Android API 35, and completed with **BUILD SUCCESSFUL**. Generated JUnit/HTML test reports are uploaded as a GitHub Actions artifact.
+
+The separate [Android test-source compilation run 43413011445](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413011445) succeeded. These are independently verifiable CI results, not a claim of physical-device tests.
 
 ## Emulator vs physical Android
 
