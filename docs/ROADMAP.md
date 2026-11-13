@@ -1,6 +1,6 @@
 # Roadmap — Navin Journal
 
-**Current phase:** Stage 3, in progress. No code or APK yet.
+**Current phase:** Stage 3, in progress; approved visual direction and detailed UX documents committed. No production app, APK or verified interactive prototype yet.
 
 ## Stage 1 — Competitive review [DONE: research-only]
 
@@ -14,11 +14,14 @@ Product promise, P0/P1/P2 boundary, proposed navigation, data-trust contract and
 
 - [x] Establish three directions: Still Pages / Midnight Archive / Memory Atelier.
 - [x] Define four-destination information architecture and core writing/reading flows.
-- [ ] Present three connected visual options; select one.
-- [ ] Approve brand name, logo principles, colors, typography, grids and iconography.
-- [ ] Design all core screens plus loading/empty/error/permission states.
+- [x] Select A Still Pages + C Memory Atelier, with B Midnight Archive as dark theme (user approved 2026-11-13).
+- [x] Draft semantic color tokens, typography, grids, motion, iconography and responsive guidance.
+- [ ] Approve consumer-facing brand name and final logo.
+- [x] Specify 18 screens including critical empty/loading/error/permission states and all core journeys.
+- [ ] Produce final pixel-verified connected phone/tablet visual mockups and interactive review prototype.
 - [ ] Validate phone and tablet mockups with representative tasks.
-- [ ] Record user choice and design tokens before code.
+- [x] Record approved hybrid and draft design tokens in GitHub.
+- [ ] User-test first-write, discovery, Trash, restore, theme parity and accessibility; resolve blockers.
 
 ## Stage 4 — Engineering proof of concept [NOT STARTED]
 
