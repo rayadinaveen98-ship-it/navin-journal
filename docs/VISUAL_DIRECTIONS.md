@@ -1,6 +1,6 @@
 # Visual direction exploration — Stage 3
 
-**Status:** Three options to evaluate; none approved.  
+**Status:** Approved by user on 2026-11-13: A + C hybrid is the main experience; B is the dark theme.  
 **Goal:** Premium, timeless and intimate. Product is a journal, not a dashboard.
 
 ## Shared design rules
@@ -54,6 +54,6 @@
 7. Distinguishability from existing journal products.
 8. Feasibility with original assets and offline-first architecture.
 
-## Proposed next decision
+## Decision: APPROVED (2026-11-13)
 
-Present three coherent editor/reader directions to the user; select one as baseline. Preserve elements from unselected alternatives only when they improve usability without compromising consistency. Then specify typography, grids, color tokens, iconography, motion, microcopy and all core screens. Do **not** interpret exploratory images as app implementation.
+**A Still Pages = editor/reader foundation. C Memory Atelier = media-led memory library. B Midnight Archive = palette/theme variant with the exact same navigation and interaction logic.** The consumer brand name, logo design, and final device-specific screens remain unapproved. The concrete design system, screen inventory, error states, and UX validation requirements are now defined in DESIGN_SYSTEM_V1.md, SCREEN_SPECIFICATION_V1.md, INTERACTION_CONTRACTS_V1.md and UX_VALIDATION_MATRIX.md. Exploratory generated visuals are **not** app implementation or evidence of functional behavior.
