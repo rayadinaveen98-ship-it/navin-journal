@@ -46,6 +46,9 @@ jobs:
       - name: Android staged icon XML and safe zone source checks
         working-directory: prototype
         run: python3 tests/icon_xml.py
+      - name: Connected journal create, Trash, restore and backup UX checks
+        working-directory: prototype
+        run: npm run check:recovery
       - name: Automated HTML accessibility scan
         working-directory: prototype
         run: npm run check:a11y
