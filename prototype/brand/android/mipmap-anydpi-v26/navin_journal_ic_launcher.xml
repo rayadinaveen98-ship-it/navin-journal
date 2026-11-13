@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Stage 3 staging example; use the app's actual ic_launcher resource names at implementation. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/navin_journal_launcher_bg"/>
+    <foreground android:drawable="@drawable/navin_journal_launcher_foreground"/>
+    <monochrome android:drawable="@drawable/navin_journal_launcher_monochrome"/>
+</adaptive-icon>
