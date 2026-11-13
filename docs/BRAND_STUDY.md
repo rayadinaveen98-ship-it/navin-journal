@@ -1,6 +1,6 @@
 # Navin Journal — visual identity exploration (Stage 3)
 
-**Status:** Three original mark candidates drafted on 13 November 2026. **No consumer-facing brand or final logo has been approved.**
+**Status:** On 2026-11-13, user selected **01 — Folded Page** as Navin Journal's visual mark. Consumer-facing **name, final platform exports and store identity remain pending**.
 
 ## Constraints already approved
 
@@ -18,7 +18,7 @@
 | **F2 · Quiet Leaf** | [SVG](../prototype/brand/quiet-leaf.svg) | A bookmark-shaped page and calm organic stroke | Gentle, minimal, emotional | Can be mistaken for a reading or sustainability app |
 | **F3 · Memory Window** | [SVG](../prototype/brand/memory-window.svg) | Layered pages with a small landscape memory | Communicates photo-led archive experience | Busier at small launcher sizes; more appropriate for Memories than writing-first brand |
 
-**Recommended candidate for review, not final approval:** F1 / Folded Page. It foregrounds writing and uses the clay bookmark as a quiet memory cue. The other marks remain available for comparison.
+**Selected mark direction:** F1 / Folded Page (owner approval on 2026-11-13). It foregrounds writing and uses the clay bookmark as a quiet memory cue. F2 and F3 remain archived exploration alternatives rather than selected product assets.
 
 ## Original vector assets
 
@@ -38,13 +38,17 @@ Proposed lockup: symbol + an elegant editorial serif title with generous vertica
 - Dark mode: preserve icon semantics, test contrast at launcher and in-app sizes, don't invert photography.
 - Monochrome icon required for status bars and contextual actions in the eventual native implementation; first SVG candidates are **not** signed-off adaptive launcher assets.
 
+## Integrated assets
+
+The selected F1 mark is now present in the Stage 3 Welcome, first-journal setup, desktop sidebar and compact mobile header. Light/dark SVG variations, transparent 108x108 adaptive foreground, full background, monochrome themed layer and staged Android VectorDrawable XML have been created. See [Folded Page asset handoff](BRAND_ASSET_HANDOFF.md). These assets are **not yet compiled into a native app**.
+
 ## Review at meaningful sizes
 
 1. Compare on light and dark surface at 24, 48, and 128 CSS px.
 2. Render 430 px phone and 1024 px tablet/desktop review screens.
 3. Check 200% text scale, dark contrast and icon recognition without reading captions.
 4. Ask whether the mark evokes a private journal, distinct from a book reader or photo-storage app.
-5. Only after approval, create final geometry, monochrome paths, Android adaptive icon safe zone, iOS app icon variants, splash lockups and full UI component assets.
+5. F1 direction has approval and vector/monochrome/adaptive candidate geometry is drafted. Android build compilation, adaptive masking on actual launchers, iOS assets, splash refinement and final wordmark remain pending.
 
 ## Source-of-truth and next gate
 
@@ -53,4 +57,4 @@ Proposed lockup: symbol + an elegant editorial serif title with generous vertica
 - [Screen specification](SCREEN_SPECIFICATION_V1.md).
 - [Roadmap](ROADMAP.md).
 
-The chosen visual identity will be added to the main prototype only after owner review. No production app, actual journal storage or logo release is implied by these assets.
+The approved F1 visual identity has been added to the main prototype. No production app, actual journal storage or public consumer brand/logo release is implied by these design artifacts.
