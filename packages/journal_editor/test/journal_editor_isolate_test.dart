@@ -180,6 +180,21 @@ void main() {
     expect((await worker.readEntry(id))!['body'], originalBody);
   });
 
+  test('journal library is read directly from the encrypted worker', () async {
+    final idA = await worker.createJournal('Fictional Seasons');
+    final idB = await worker.createJournal('Fictional Letters');
+    final all = await worker.listJournals();
+    expect(all.map((v) => v['id']), containsAll([idA, idB]));
+    expect(all.map((v) => v['name']),
+      containsAll(['Fictional Seasons', 'Fictional Letters']));
+    expect(all.every((v) => v['deletedAtMs'] == null), isTrue);
+    await worker.close();
+    worker = await JournalEditorWorker.open(dbPath, key: key);
+    final reopened = await worker.listJournals();
+    expect(reopened.map((v) => v['id']), containsAll([idA, idB]));
+    expect(await worker.integrityCheck(), isTrue);
+  });
+
   test('separate journals remain separated and persisted', () async {
     final a = await worker.createJournal('A');
     final b = await worker.createJournal('B');
