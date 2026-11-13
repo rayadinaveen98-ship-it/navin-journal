@@ -1,0 +1,34 @@
+name: Stage 4 Device-Key Lifecycle A2.2 Spike
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'spikes/key_lifecycle/**'
+      - 'spikes/encrypted_store/**'
+      - '.github/workflows/key-lifecycle-spike.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lifecycle-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Resolve key-lifecycle dependencies and SQLite3MC
+        working-directory: spikes/key_lifecycle
+        run: dart pub get
+      - name: Format isolated spike
+        working-directory: spikes/key_lifecycle
+        run: dart format .
+      - name: Static analysis
+        working-directory: spikes/key_lifecycle
+        run: dart analyze --fatal-infos
+      - name: Key envelope, crash-stage and encrypted SQLite integration tests
+        working-directory: spikes/key_lifecycle
+        run: dart test --reporter expanded
