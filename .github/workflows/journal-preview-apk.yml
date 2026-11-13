@@ -45,7 +45,8 @@ jobs:
           flutter create --org com.navinjournal --project-name navin_journal_preview \
             --platforms=android "$TARGET"
 
-          cp "$GITHUB_WORKSPACE/preview_app/lib/"*.dart "$TARGET/lib/"
+          cp "$GITHUB_WORKSPACE/preview_app/lib/main.dart" "$TARGET/lib/"
+          cp "$GITHUB_WORKSPACE/preview_app/lib/visuals.dart" "$TARGET/lib/"
           rm -f "$TARGET/test/widget_test.dart"
           cp "$GITHUB_WORKSPACE/preview_app/test/"*.dart "$TARGET/test/"
 
