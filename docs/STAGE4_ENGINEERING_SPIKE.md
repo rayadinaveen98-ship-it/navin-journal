@@ -79,7 +79,7 @@ The [Android candidate wrapper](../spikes/key_lifecycle/android/src/main/kotlin/
 
 ## A2.3 — Android Keystore emulator execution [12/12 VERIFIED; PHYSICAL DEVICE PENDING]
 
-The [AndroidJUnit4 instrumentation suite](../spikes/key_lifecycle/android/src/androidTest/java/com/navinjournal/security/spike/AndroidKeystoreInstrumentedTest.kt) exercised Android's **actual AndroidKeyStore** provider in an Android API 35 emulator. [Run 43412815431](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43412815431) finished **12 tests successfully**, with test reports; instrumented test-source compilation separately passed in [run 43413011445](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413011445).
+The [AndroidJUnit4 instrumentation suite](../spikes/key_lifecycle/android/src/androidTest/java/com/navinjournal/security/spike/AndroidKeystoreInstrumentedTest.kt) exercised Android's **actual AndroidKeyStore** provider in an Android API 35 emulator. [Run 43413956404](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413956404) finished **12 tests successfully**, with test reports; instrumented test-source compilation separately passed in [run 43413956366](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43413956366).
 
 Verified semantics include AES-256-GCM wrap/unwrap, new alias creation, duplicate and missing alias rejection, tag/ciphertext/AAD tamper detection, across-instance access, alias retirement, rewrap under a second alias, fresh nonces, malformed-input rejection and non-exportable AndroidKeyStore AES key representation.
 
