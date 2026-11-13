@@ -27,6 +27,7 @@
 | NJ-021 | A2.3 real AndroidKeyStore emulator runtime validation | EMULATOR TESTED 2026-11-13 | 12/12 AndroidJUnit4 API35 tests passed; validates Android framework provider in emulator, NOT hardware-backed physical device, Flutter bridge, recovery or release security gate |
 | NJ-022 | A2.4 Flutter MethodChannel to Android Keystore | EMULATOR TESTED 2026-11-13 | 14 contract tests and 2 full native Android emulator integration tests passed, debug APK built; NOT physical-device security or production journaling UI |
 | NJ-023 | A3 autosave-state coordinator plus encrypted transaction experiment | LINUX TESTED 2026-11-13 | 33/33 tests passed; separates pending vs acknowledged writes, prevents stale overwrite, handles lost ACK, transaction rollback and SQLite reopen; Android lifecycle and unified product vault remain pending |
+| NJ-024 | Stage 4 A3.3 one-owner encrypted SQLite isolate and diagnostic Flutter editor | LINUX STORAGE TESTED 2026-11-13 | 41/41 Dart tests pass; Android debug writer/lifecycle checks pending CI; not physical-device crash-safe autosave, user diary or final visual design |
 ## Pending high-impact decisions
 
 - Final consumer brand name, trademark/availability review and production launcher/splash approval; Folded Page direction approved.
