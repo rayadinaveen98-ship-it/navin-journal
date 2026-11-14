@@ -291,7 +291,9 @@ void main() {
     expect(harness.controller.indicator.phase, SavePhase.error);
     expect(harness.controller.indicator.mayLeaveSafely, isFalse);
     expect(find.textContaining('Save failed'), findsOneWidget);
-    expect(find.textContaining('Saved locally'), findsNothing);
+    // The safety copy explains the words "Saved locally"; only the exact
+    // acknowledged status label is authoritative.
+    expect(find.text('Saved locally · version 1'), findsNothing);
     await tester.tap(find.byKey(const ValueKey('connected-back')));
     await tester.pumpAndSettle();
     expect(closed, isFalse);
