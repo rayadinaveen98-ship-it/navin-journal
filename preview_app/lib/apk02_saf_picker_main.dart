@@ -60,8 +60,9 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
   /// written to an ordinary plaintext preferences store or to CI logs.
   Future<void> _withFictionalArchive(
     Directory root,
-    Future<void> Function(Uint8List archive, RecoveryKey key) exercise,
-  ) async {
+    Future<void> Function(Uint8List archive, RecoveryKey key) exercise, {
+    void Function(String)? onCleanupStage,
+  }) async {
     final folder = Directory('${root.path}/saf-scripted-source-v1');
     if (await FileSystemEntity.type(folder.path, followLinks: false) !=
         FileSystemEntityType.notFound) {
@@ -112,11 +113,24 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
       _verifyFictionalSnapshot(verified);
       await exercise(archive, recoveryKey);
     } finally {
-      archive?.fillRange(0, archive.length, 0);
-      await worker?.close();
-      dbKey?.destroy();
-      deviceBytes.fillRange(0, deviceBytes.length, 0);
-      recoveryKey.destroy();
+      // Even if the disposable encrypted worker cannot close, continue to
+      // destroy every process-local key. A cleanup failure still fails CI.
+      onCleanupStage?.call('SAF_ERROR_ARCHIVE_ZEROIZE');
+      var sourceClosed = false;
+      try {
+        archive?.fillRange(0, archive.length, 0);
+        onCleanupStage?.call('SAF_ERROR_WORKER_CLOSE');
+        await worker?.close();
+        sourceClosed = true;
+      } finally {
+        if (sourceClosed) onCleanupStage?.call('SAF_ERROR_KEY_ZEROIZE');
+        try {
+          dbKey?.destroy();
+          deviceBytes.fillRange(0, deviceBytes.length, 0);
+        } finally {
+          recoveryKey.destroy();
+        }
+      }
     }
   }
 
@@ -213,6 +227,14 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
               // resources and destroying the process-local test keys remains.
               failurePhase = 'SAF_ERROR_SOURCE_CLOSE';
             }
+          }
+        }, onCleanupStage: (stage) {
+          // Preserve an earlier export/import/auth failure classification;
+          // only refine the successful-authentication cleanup path.
+          if (failurePhase == 'SAF_ERROR_SOURCE_CLOSE' ||
+              failurePhase == 'SAF_ERROR_ARCHIVE_ZEROIZE' ||
+              failurePhase == 'SAF_ERROR_WORKER_CLOSE') {
+            failurePhase = stage;
           }
         });
         failurePhase = 'SAF_ERROR_FINAL_MARKER';
