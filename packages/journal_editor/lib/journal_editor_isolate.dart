@@ -168,6 +168,38 @@ class JournalEditorWorker implements DraftCommitPort {
     );
   }
 
+  /// Fictional-only journal management. The worker returns the confirmed
+  /// post-mutation catalog + selected pages in one response, never a
+  /// plaintext cache. The worker enforces trash protection independently.
+  Future<EncryptedJournalShelf> manageFictionalJournal({
+    required String journalId,
+    required String activeJournalId,
+    required String operation,
+    String? fictionalNewName,
+  }) async {
+    const operations = {'rename', 'archive', 'unarchive', 'trash', 'restore'};
+    if (!operations.contains(operation)) {
+      throw ArgumentError('Unsupported fictional journal operation');
+    }
+    final r = await _send('manage_fictional_journal', {
+      'journalId': journalId,
+      'activeJournalId': activeJournalId,
+      'operation': operation,
+      if (operation == 'rename') 'name': fictionalNewName,
+    });
+    return EncryptedJournalShelf(
+      r['journalId'] as String,
+      [
+        for (final value in r['journals'] as List)
+          Map<String, Object?>.from(value as Map),
+      ],
+      [
+        for (final value in r['entries'] as List)
+          Map<String, Object?>.from(value as Map),
+      ],
+    );
+  }
+
   Future<List<Map<String, Object?>>> listEntries({
     String? journalId,
     bool includeTrash = false,
@@ -362,15 +394,72 @@ Future<void> _editorStorageWorker(List<Object> args) async {
           // Fictional test command only; the consumer UI must never expose
           // this path as an unrestricted real diary creation interface.
           final newId = vault.createJournal(message['name'] as String);
-          final catalog = vault.listJournals();
+          final catalog = vault.listJournals(includeTrash: true);
           final newPages = vault.listEntries(journalId: newId);
           reply.send({
             'id': id, 'ok': true, 'journalId': newId,
             'journals': catalog, 'entries': newPages,
           });
+        case 'manage_fictional_journal':
+          final targetId = message['journalId'] as String;
+          final operation = message['operation'] as String;
+          final before = vault.listJournals(includeTrash: true);
+          final matched = before.where((j) => j['id'] == targetId).toList();
+          if (matched.length != 1) throw const JournalUnavailable();
+          final target = matched.single;
+          final isTrashed = target['deletedAtMs'] != null;
+          if (operation == 'restore') {
+            if (!isTrashed) throw const JournalUnavailable();
+            vault.restoreJournal(targetId);
+          } else {
+            if (isTrashed) throw const JournalUnavailable();
+            switch (operation) {
+              case 'rename':
+                vault.renameJournal(targetId, message['name'] as String);
+              case 'archive':
+                if (target['archived'] == true) {
+                  throw const JournalUnavailable();
+                }
+                vault.archiveJournal(targetId, archived: true);
+              case 'unarchive':
+                if (target['archived'] != true) {
+                  throw const JournalUnavailable();
+                }
+                vault.archiveJournal(targetId, archived: false);
+              case 'trash':
+                if (before.where((j) =>
+                    j['deletedAtMs'] == null).length < 2) {
+                  // Never strand a fictional vault without an accessible
+                  // journal. Even direct worker callers cannot bypass this.
+                  throw const JournalUnavailable();
+                }
+                vault.trashJournal(targetId);
+              default:
+                throw ArgumentError('Unsupported journal operation');
+            }
+          }
+          final all = vault.listJournals(includeTrash: true);
+          final accessible = all.where((j) =>
+              j['deletedAtMs'] == null).toList();
+          if (accessible.isEmpty) throw const JournalUnavailable();
+          final requested = message['activeJournalId'] as String;
+          final exists = accessible.any((j) => j['id'] == requested);
+          final activeId = exists ? requested :
+              (accessible.where((j) => j['archived'] == false).isNotEmpty
+                  ? accessible.firstWhere((j) => j['archived'] == false)['id']
+                  : accessible.first['id']) as String;
+          final pages = vault.listEntries(journalId: activeId);
+          if (pages.any((e) => e['journalId'] != activeId ||
+              e['deletedAtMs'] != null)) {
+            throw const JournalUnavailable();
+          }
+          reply.send({
+            'id': id, 'ok': true, 'journalId': activeId,
+            'journals': all, 'entries': pages,
+          });
         case 'load_journal_shelf':
           final journalId = message['journalId'] as String;
-          final journals = vault.listJournals();
+          final journals = vault.listJournals(includeTrash: true);
           if (!journals.any((j) =>
               j['id'] == journalId && j['deletedAtMs'] == null)) {
             throw const JournalUnavailable();
