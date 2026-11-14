@@ -11,6 +11,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:navin_journal_editor/fictional_archive_importer.dart';
+import 'package:navin_journal_editor/fictional_retained_recovery_candidate.dart';
 
 import 'visuals.dart';
 
@@ -19,11 +20,16 @@ class FictionalExternalImportSection extends StatefulWidget {
   final Future<FictionalArchiveImportReport> Function(
       Uint8List document, String recoveryKey) inspect;
   final Future<void> Function() hideProtectedInput;
+  final Future<FictionalRetainedRecoveryReport> Function(
+      Uint8List archive, String manualKey)? retainCandidate;
+  final Future<FictionalRetainedRecoveryReport> Function()? reopenCandidate;
   const FictionalExternalImportSection({
     super.key,
     required this.selectEncryptedDocument,
     required this.inspect,
     required this.hideProtectedInput,
+    this.retainCandidate,
+    this.reopenCandidate,
   });
 
   @override
@@ -40,6 +46,7 @@ class FictionalExternalImportSectionState
   bool _checking = false;
   String? _notice;
   FictionalArchiveImportReport? _report;
+  FictionalRetainedRecoveryReport? _retainedReport;
   Future<void>? _activeWork;
 
   @visibleForTesting
@@ -103,6 +110,7 @@ class FictionalExternalImportSectionState
       _selecting = true;
       _notice = null;
       _report = null;
+      _retainedReport = null;
     });
     try {
       final ciphertext = await widget.selectEncryptedDocument();
@@ -131,7 +139,7 @@ class FictionalExternalImportSectionState
     }
   }
 
-  Future<void> _verify() async {
+  Future<void> _verify({bool retain = false}) async {
     final ciphertext = _selectedDocument;
     if (_selecting || _checking || ciphertext == null || !mounted ||
         !RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(_manualKey.text)) return;
@@ -143,20 +151,61 @@ class FictionalExternalImportSectionState
       _selectedDocument = null; // transfer ownership to isolated inspector
     });
     try {
-      final result = await widget.inspect(ciphertext, key);
-      if (result.activeVaultReplaced ||
-          result.importedVaultRetained ||
-          result.independentlyRecoverableBackupVerified) {
-        throw const FictionalArchiveImportRejected();
+      if (retain) {
+        final action = widget.retainCandidate;
+        if (action == null) throw const FictionalArchiveImportRejected();
+        final candidate = await action(ciphertext, key);
+        if (candidate.activeJournalReplaced ||
+            candidate.activatedForPersonalWriting ||
+            candidate.physicalDeviceRecoveryVerified) {
+          throw const FictionalArchiveImportRejected();
+        }
+        if (mounted) setState(() => _retainedReport = candidate);
+      } else {
+        final result = await widget.inspect(ciphertext, key);
+        if (result.activeVaultReplaced ||
+            result.importedVaultRetained ||
+            result.independentlyRecoverableBackupVerified) {
+          throw const FictionalArchiveImportRejected();
+        }
+        if (mounted) setState(() => _report = result);
       }
-      if (mounted) setState(() => _report = result);
     } catch (_) {
       if (mounted) setState(() => _notice =
           'Recovery verification failed. The key may be incorrect, '
           'the archive may be damaged or storage may be unavailable. '
-          'No existing journal was replaced.');
+          'No existing journal was replaced. A reserved candidate '
+          'may remain quarantined for manual inspection.');
     } finally {
       ciphertext.fillRange(0, ciphertext.length, 0);
+      await _hideNativeInput();
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  Future<void> _reopenRetained() async {
+    final action = widget.reopenCandidate;
+    if (action == null || _selectedDocument != null ||
+        _selecting || _checking || !mounted) return;
+    setState(() {
+      _checking = true;
+      _notice = null;
+      _report = null;
+      _retainedReport = null;
+    });
+    try {
+      final retained = await action();
+      if (retained.activeJournalReplaced ||
+          retained.activatedForPersonalWriting ||
+          retained.physicalDeviceRecoveryVerified) {
+        throw const FictionalArchiveImportRejected();
+      }
+      if (mounted) setState(() => _retainedReport = retained);
+    } catch (_) {
+      if (mounted) setState(() => _notice =
+          'Protected candidate could not reopen. It was not deleted, '
+          'repaired or activated. Your current journal was not changed.');
+    } finally {
       await _hideNativeInput();
       if (mounted) setState(() => _checking = false);
     }
@@ -173,8 +222,9 @@ class FictionalExternalImportSectionState
         const SizedBox(height: 9),
         Text('Select an existing .njr encrypted document, then manually '
           're-enter its separate recovery key. Verification uses a new '
-          'disposable encrypted vault. It NEVER modifies or merges your '
-          'current journal and does not keep recovered pages.',
+          'disposable encrypted vault by default. An optional separate '
+          'retained-candidate test keeps a new device-wrapped encrypted '
+          'vault without changing your current journal.',
           key: const ValueKey('import-safety-warning'),
           style: TextStyle(color: c.secondary, height: 1.5)),
         const SizedBox(height: 10),
@@ -216,6 +266,95 @@ class FictionalExternalImportSectionState
             icon: const Icon(Icons.verified_user_outlined),
             label: const Text('Verify in separate encrypted vault'),
           ),
+          if (widget.retainCandidate != null) ...[
+            const SizedBox(height: 9),
+            Text('STAGE 5A TEST · Retains one separate protected candidate. '
+              'Never replaces or activates the current journal. '
+              'Repeated imports refuse an occupied candidate.',
+              key: const ValueKey('import-retain-warning'),
+              style: TextStyle(color: c.clay,
+                height: 1.4, fontWeight: FontWeight.w600, fontSize: 12)),
+            OutlinedButton.icon(
+              key: const ValueKey('import-retain-candidate'),
+              onPressed: _checking ||
+                  !RegExp(r'^[A-Za-z0-9_-]{43}
+            onPressed: _checking ? null : () {
+              _clearSelection();
+              setState(() =>
+                  _notice = 'Import cancelled. No journal was changed.');
+            },
+            child: const Text('Cancel without restoring'),
+          ),
+        ],
+        if (_selecting || _checking) const Padding(
+          padding: EdgeInsets.only(top: 10),
+          child: LinearProgressIndicator(key: ValueKey('import-progress')),
+        ),
+        if (widget.reopenCandidate != null &&
+            _selectedDocument == null)
+          OutlinedButton.icon(
+            key: const ValueKey('import-reopen-candidate'),
+            onPressed: _selecting || _checking ? null :
+                () => _activeWork = _reopenRetained(),
+            icon: const Icon(Icons.lock_open_outlined),
+            label: const Text('Recheck stored protected candidate (test)'),
+          ),
+        if (_notice != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Text(_notice!, key: const ValueKey('import-notice'),
+              style: TextStyle(color: c.clay, height: 1.5)),
+          ),
+        if (_retainedReport != null) ...[
+          const SizedBox(height: 12),
+          Text('Separate protected recovery candidate reopened',
+            key: const ValueKey('import-retained-verified'),
+            style: TextStyle(color: c.success,
+              fontWeight: FontWeight.w700)),
+          const SizedBox(height: 7),
+          Text('${_retainedReport!.journals} notebooks · '
+            '${_retainedReport!.entries} pages · '
+            '${_retainedReport!.revisions} revisions · '
+            '${_retainedReport!.attachments} attachments',
+            key: const ValueKey('import-retained-counts'),
+            style: TextStyle(color: c.ink)),
+          const SizedBox(height: 7),
+          Text('QUARANTINED CANDIDATE ONLY · Not activated, not merged '
+            'with your Library, not approved for private writing.',
+            key: const ValueKey('import-retained-not-activated'),
+            style: TextStyle(color: c.clay,
+              fontWeight: FontWeight.w700, fontSize: 12)),
+        ],
+        if (_report != null) ...[
+          const SizedBox(height: 13),
+          Text('Separate fictional encrypted restore verified',
+            key: const ValueKey('import-verified'),
+            style: TextStyle(color: c.success,
+              fontWeight: FontWeight.w700)),
+          const SizedBox(height: 7),
+          Text('${_report!.journals} notebooks · ${_report!.entries} '
+            'pages · ${_report!.revisions} revisions · '
+            '${_report!.attachments} attachments',
+            key: const ValueKey('import-counts'),
+            style: TextStyle(color: c.ink)),
+          const SizedBox(height: 7),
+          Text('TEMPORARY REVIEW ONLY · restored test vault was removed. '
+            'No existing journal was changed and no new usable journal '
+            'was installed.',
+            key: const ValueKey('import-not-installed'),
+            style: TextStyle(color: c.clay, height: 1.5,
+              fontSize: 12, fontWeight: FontWeight.w700)),
+        ],
+      ],
+    );
+  }
+}
+).hasMatch(_manualKey.text)
+                  ? null : () => _activeWork = _verify(retain: true),
+              icon: const Icon(Icons.archive_outlined),
+              label: const Text('Keep separate protected candidate (test)'),
+            ),
+          ],
           TextButton(
             key: const ValueKey('import-cancel'),
             onPressed: _checking ? null : () {
