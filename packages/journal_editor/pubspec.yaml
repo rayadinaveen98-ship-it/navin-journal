@@ -11,6 +11,8 @@ dependencies:
     path: ../../spikes/autosave_coordinator
   navin_journal_encrypted_spike:
     path: ../../spikes/encrypted_store
+  navin_journal_recovery_archive_spike:
+    path: ../../spikes/recovery_archive
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.26.0
