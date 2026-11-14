@@ -60,8 +60,10 @@ class InsecureFakeDeviceProtector implements DeviceKeyProtector {
 
   @override
   Future<void> retire(String alias) async {
-    _keys.remove(alias)?.fillRange(0, 32, 0);
-    _aad.remove(alias)?.fillRange(0, _aad[alias]?.length ?? 0, 0);
+    final key = _keys.remove(alias);
+    final context = _aad.remove(alias);
+    key?.fillRange(0, key.length, 0);
+    context?.fillRange(0, context.length, 0);
   }
 }
 
