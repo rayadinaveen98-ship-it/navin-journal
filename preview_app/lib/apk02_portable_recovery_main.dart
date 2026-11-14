@@ -339,7 +339,7 @@ class _PortableRecoveryDiagnosticAppState
             const Text('Not a real diary, backup UI or approved beta.',
               textAlign: TextAlign.center),
           ]),
-        )))),
+        ))),
       ),
     );
   }
