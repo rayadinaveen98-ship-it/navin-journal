@@ -85,7 +85,10 @@ class FictionalKeyboardLabState extends State<FictionalKeyboardLab>
   bool _insertedSample = false;
 
   bool get isComposing => _composing;
-  bool get enteredTextIsOnlyInMemory => true;
+
+  /// An intentionally sanitized diagnostic that never includes typed text.
+  /// This supports QA assertions without accessing the device clipboard.
+  String get sanitizedChecklist => _sanitizedReport();
 
   @override
   void initState() {
