@@ -1,6 +1,6 @@
 # APK 02 portable encrypted recovery — clean Android reinstall gate
 
-**Status: Android test in verification. FICTIONAL FIXTURES ONLY.** No real private journal import is authorized.
+**Status: Android API-34 clean uninstall/reinstall, wrong-key rejection, independent-key restore and post-restore reopen VERIFIED (4/4). FICTIONAL FIXTURES ONLY.** No real private journal import is authorized.
 
 ## Scope and architecture
 
@@ -13,7 +13,7 @@ The [fictional Android probe](../preview_app/lib/apk02_portable_recovery_main.da
 ## Test evidence
 
 - [29/29 encrypted editor and portable-recovery tests passed](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43556363294), strict Dart static analysis clean. Six new recovery tests cover encrypted export without plaintext, original vault/key deletion, offline recovery-key reentry, version/history recovery, tampering and wrong-key rejection, no replacement of existing destination, and new database-key isolation.
-- **Android clean reinstall**: [CI workflow](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/workflows/apk02-portable-reinstall.yml). Do NOT mark passed until the separate fresh-install run produces all `PORTABLE_EXPORT_READY`, `PORTABLE_WRONG_KEY`, `PORTABLE_RESTORE_OK`, and `PORTABLE_REOPEN_OK` markers and passes the workflow.
+- **Android clean reinstall VERIFIED** in [successful run 43558301280](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43558301280) (artifact **14099640721**, debug-only). API-34 emulator produced all four markers: `PORTABLE_EXPORT_READY` (04:51:53 UTC), `PORTABLE_WRONG_KEY` (04:52:08 UTC), `PORTABLE_RESTORE_OK` (04:52:17 UTC), and `PORTABLE_REOPEN_OK` (04:52:24 UTC). The runner confirmed original app uninstall, file absence in a fresh app sandbox, byte-identical authenticated archive reinjection, wrong-key no-staging, fresh Android Keystore database key, and exact version/history after a further force-stop. **29/29 encrypted worker/recovery tests and 13/13 Flutter widget tests passed** in the same workflow. The Android diagnostic itself was uninstalled after the test; the recovery secret was never printed in logs.
 - Android API-34 same-install Keystore recovery `ACK_V1 → ACK_V2 → RECOVERED_V2` after two real force-stops **previously passed** in [run 43479108180](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43479108180). That is a different scenario and must not be substituted for this clean-install test.
 
 ## Actual clean-install acceptance sequence
