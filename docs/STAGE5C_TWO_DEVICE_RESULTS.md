@@ -36,6 +36,12 @@ Write **PASS**, **FAIL**, **BLOCKED**, or **NOT RUN** per device. Record a conci
 | 5C-12 | Increase font size, safe areas, Back navigation, tablet rotation | NOT RUN | NOT RUN | — |
 | 5C-13 | Separate **no-storage** Telugu keyboard lab with real Gboard/IME/TalkBack | NOT RUN | NOT RUN | — |
 
+## Automated pre-device evidence (does NOT fill physical result cells)
+
+- [Stage 5C import-buffer safety PR #17](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/17): fixture-only Library app update, two read-only native channel ciphertext regression tests; [Library CI 43624305760](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43624305760) + [Android Telugu lifecycle CI 43624305758](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43624305758) SUCCESS. This is the actual device-test candidate artifact above.
+- [Stage 5C first-launch large-font PR #18](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/18): **tests-only**: simulated 360×780 phone and 800×1130 tablet at 200% Android text scale, create/import/recovery action scrollability and bounds, no render exceptions or implicit vault creation; [Library CI 43625752604](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43625752604) + [API34 lifecycle CI 43625752646](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43625752646) SUCCESS. Device installation of a new APK **not required** for this tests-only change.
+- No real phone/tablet screenshots, version numbers, interaction results or manual test evidence have been supplied yet. Preserve all result cells as NOT RUN.
+
 ## Scope boundaries
 
 - This APK is intentionally read-only/scripted: **do not enter personal diaries**. It uses a **light-only** diagnostic visual theme and has **no full consumer Settings hub**. Midnight Archive theme and finished Settings require Stage 5D; do not mark them Stage 5C PASS.
