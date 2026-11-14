@@ -35,6 +35,8 @@ A composing keyboard (including Telugu IMEs) can hold an unfinished preedit. Tre
 - Independent recovery-key custody, power-loss/OEM/low-storage, large media scale, security/privacy audit and complete signed production beta.
 - Any actual personal diary writing is prohibited in the APK 02 fictional diagnostic.
 
-## Next engineering task
+## Subsequent Android runtime checkpoint (verified 14 November 2026)
 
-Add an API-34 Android connected-editor diagnostic that drives **scripted fictional** Telugu composition and background/relaunch transitions, verifies only acknowledged versions, and fails closed on unfinished composition. Keep hardware/real input acceptance as a separate human physical-device gate. The approved A Still Pages + C Memory Atelier visuals and B Midnight Archive dark theme remain unchanged.
+**Completed:** The previously listed synthetic Android diagnostic was implemented and passed on API 34 in [run 43575135204](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43575135204). It checked real Android HOME, a lifecycle-triggered encrypted partial fictional save, two real app force-stops and independently reopened final/earlier fictional Telugu versions under Android Keystore. See [API-34 evidence and strict limitations](APK02_ANDROID_IME_BACKGROUND.md).
+
+**Still open:** Native Gboard composition on an actual handset/tablet, accessibility and responsive keyboard UX, power-loss/OEM constraints, independent key custody and security signoff. The approved A Still Pages + C Memory Atelier visuals and B Midnight Archive dark theme remain unchanged.
