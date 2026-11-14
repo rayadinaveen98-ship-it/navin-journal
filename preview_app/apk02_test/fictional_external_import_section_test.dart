@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:navin_journal_editor/fictional_archive_importer.dart';
+import 'package:navin_journal_editor/fictional_retained_recovery_candidate.dart';
 import 'package:navin_journal_preview/fictional_external_import_section.dart';
 
 const demoKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
@@ -175,4 +176,93 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('import-progress')), findsNothing);
   });
+  testWidgets('explicit fictional candidate retention and later independent '
+      'reopen never claim activation', (tester) async {
+    var retained = 0;
+    var reopened = 0;
+    const report = FictionalRetainedRecoveryReport(
+      journals: 1, entries: 2, revisions: 3, attachments: 0);
+    Future<FictionalRetainedRecoveryReport> retain(
+        Uint8List bytes, String key) async {
+      retained++;
+      expect(key, demoKey);
+      expect(bytes, [4, 5, 6, 7]);
+      return report;
+    }
+    Future<FictionalRetainedRecoveryReport> reopen() async {
+      reopened++;
+      return report;
+    }
+    Widget app() => MaterialApp(home: Scaffold(body: SingleChildScrollView(
+      child: FictionalExternalImportSection(
+        selectEncryptedDocument: () async =>
+            Uint8List.fromList([4, 5, 6, 7]),
+        inspect: (_, _) async =>
+            throw const FictionalArchiveImportRejected(),
+        hideProtectedInput: () async {},
+        retainCandidate: retain,
+        reopenCandidate: reopen,
+      ),
+    )));
+    await tester.pumpWidget(app());
+    await tapVisible(tester, 'import-select-document');
+    await tester.enterText(
+      find.byKey(const ValueKey('import-recovery-key')), demoKey);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('import-retain-warning')),
+      findsOneWidget);
+    await tapVisible(tester, 'import-retain-candidate');
+    expect(retained, 1);
+    expect(find.byKey(const ValueKey('import-retained-verified')),
+      findsOneWidget);
+    expect(find.textContaining('QUARANTINED CANDIDATE ONLY'),
+      findsOneWidget);
+    expect(find.byKey(const ValueKey('import-verified')), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(app());
+    await tapVisible(tester, 'import-reopen-candidate');
+    expect(reopened, 1);
+    expect(find.byKey(const ValueKey('import-retained-verified')),
+      findsOneWidget);
+    expect(find.byKey(const ValueKey('import-retained-not-activated')),
+      findsOneWidget);
+    expect(find.byKey(const ValueKey('import-recovery-key')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('occupied candidate keeps failure neutral and leaves no '
+      'success or activated-journal UI', (tester) async {
+    var tries = 0;
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body:
+      SingleChildScrollView(child: FictionalExternalImportSection(
+        selectEncryptedDocument: () async => Uint8List.fromList([8, 9]),
+        inspect: (_, _) async =>
+            throw const FictionalArchiveImportRejected(),
+        retainCandidate: (_, _) async {
+          tries++;
+          throw const FictionalRetainedRecoveryRejected();
+        },
+        reopenCandidate: () async =>
+            throw const FictionalRetainedRecoveryRejected(),
+        hideProtectedInput: () async {},
+      )),
+    )));
+    await tapVisible(tester, 'import-select-document');
+    await tester.enterText(
+      find.byKey(const ValueKey('import-recovery-key')), demoKey);
+    await tester.pumpAndSettle();
+    await tapVisible(tester, 'import-retain-candidate');
+    expect(tries, 1);
+    expect(find.textContaining('A reserved candidate'), findsOneWidget);
+    expect(find.byKey(const ValueKey('import-retained-verified')),
+      findsNothing);
+    expect(find.byKey(const ValueKey('import-recovery-key')), findsNothing);
+    await tapVisible(tester, 'import-reopen-candidate');
+    expect(find.textContaining('could not reopen'), findsOneWidget);
+    expect(find.byKey(const ValueKey('import-retained-verified')),
+      findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
 }
