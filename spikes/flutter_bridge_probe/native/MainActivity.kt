@@ -327,6 +327,9 @@ class MainActivity : FlutterActivity() {
                             "SAF_ERROR_NATIVE_OPEN",
                             "SAF_ERROR_SELECTED_BYTES",
                             "SAF_ERROR_AUTH", "SAF_ERROR_CLEANUP",
+                            "SAF_ERROR_IMPORT_HIDE",
+                            "SAF_ERROR_SOURCE_CLOSE",
+                            "SAF_ERROR_FINAL_MARKER",
                             "IME_PREEDIT_READY", "IME_BACKGROUND_ACK_V1",
                             "IME_FINAL_ACK_V2", "IME_REOPENED_V2",
                         )

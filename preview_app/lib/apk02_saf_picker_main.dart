@@ -204,12 +204,18 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
               archive: picked, recoveryKey: key);
             _verifyFictionalSnapshot(verified);
             await _mark('SAF_ROUNDTRIP_AUTH_OK');
-            failurePhase = 'SAF_ERROR_CLEANUP';
+            failurePhase = 'SAF_ERROR_IMPORT_HIDE';
           } finally {
             picked?.fillRange(0, picked.length, 0);
             await _picker.invokeMethod<void>('hideImportRecoveryInput');
+            if (failurePhase == 'SAF_ERROR_IMPORT_HIDE') {
+              // Authentication passed; now closing only disposable source
+              // resources and destroying the process-local test keys remains.
+              failurePhase = 'SAF_ERROR_SOURCE_CLOSE';
+            }
           }
         });
+        failurePhase = 'SAF_ERROR_FINAL_MARKER';
         await _mark('SAF_ROUNDTRIP_VERIFIED');
       } else {
         throw StateError('Unsupported SAF test-only phase');
