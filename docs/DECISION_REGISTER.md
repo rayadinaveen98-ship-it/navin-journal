@@ -40,6 +40,8 @@
 
 | NJ-032 | Fictional Android SAF archive import with manually re-entered recovery key and disposable clean-vault inspection | ENGINEERING VERIFIED 2026-11-14; NOT DURABLE RESTORE | Bounded ACTION_OPEN_DOCUMENT input, FLAG_SECURE masked key, real v2 AES-GCM restore into isolated temporary encrypted vault, independent reopen/checks; wrong key/tampering/cancel fail closed. 45/45 worker, 30/30 Library, Android APK and API-34 regression pass (43583688287/43583688293). No persistent new-device key envelope, activation, physical picker proof or private-data beta signoff. |
 
+| NJ-033 | Separate retained encrypted recovery candidate, never silent active-vault replacement | ENGINEERING VERIFIED 2026-11-14; NATIVE CANDIDATE/HARDWARE OPEN | A fresh device-wrapped key/envelope and atomic no-replace child vault allow offline candidate reopen; permanent exclusive-create reservation serializes imports and preserves interrupted candidates without reset. 52/52 worker, 31/31 Library/widget, debug Android build and baseline API34 lifecycle passed (43587076593 / 43587076581). Linux candidate tests use an insecure fake key protector, NOT actual AndroidKeystore runtime proof for this feature. Durable activation, key-loss handling, power-loss, device QA, private beta are blocked. |
+
 ## Pending high-impact decisions
 
 - Final consumer brand name, trademark/availability review and production launcher/splash approval; Folded Page direction approved.
