@@ -58,6 +58,13 @@ class FictionalActivationReceipt {
 class FictionalRecoveryActivator {
   const FictionalRecoveryActivator._();
 
+  // Prevent overlapping activation attempts from the same Dart isolate from
+  // reopening and mutating the same candidate vault concurrently. This is
+  // ONLY a local admission gate: the permanent exclusive file reservation
+  // and native renameat2(RENAME_NOREPLACE) below remain mandatory across
+  // isolates/processes, even when this flag is true or a process crashes.
+  static bool _activationInProcess = false;
+
   /// This is the existing APK02 Library fixture destination, NOT a second
   /// arbitrary active directory. Existing normal APK02 installs occupy it.
   static const activeDirectoryName = 'nj_apk02_library_fixture';
@@ -140,6 +147,13 @@ class FictionalRecoveryActivator {
     required bool userExplicitlyApproved,
     void Function(String checkpoint)? injectFailure,
   }) async {
+    // This check and assignment run before the first await. Competing calls
+    // inside one isolate are rejected before either can race a candidate
+    // unlock. A separate process still requires the kernel no-clobber gates.
+    if (_activationInProcess) {
+      throw const FictionalActivationRejected();
+    }
+    _activationInProcess = true;
     try {
       if (!userExplicitlyApproved ||
           const bool.fromEnvironment('dart.vm.product')) {
@@ -197,6 +211,11 @@ class FictionalRecoveryActivator {
       // Any error after no-replace rename is AMBIGUOUS. Preserve both
       // candidate and/or promoted active directory, plus all reservations.
       throw const FictionalActivationRejected();
+    } finally {
+      // An interrupted or ambiguous *persistent* reservation is never reset;
+      // this ephemeral guard only admits a later request to fail closed after
+      // inspecting the permanent reservation and candidate/active state.
+      _activationInProcess = false;
     }
   }
 
