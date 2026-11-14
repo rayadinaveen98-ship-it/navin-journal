@@ -316,6 +316,8 @@ class MainActivity : FlutterActivity() {
                             "CANDIDATE_KEY_LOSS_SAFE",
                             "ACTIVE_ACTIVATED", "ACTIVE_REOPEN_OK",
                             "ACTIVE_KEY_LOSS_SAFE",
+                            "SAF_EXPORT_CANCELLED", "SAF_IMPORT_CANCELLED",
+                            "SAF_ROUNDTRIP_VERIFIED",
                             "IME_PREEDIT_READY", "IME_BACKGROUND_ACK_V1",
                             "IME_FINAL_ACK_V2", "IME_REOPENED_V2",
                         )
