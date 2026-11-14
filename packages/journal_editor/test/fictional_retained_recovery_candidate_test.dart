@@ -178,6 +178,50 @@ void main() {
       trustedPrivateRoot: root, deviceProtector: fake)).entries, 1);
   });
 
+  test('exclusive filesystem reservation prevents simultaneous imports '
+      'and preserves the verified winner', () async {
+    final outcomes = await Future.wait(
+      List<Future<bool>>.generate(2, (_) async {
+        try {
+          await FictionalRetainedRecoveryCandidate.prepare(
+            encryptedArchive: Uint8List.fromList(archive),
+            manuallyEnteredRecoveryKey: typedKey,
+            trustedPrivateRoot: root,
+            deviceProtector: fake,
+          );
+          return true;
+        } on FictionalRetainedRecoveryRejected {
+          return false;
+        }
+      }),
+    );
+    expect(outcomes.where((value) => value), hasLength(1));
+    expect(outcomes.where((value) => !value), hasLength(1));
+    expect(File('${root.path}/$candidateName.reservation').existsSync(),
+      isTrue);
+    final reopened = await FictionalRetainedRecoveryCandidate.reopen(
+      trustedPrivateRoot: root, deviceProtector: fake,
+    );
+    expect(reopened.entries, 1);
+    expect(await source.readEntry(entryId), initialPage);
+  });
+
+  test('orphaned exclusive reservation is not silently reset or reused',
+      () async {
+    File('${root.path}/$candidateName.reservation')
+        .createSync(exclusive: true);
+    await expectLater(FictionalRetainedRecoveryCandidate.prepare(
+      encryptedArchive: Uint8List.fromList(archive),
+      manuallyEnteredRecoveryKey: typedKey,
+      trustedPrivateRoot: root,
+      deviceProtector: fake,
+    ), throwsA(isA<FictionalRetainedRecoveryRejected>()));
+    expect(Directory('${root.path}/$candidateName').existsSync(), isFalse);
+    expect(File('${root.path}/$candidateName.reservation').existsSync(),
+      isTrue);
+    expect(await source.readEntry(entryId), initialPage);
+  });
+
   test('wrong key and damaged ciphertext do not reserve a candidate', () async {
     final wrong = RecoveryKey.random();
     final falseKey = wrong.exportForOfflineStorage();
