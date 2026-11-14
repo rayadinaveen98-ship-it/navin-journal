@@ -182,21 +182,7 @@ launch saf_roundtrip
 wait_marker SAF_ROUNDTRIP_EXPORT_READY
 wait_picker
 select_downloads
-tap_label '^(Save|SAVE)
-select_downloads
-tap_label 'navin-journal-FICTIONAL-only'
-wait_marker SAF_ROUNDTRIP_VERIFIED
-
-# Only now is the real Android provider export+import round trip accepted.
-# Core API34 clean-uninstall recovery and full UI/physical acceptance are
-# tracked separately and are NOT implied by this automated picker gate.
-adb -s "$SERIAL" shell am force-stop "$PACKAGE"
-adb -s "$SERIAL" uninstall "$PACKAGE" | grep -q Success
-echo "VERIFIED: real API34 DocumentsUI export cancellation, import cancellation,"
-echo "verified ciphertext write/readback, provider re-selection and authenticated"
-echo "fictional Telugu current+historical revision after imported-byte equality."
-echo "NOT physical OEM/Gboard, manual recovery-key entry or private diary release."
-
+tap_label '^(Save|SAVE)$'
 # Native checks exact encrypted provider readback before the next Open intent.
 wait_marker SAF_ROUNDTRIP_IMPORT_READY
 wait_picker
