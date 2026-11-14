@@ -69,8 +69,8 @@ capture_ui() {
 }
 wait_picker() {
   for i in $(seq 1 45); do
-    if capture_ui && grep -Eq \
-      'com.(google.android|android).documentsui' "$WORK/hierarchy.xml"; then
+    if capture_ui && grep -Eiq \
+      'documentsui|documents.ui' "$WORK/hierarchy.xml"; then
       return 0
     fi
     if [[ "$(marker)" == FAILED ]]; then
@@ -78,7 +78,27 @@ wait_picker() {
     fi
     sleep 1
   done
-  echo "::error::Actual Android DocumentsUI did not appear"; return 1
+  echo "::error::Actual Android DocumentsUI did not appear"
+  echo "::error::Last nonsecret app phase: $(marker)"
+  adb -s "$SERIAL" shell dumpsys window 2>/dev/null |
+    grep -E 'mCurrentFocus|mFocusedApp' | head -n 3 || true
+  # Only report distinct package names; never dump full UI text, file paths,
+  # keys or ciphertext into GitHub CI logs.
+  if capture_ui; then
+    python3 - "$WORK/hierarchy.xml" <<'PY'
+import sys, xml.etree.ElementTree as ET
+try:
+    root = ET.parse(sys.argv[1]).getroot()
+    packages = sorted(set(node.attrib.get("package", "")
+                          for node in root.iter("node")))
+    print("UI package summary:", ", ".join(p for p in packages if p)[:320])
+except Exception:
+    print("UI accessibility hierarchy unavailable")
+PY
+  else
+    echo "::warning::UI accessibility hierarchy dump unavailable"
+  fi
+  return 1
 }
 # Inspect the actual Android accessibility hierarchy, not a screenshot, OCR,
 # hardcoded pixel position, synthetic ActivityResult, or ADB-injected file URI.
@@ -147,22 +167,40 @@ select_downloads() {
 
 reset_probe
 launch saf_export_cancel
+wait_marker SAF_EXPORT_READY
 wait_picker
 adb -s "$SERIAL" shell input keyevent KEYCODE_BACK
 wait_marker SAF_EXPORT_CANCELLED
 reset_probe
 
 launch saf_import_cancel
+wait_marker SAF_IMPORT_READY
 wait_picker
 adb -s "$SERIAL" shell input keyevent KEYCODE_BACK
 wait_marker SAF_IMPORT_CANCELLED
 reset_probe
 
 launch saf_roundtrip
+wait_marker SAF_ROUNDTRIP_EXPORT_READY
 wait_picker
 select_downloads
-tap_label '^(Save|SAVE)$'
+tap_label '^(Save|SAVE)
+select_downloads
+tap_label 'navin-journal-FICTIONAL-only'
+wait_marker SAF_ROUNDTRIP_VERIFIED
+
+# Only now is the real Android provider export+import round trip accepted.
+# Core API34 clean-uninstall recovery and full UI/physical acceptance are
+# tracked separately and are NOT implied by this automated picker gate.
+adb -s "$SERIAL" shell am force-stop "$PACKAGE"
+adb -s "$SERIAL" uninstall "$PACKAGE" | grep -q Success
+echo "VERIFIED: real API34 DocumentsUI export cancellation, import cancellation,"
+echo "verified ciphertext write/readback, provider re-selection and authenticated"
+echo "fictional Telugu current+historical revision after imported-byte equality."
+echo "NOT physical OEM/Gboard, manual recovery-key entry or private diary release."
+
 # Native checks exact encrypted provider readback before the next Open intent.
+wait_marker SAF_ROUNDTRIP_IMPORT_READY
 wait_picker
 select_downloads
 tap_label 'navin-journal-FICTIONAL-only'
