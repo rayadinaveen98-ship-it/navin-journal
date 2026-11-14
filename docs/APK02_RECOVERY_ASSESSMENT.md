@@ -1,6 +1,6 @@
 # APK 02 — Read-only authenticated recovery assessment
 
-**Status:** encrypted-core assessment verified on Linux (41/41), encrypted background-worker assessment verified (35/35), and read-only review Flutter widget tests passed. **FICTIONAL TEST DATA ONLY.** Native APK 02 compilation is a separate CI gate. Never use the diagnostic APK to store a personal journal.
+**Status:** Linux encrypted-core assessment **41/41**, encrypted background worker **35/35**, five read-only review widget tests and APK 02 fictional Library build **ALL PASSED**. [Successful CI run 43565045914](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43565045914); artifact **14101479894** is a diagnostic debug APK, NOT a private diary beta. Never enter personal journal content.
 
 ## Problem and safety boundary
 
@@ -26,7 +26,7 @@ The [RecoveryAssessmentReview](../preview_app/lib/recovery_assessment_review.dar
 
 - [Linux encrypted-core run 43564506990](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43564506990): **41/41 tests passed**, strict static analysis clean. The eleven new core test cases validate intact encrypted stages with/without markers, byte-for-byte unchanged original files, wrong recovery/database keys, divergent data, forged markers, corrupt SQLite, untrusted paths/symlinks, missing files and size limits.
 - [Encrypted editor/assessment worker run 43564673309](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43564673309): **35/35 tests passed**, strict analysis clean. Three new tests verify authenticated stage assessment over the background isolate, wrong archive-key rejection and refusing traversal names.
-- The new Flutter review panel's **five phone/tablet, light/dark and no-destructive-action tests passed** in the [APK02 Library pipeline 43565045914](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43565045914). A passed widget step is not itself a signed or hardware-tested APK.
+- The new Flutter review panel's **five phone/tablet, light/dark and no-destructive-action tests passed** in the [successful APK02 Library build 43565045914](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43565045914). The Android debug APK was built and uploaded as **artifact 14101479894**. The panel is a tested reusable component, **not yet a navigable consumer recovery route**, and the APK is not signed for release or tested on a physical handset.
 
 ## Important limitations and next decision
 
