@@ -4,6 +4,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:navin_journal_autosave_spike/draft_autosave.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:navin_journal_core/journal_vault.dart';
 import 'package:navin_journal_core/native_restore_publisher.dart';
@@ -734,6 +735,146 @@ void main() {
       () => worker.readRevisions(id));
     expect(revisions.length, 1);
     expect(revisions.single['body'], 'తెలు');
+    expect(await workerCall(tester, worker.integrityCheck), isTrue);
+  });
+
+  testWidgets('encrypted page Trash confirmation, restore and revision history',
+      (tester) async {
+    final session = await workerCall(tester,
+      () => worker.startSession(journalId: journal));
+    session.controller.update(
+      title: 'The first fictional page', body: 'తెలుగు imaginary v1',
+    );
+    await workerVoid(tester, session.save);
+    final id = (await workerCall(tester, session.persistedEntryId))!;
+    session.controller.update(
+      title: 'The second fictional page', body: 'తెలుగు imaginary v2 🌿',
+    );
+    await workerVoid(tester, session.save);
+    expect(await workerCall(tester, session.closeSafely), isTrue);
+    expect((await workerCall(tester,
+      () => worker.readEntry(id)))!['version'], 2);
+
+    await mount(tester);
+    await tapVisible(tester, 'library-open-' + id);
+    await tapVisible(tester, 'reader-trash-page');
+    expect(find.byKey(const ValueKey('page-trash-confirm')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('page-trash-cancel')));
+    await settleRealWorker(tester);
+    expect((await workerCall(tester,
+        () => worker.readEntry(id)))!['version'], 2);
+    expect(find.byKey(const ValueKey('reader-title')), findsOneWidget);
+
+    await tapVisible(tester, 'reader-trash-page');
+    await tester.tap(find.byKey(const ValueKey('page-trash-confirm')));
+    await settleRealWorker(tester);
+    expect(find.byKey(ValueKey('library-trashed-page-' + id)),
+      findsOneWidget);
+    expect(find.byKey(ValueKey('library-open-' + id)), findsNothing);
+    expect(find.byKey(const ValueKey('library-empty')), findsOneWidget);
+    expect((await workerCall(tester,
+      () => worker.listEntries(journalId: journal))), isEmpty);
+    final trashed = (await workerCall(tester,
+      () => worker.readEntry(id)))!;
+    expect(trashed['deletedAtMs'], isNotNull);
+    expect(trashed['version'], 3);
+    expect(await workerCall(tester,
+      () => worker.historyCount(id)), 2);
+
+    await tapVisible(tester, 'library-restore-page-' + id);
+    expect(find.byKey(ValueKey('library-trashed-page-' + id)), findsNothing);
+    expect(find.byKey(ValueKey('library-open-' + id)), findsOneWidget);
+    final restored = (await workerCall(tester,
+      () => worker.readEntry(id)))!;
+    expect(restored['journalId'], journal);
+    expect(restored['deletedAtMs'], isNull);
+    expect(restored['version'], 4);
+    expect(restored['body'], 'తెలుగు imaginary v2 🌿');
+    final versions = await workerCall(tester,
+      () => worker.readRevisions(id));
+    expect(versions.map((e) => e['version']).toSet(), {1, 2, 3});
+    expect(versions.firstWhere((e) => e['version'] == 1)['body'],
+      'తెలుగు imaginary v1');
+    expect(await workerCall(tester, worker.integrityCheck), isTrue);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('archived notebook refuses page Trash and restoration',
+      (tester) async {
+    final session = await workerCall(tester,
+      () => worker.startSession(journalId: journal));
+    session.controller.update(title: 'Imaginary archived', body: 'No erase');
+    await workerVoid(tester, session.save);
+    final entryId = (await workerCall(tester, session.persistedEntryId))!;
+    expect(await workerCall(tester, session.closeSafely), isTrue);
+
+    await mount(tester);
+    await tapVisible(tester, 'library-journal-archive');
+    await tapVisible(tester, 'library-open-' + entryId);
+    expect(tester.widget<OutlinedButton>(
+      find.byKey(const ValueKey('reader-trash-page'))).onPressed, isNull);
+    final refused = await workerCall(tester, () async {
+      try {
+        await worker.manageFictionalEntry(
+          journalId: journal, entryId: entryId,
+          expectedVersion: 1, operation: 'trash');
+        return false;
+      } on JournalEditorWorkerUnavailable {
+        return true;
+      }
+    });
+    expect(refused, isTrue);
+    expect((await workerCall(tester,
+        () => worker.readEntry(entryId)))!['deletedAtMs'], isNull);
+    expect(await workerCall(tester, worker.integrityCheck), isTrue);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('stale version and cross-notebook page operations fail closed',
+      (tester) async {
+    final other = await workerCall(tester,
+      () => worker.createJournal('Second imaginary notebook'));
+    final session = await workerCall(tester,
+      () => worker.startSession(journalId: other));
+    session.controller.update(
+      title: 'A second notebook page', body: 'Strictly fictional',
+    );
+    await workerVoid(tester, session.save);
+    final entryId = (await workerCall(tester, session.persistedEntryId))!;
+    expect(await workerCall(tester, session.closeSafely), isTrue);
+
+    final wrongJournalRefused = await workerCall(tester, () async {
+      try {
+        await worker.manageFictionalEntry(
+          journalId: journal, entryId: entryId,
+          expectedVersion: 1, operation: 'trash');
+        return false;
+      } on JournalEditorWorkerUnavailable {
+        return true;
+      }
+    });
+    expect(wrongJournalRefused, isTrue);
+    final staleRefused = await workerCall(tester, () async {
+      try {
+        await worker.manageFictionalEntry(
+          journalId: other, entryId: entryId,
+          expectedVersion: 0, operation: 'trash');
+        return false;
+      } on DraftConflict {
+        return true;
+      }
+    });
+    expect(staleRefused, isTrue);
+    final firstState = await workerCall(tester,
+      () => worker.listEntries(journalId: journal, includeTrash: true));
+    expect(firstState, isEmpty);
+    final secondState = await workerCall(tester,
+      () => worker.listEntries(journalId: other, includeTrash: true));
+    expect(secondState.length, 1);
+    expect(secondState.single['deletedAtMs'], isNull);
+    expect(secondState.single['version'], 1);
     expect(await workerCall(tester, worker.integrityCheck), isTrue);
   });
 

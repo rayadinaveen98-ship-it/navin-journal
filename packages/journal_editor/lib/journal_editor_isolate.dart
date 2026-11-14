@@ -34,7 +34,11 @@ class EncryptedJournalShelf {
   final String journalId;
   final List<Map<String, Object?>> journals;
   final List<Map<String, Object?>> pages;
-  const EncryptedJournalShelf(this.journalId, this.journals, this.pages);
+  /// Read-only tombstones for the selected journal. Never stored on disk
+  /// outside the encrypted SQLite file; never included in normal searches.
+  final List<Map<String, Object?>> trashedPages;
+  const EncryptedJournalShelf(this.journalId, this.journals, this.pages,
+      {this.trashedPages = const []});
 }
 
 class JournalEditorWorker implements DraftCommitPort {
@@ -147,6 +151,10 @@ class JournalEditorWorker implements DraftCommitPort {
         for (final value in r['entries'] as List)
           Map<String, Object?>.from(value as Map),
       ],
+      trashedPages: [
+        for (final value in (r['trashedEntries'] as List? ?? const []))
+          Map<String, Object?>.from(value as Map),
+      ],
     );
   }
 
@@ -163,6 +171,10 @@ class JournalEditorWorker implements DraftCommitPort {
       ],
       [
         for (final value in r['entries'] as List)
+          Map<String, Object?>.from(value as Map),
+      ],
+      trashedPages: [
+        for (final value in (r['trashedEntries'] as List? ?? const []))
           Map<String, Object?>.from(value as Map),
       ],
     );
@@ -195,6 +207,45 @@ class JournalEditorWorker implements DraftCommitPort {
       ],
       [
         for (final value in r['entries'] as List)
+          Map<String, Object?>.from(value as Map),
+      ],
+      trashedPages: [
+        for (final value in (r['trashedEntries'] as List? ?? const []))
+          Map<String, Object?>.from(value as Map),
+      ],
+    );
+  }
+
+  /// Reversible fictional page Trash backed by the encrypted worker.
+  /// Never relocate a page to a different journal, overwrite a stale
+  /// version, or act on a trashed/archived notebook.
+  Future<EncryptedJournalShelf> manageFictionalEntry({
+    required String journalId,
+    required String entryId,
+    required int expectedVersion,
+    required String operation,
+  }) async {
+    if (operation != 'trash' && operation != 'restore') {
+      throw ArgumentError('Unknown fictional page operation');
+    }
+    final r = await _send('manage_fictional_entry', {
+      'journalId': journalId,
+      'entryId': entryId,
+      'expectedVersion': expectedVersion,
+      'operation': operation,
+    });
+    return EncryptedJournalShelf(
+      journalId,
+      [
+        for (final value in r['journals'] as List)
+          Map<String, Object?>.from(value as Map),
+      ],
+      [
+        for (final value in r['entries'] as List)
+          Map<String, Object?>.from(value as Map),
+      ],
+      trashedPages: [
+        for (final value in r['trashedEntries'] as List)
           Map<String, Object?>.from(value as Map),
       ],
     );
@@ -453,9 +504,52 @@ Future<void> _editorStorageWorker(List<Object> args) async {
               e['deletedAtMs'] != null)) {
             throw const JournalUnavailable();
           }
+          final allPages = vault.listEntries(
+              journalId: activeId, includeTrash: true);
           reply.send({
             'id': id, 'ok': true, 'journalId': activeId,
             'journals': all, 'entries': pages,
+            'trashedEntries': allPages.where((e) =>
+                e['deletedAtMs'] != null).toList(),
+          });
+        case 'manage_fictional_entry':
+          final journalId = message['journalId'] as String;
+          final entryId = message['entryId'] as String;
+          final expectedVersion = message['expectedVersion'] as int;
+          final action = message['operation'] as String;
+          final journalRows = vault.listJournals(includeTrash: true);
+          final matches = journalRows.where((j) =>
+              j['id'] == journalId &&
+              j['deletedAtMs'] == null &&
+              j['archived'] == false).toList();
+          if (matches.length != 1) throw const JournalUnavailable();
+          final old = vault.readEntry(entryId);
+          if (old == null || old['journalId'] != journalId) {
+            throw const JournalUnavailable();
+          }
+          if (old['version'] != expectedVersion) {
+            throw const JournalConflict();
+          }
+          if (action == 'trash' && old['deletedAtMs'] == null) {
+            vault.trashEntry(entryId, expectedVersion: expectedVersion);
+          } else if (action == 'restore' && old['deletedAtMs'] != null) {
+            // Restore only to its original, verified writable notebook.
+            vault.restoreEntry(entryId);
+          } else {
+            throw const JournalUnavailable();
+          }
+          final everyPage = vault.listEntries(
+              journalId: journalId, includeTrash: true);
+          if (everyPage.any((e) => e['journalId'] != journalId)) {
+            throw const JournalUnavailable();
+          }
+          reply.send({
+            'id': id, 'ok': true, 'journals':
+                vault.listJournals(includeTrash: true),
+            'entries': everyPage.where((e) =>
+                e['deletedAtMs'] == null).toList(),
+            'trashedEntries': everyPage.where((e) =>
+                e['deletedAtMs'] != null).toList(),
           });
         case 'load_journal_shelf':
           final journalId = message['journalId'] as String;
@@ -470,8 +564,12 @@ Future<void> _editorStorageWorker(List<Object> args) async {
               entry['deletedAtMs'] != null)) {
             throw const JournalUnavailable();
           }
+          final allEntries = vault.listEntries(
+              journalId: journalId, includeTrash: true);
           reply.send({
             'id': id, 'ok': true, 'journals': journals, 'entries': pages,
+            'trashedEntries': allEntries.where((e) =>
+                e['deletedAtMs'] != null).toList(),
           });
         case 'list_entries':
           final entries = vault.listEntries(
