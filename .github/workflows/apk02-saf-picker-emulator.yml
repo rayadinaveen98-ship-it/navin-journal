@@ -6,6 +6,8 @@ on:
     paths:
       - 'preview_app/lib/apk02_saf_picker_main.dart'
       - 'preview_app/ci/apk02_android_saf_picker.sh'
+      - 'preview_app/ci/apk02_android_saf_uiautomator.sh'
+      - 'preview_app/ci/android_saf_uiautomator/**'
       - 'spikes/flutter_bridge_probe/native/MainActivity.kt'
       - 'packages/journal_editor/**'
       - 'spikes/recovery_archive/**'
@@ -16,6 +18,8 @@ on:
     paths:
       - 'preview_app/lib/apk02_saf_picker_main.dart'
       - 'preview_app/ci/apk02_android_saf_picker.sh'
+      - 'preview_app/ci/apk02_android_saf_uiautomator.sh'
+      - 'preview_app/ci/android_saf_uiautomator/**'
       - 'spikes/flutter_bridge_probe/native/MainActivity.kt'
       - 'packages/journal_editor/**'
       - 'spikes/recovery_archive/**'
@@ -107,11 +111,11 @@ jobs:
           flutter pub get
           dart format lib
           flutter analyze --no-pub
-      - name: Lint fictional Android picker driver before any emulator boot
+      - name: Syntax-check independent AndroidX SAF test runner
         shell: bash
         run: |
           set -euo pipefail
-          bash -n "$GITHUB_WORKSPACE/preview_app/ci/apk02_android_saf_picker.sh"
+          bash -n "$GITHUB_WORKSPACE/preview_app/ci/apk02_android_saf_uiautomator.sh"
       - name: Verify encrypted editor worker and portable archive contracts
         shell: bash
         run: |
@@ -126,6 +130,44 @@ jobs:
           flutter build apk --debug -t lib/apk02_saf_picker_main.dart
           test -s build/app/outputs/flutter-apk/app-debug.apk
           sha256sum build/app/outputs/flutter-apk/app-debug.apk
+      - name: Assemble independent AndroidX UI Automator driver APK + test instrumentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$GITHUB_WORKSPACE"
+          DRIVER="$ROOT/preview_app/_saf_driver_generated"
+          flutter create --org com.navinjournal \
+            --project-name navin_journal_saf_driver --platforms=android "$DRIVER"
+          TEST_DIR="$DRIVER/android/app/src/androidTest/kotlin/com/navinjournal/navin_journal_saf_driver"
+          mkdir -p "$TEST_DIR"
+          cp "$ROOT/preview_app/ci/android_saf_uiautomator/SafDocumentPickerInstrumentedTest.kt" "$TEST_DIR/"
+          python3 - "$DRIVER/android/app/build.gradle.kts" <<'PY'
+          from pathlib import Path
+          import sys
+          path = Path(sys.argv[1])
+          s = path.read_text()
+          assert 'com.android.application' in s
+          s += """
+          android {
+              defaultConfig {
+                  testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+              }
+          }
+          dependencies {
+              androidTestImplementation("androidx.test:runner:1.6.2")
+              androidTestImplementation("androidx.test.ext:junit:1.2.1")
+              androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
+          }
+          """
+          path.write_text(s)
+          PY
+          cd "$DRIVER"
+          flutter pub get
+          cd android
+          ./gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest
+          test -s "$DRIVER/build/app/outputs/apk/debug/app-debug.apk"
+          test -s "$DRIVER/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
+          echo "SAF_DRIVER_ROOT=$DRIVER" >> "$GITHUB_ENV"
       - name: Enable emulator acceleration when available
         shell: bash
         run: |
@@ -146,7 +188,7 @@ jobs:
           disable-animations: true
           emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -camera-back none -no-snapshot-load -no-snapshot-save -memory 4096 -cores 4
-          script: bash "$GITHUB_WORKSPACE/preview_app/ci/apk02_android_saf_picker.sh"
+          script: bash "$GITHUB_WORKSPACE/preview_app/ci/apk02_android_saf_uiautomator.sh"
       - name: Retain ONLY disposable fictional SAF test APK after successful Android gate
         if: success()
         uses: actions/upload-artifact@v4
