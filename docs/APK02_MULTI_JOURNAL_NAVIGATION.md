@@ -22,8 +22,10 @@ Existing Library/Reader/Writer navigation, bilingual preset search, earlier-vers
 ## Validation
 
 - Source pull request: https://github.com/rayadinaveen98-ship-it/navin-journal/pull/1
-- PR branch Android workflow: `.github/workflows/apk02-library-debug.yml`; it must pass analysis, worker/widget/real encrypted navigation/recovery tests and compile the Android debug APK.
-- Until there is a passing run, this is implemented but **NOT verified**. Even after a passing run, physical phone/tablet UX, power-loss, key custody and independent security assessment remain open.
+- **Verified passing CI:** [APK 02 multi-journal debug run 43568957683](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43568957683) on 14 November 2026. Strict Flutter analysis passed; **35/35** encrypted editor/recovery worker tests, **13/13** stable visual/editor widget checks, **19/19** encrypted Library navigation and pure index checks, **5/5** recovery safety verdict tests passed; Android debug APK compiled and uploaded.
+- **Artifact:** `navin-apk02-FICTIONAL-LIBRARY-NOT-PRIVATE-DIARY`, GitHub artifact ID `14103815467`. This is a **fictional-only test APK**, not a secure private diary. Installation on physical phone/tablet still needs user confirmation.
+- **Merged:** [PR #1](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/1) via squash commit `49730b91d1c329c78bbb4abc951a837e81730104`.
+- **Still open:** physical phone/tablet UX, power-loss, recovery-key custody, large data and independent security assessment.
 
 ## Release gate
 
