@@ -63,6 +63,7 @@ class ConnectedWritingStudioState extends State<ConnectedWritingStudio>
   bool _working = false;
   bool _leaving = false;
   String? _localMessage;
+  Future<void>? _backgroundSave;
 
   @override
   void initState() {
@@ -96,18 +97,31 @@ class ConnectedWritingStudioState extends State<ConnectedWritingStudio>
     if (!composing && controller.isComposing) controller.endComposition();
   }
 
+  /// Android may emit inactive -> hidden -> paused for a single background
+  /// transition. One best-effort request is enough, and failures must be
+  /// consumed asynchronously rather than escaping into an unhandled zone.
+  /// This never calls onAcknowledged or claims a background flush succeeded.
+  Future<void> _saveOnBackground() async {
+    try {
+      await widget.controller.flush();
+    } catch (_) {
+      // Only the SaveIndicator can declare a committed revision. Keep the
+      // live draft in memory and let an explicit user save report errors.
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (_leaving) return;
-    // Best-effort; Android does not guarantee a Future completes on OS kill.
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
-      try {
-        unawaited(widget.controller.flush());
-      } catch (_) {
-        // Never assert that a lifecycle request constitutes a durable save.
-      }
+      if (_backgroundSave != null) return;
+      final work = _saveOnBackground();
+      _backgroundSave = work;
+      unawaited(work.whenComplete(() {
+        if (identical(_backgroundSave, work)) _backgroundSave = null;
+      }));
     }
   }
 
@@ -170,10 +184,13 @@ class ConnectedWritingStudioState extends State<ConnectedWritingStudio>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Your changes are not safely saved'),
-        content: const Text(
-          'This page is still open. Check the save status and retry. '
-          'A conflict must be reviewed; the editor never silently overwrites it.',
-        ),
+        content: Text(widget.controller.isComposing
+          ? 'Finish the current keyboard composition before leaving. '
+            'The live draft stays open; a background save may contain '
+            'only a partial preedit.'
+          : 'This page is still open. Check the save status and retry. '
+            'A conflict must be reviewed; the editor never silently overwrites it.'),
+
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),

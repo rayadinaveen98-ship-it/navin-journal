@@ -1,5 +1,7 @@
 // ignore_for_file: deprecated_member_use
 // APK02 widget tests: all data fictional; no Android keys or user input.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:navin_journal_autosave_spike/draft_autosave.dart';
@@ -14,6 +16,8 @@ class FakeEncryptedPort implements DraftCommitPort {
   DraftContent? stored;
   bool fail = false;
   bool conflict = false;
+  int commits = 0;
+  Completer<void>? gate;
 
   @override
   Future<CommitReceipt> commit({
@@ -21,6 +25,9 @@ class FakeEncryptedPort implements DraftCommitPort {
     required int expectedVersion,
     required DraftContent content,
   }) async {
+    commits++;
+    final held = gate;
+    if (held != null) await held.future;
     if (conflict || expectedVersion != storedVersion) {
       throw const DraftConflict();
     }
@@ -188,6 +195,119 @@ void main() {
     expect(harness.port.stored!.title, 'Fictional manual test');
     expect(harness.port.stored!.body, 'Only imagined test content');
     expect(harness.controller.indicator.phase, SavePhase.saved);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('synthetic Telugu composition stays editable in memory and blocks close',
+      (tester) async {
+    var closed = false;
+    final harness = await mount(tester, onClose: () => closed = true);
+    final view = tester.state<ConnectedWritingStudioState>(
+      find.byType(ConnectedWritingStudio));
+
+    const partial = 'తెలు';
+    view.titleInput.text = 'కల్పితమైన పేజీ';
+    view.bodyInput.value = TextEditingValue(
+      text: partial,
+      selection: TextSelection.collapsed(offset: partial.length),
+      composing: TextRange(start: 0, end: partial.length),
+    );
+    await tester.pump();
+    expect(harness.controller.isComposing, isTrue);
+    expect(harness.controller.indicator.phase, SavePhase.dirty);
+    expect(harness.port.commits, 0);
+    expect(tester.widget<TextField>(
+      find.byKey(const ValueKey('connected-body'))).readOnly, isTrue);
+
+    await tester.tap(find.byKey(const ValueKey('connected-back')));
+    await tester.pumpAndSettle();
+    expect(find.text('Your changes are not safely saved'), findsOneWidget);
+    expect(find.textContaining('Finish the current keyboard composition'),
+      findsOneWidget);
+    expect(closed, isFalse);
+    await tester.tap(find.text('Keep editing'));
+    await tester.pumpAndSettle();
+
+    const complete = 'తెలుగు కథ 🌿 ఒక ఊహించిన రోజు';
+    view.bodyInput.value = TextEditingValue(
+      text: complete,
+      selection: TextSelection.collapsed(offset: complete.length),
+    );
+    await tester.pump();
+    expect(harness.controller.isComposing, isFalse);
+    expect(harness.port.commits, 0);
+    await tester.ensureVisible(find.byKey(const ValueKey('connected-save')));
+    await tester.tap(find.byKey(const ValueKey('connected-save')));
+    await tester.pumpAndSettle();
+    expect(harness.port.stored?.body, complete);
+    expect(find.text('Saved locally · version 1'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('connected-back')));
+    await tester.pumpAndSettle();
+    expect(closed, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('repeated Android background transitions share one real ACK',
+      (tester) async {
+    final harness = await mount(tester, onClose: () {});
+    final view = tester.state<ConnectedWritingStudioState>(
+      find.byType(ConnectedWritingStudio));
+    harness.port.gate = Completer<void>();
+    view.titleInput.text = 'A fictional interrupted afternoon';
+    view.bodyInput.text = 'ఒక ఊహించిన జ్ఞాపకం · imagined only';
+    await tester.pump();
+    expect(harness.controller.indicator.phase, SavePhase.dirty);
+
+    view.didChangeAppLifecycleState(AppLifecycleState.inactive);
+    view.didChangeAppLifecycleState(AppLifecycleState.hidden);
+    view.didChangeAppLifecycleState(AppLifecycleState.paused);
+    await tester.pump();
+    expect(harness.port.commits, 1);
+    expect(harness.controller.indicator.phase, SavePhase.saving);
+    expect(harness.controller.indicator.mayLeaveSafely, isFalse);
+    expect(find.text('Saved locally · version 1'), findsNothing);
+
+    harness.port.gate!.complete();
+    await tester.pumpAndSettle();
+    expect(harness.port.commits, 1);
+    expect(harness.port.stored?.body, 'ఒక ఊహించిన జ్ఞాపకం · imagined only');
+    expect(harness.controller.indicator.phase, SavePhase.saved);
+    expect(find.text('Saved locally · version 1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('failed background save never shows a false acknowledgement',
+      (tester) async {
+    var closed = false;
+    final harness = await mount(tester, onClose: () => closed = true);
+    final view = tester.state<ConnectedWritingStudioState>(
+      find.byType(ConnectedWritingStudio));
+    harness.port.fail = true;
+    view.titleInput.text = 'Fictional draft during pause';
+    view.bodyInput.text = 'అసంపూర్ణ ఊహించిన కథ';
+    await tester.pump();
+    view.didChangeAppLifecycleState(AppLifecycleState.paused);
+    await tester.pumpAndSettle();
+    expect(harness.controller.indicator.phase, SavePhase.error);
+    expect(harness.controller.indicator.mayLeaveSafely, isFalse);
+    expect(find.textContaining('Save failed'), findsOneWidget);
+    // The safety copy explains the words "Saved locally"; only the exact
+    // acknowledged status label is authoritative.
+    expect(find.text('Saved locally · version 1'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('connected-back')));
+    await tester.pumpAndSettle();
+    expect(closed, isFalse);
+    expect(find.text('Your changes are not safely saved'), findsOneWidget);
+    await tester.tap(find.text('Keep editing'));
+    await tester.pumpAndSettle();
+
+    harness.port.fail = false;
+    await tester.ensureVisible(find.byKey(const ValueKey('connected-save')));
+    await tester.tap(find.byKey(const ValueKey('connected-save')));
+    await tester.pumpAndSettle();
+    expect(harness.port.stored?.body, 'అసంపూర్ణ ఊహించిన కథ');
+    expect(harness.controller.indicator.phase, SavePhase.saved);
+    expect(harness.port.storedVersion, 1);
     expect(tester.takeException(), isNull);
   });
 

@@ -689,4 +689,52 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('synthetic Telugu preedit and final text survive encrypted worker reopen',
+      (tester) async {
+    // Fixture-only controller operations: no real typing or personal content.
+    final session = await workerCall(tester,
+      () => worker.startSession(journalId: journal,
+        debounce: const Duration(days: 1)));
+    session.controller.startComposition();
+    session.controller.update(
+      title: 'ఊహించిన సంఘటన',
+      body: 'తెలు',
+    );
+    expect(await workerCall(tester, session.closeSafely), isFalse);
+    expect(await workerCall(tester,
+      () => worker.listEntries(journalId: journal)), isEmpty);
+
+    // App-background force flush can preserve a partial fictional preedit,
+    // but the active editor must not be dismissed while composing.
+    await workerVoid(tester, session.save);
+    expect(session.indicator.databaseVersion, 1);
+    expect(await workerCall(tester, session.closeSafely), isFalse);
+
+    session.controller.update(
+      title: 'ఊహించిన సంఘటన',
+      body: 'తెలుగు కథ 🌿 పూర్తిగా కల్పితం',
+    );
+    session.controller.endComposition();
+    await workerVoid(tester, session.save);
+    expect(session.indicator.databaseVersion, 2);
+    final id = (await workerCall(tester, session.persistedEntryId))!;
+    expect(await workerCall(tester, session.closeSafely), isTrue);
+
+    // Clean worker close/reopen is not an OS-kill or physical-device proof.
+    await workerVoid(tester, worker.close);
+    worker = await workerCall(tester,
+      () => JournalEditorWorker.open(path, key: key));
+    final finalRecord = (await workerCall(tester,
+      () => worker.readEntry(id)))!;
+    expect(finalRecord['journalId'], journal);
+    expect(finalRecord['title'], 'ఊహించిన సంఘటన');
+    expect(finalRecord['body'], 'తెలుగు కథ 🌿 పూర్తిగా కల్పితం');
+    expect(finalRecord['version'], 2);
+    final revisions = await workerCall(tester,
+      () => worker.readRevisions(id));
+    expect(revisions.length, 1);
+    expect(revisions.single['body'], 'తెలు');
+    expect(await workerCall(tester, worker.integrityCheck), isTrue);
+  });
+
 }

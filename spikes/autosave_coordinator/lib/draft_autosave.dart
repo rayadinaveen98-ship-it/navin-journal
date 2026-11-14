@@ -266,12 +266,17 @@ class DraftAutosaveController {
     return flush();
   }
 
-  /// Attempt to flush on editor dismissal. Refuse to close if unsaved.
+  /// Attempt to flush on editor dismissal. Refuse to close if unsaved or
+  /// while an IME is composing: a partial Telugu/other-language preedit is
+  /// not a completed editorial decision. A lifecycle-triggered flush may
+  /// still preserve a best-effort snapshot during app backgrounding, but
+  /// must not be treated as permission to dismiss the active editor.
   /// Real OS process death may happen even after refusal; no guarantees.
   Future<bool> closeSafely() async {
     if (_closed) return true;
+    if (_composing) return false;
     await flush();
-    if (!indicator.mayLeaveSafely) return false;
+    if (_composing || !indicator.mayLeaveSafely) return false;
     _closed = true;
     _timer?.cancel();
     _timer = null;
