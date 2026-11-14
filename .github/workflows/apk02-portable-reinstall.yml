@@ -12,6 +12,17 @@ on:
       - 'spikes/key_lifecycle/**'
       - 'spikes/flutter_bridge_probe/native/MainActivity.kt'
       - '.github/workflows/apk02-portable-reinstall.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'preview_app/lib/apk02_portable_recovery_main.dart'
+      - 'preview_app/ci/apk02_portable_reinstall.sh'
+      - 'packages/journal_editor/**'
+      - 'packages/journal_core/**'
+      - 'spikes/recovery_archive/**'
+      - 'spikes/key_lifecycle/**'
+      - 'spikes/flutter_bridge_probe/native/MainActivity.kt'
+      - '.github/workflows/apk02-portable-reinstall.yml'
   workflow_dispatch:
 
 permissions:
