@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
 import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_core/restore_staging_inventory.dart';
+import 'package:navin_journal_editor/fictional_recovery_rehearsal.dart';
 import 'connected_writing_studio.dart';
 import 'fictional_library_index.dart';
 import 'recovery_safety_screen.dart';
@@ -560,6 +561,9 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
                   privateRoot: widget.recoveryPrivateRoot!,
                   authenticatedAssessment: widget.authenticatedAssessment,
                   inventoryLoader: widget.inventoryLoader,
+                  rehearsal: () => FictionalRecoveryRehearsal.run(
+                    source: widget.worker,
+                  ),
                 )
               else _libraryView(c),
             ]),
