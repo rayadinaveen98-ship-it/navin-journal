@@ -34,7 +34,16 @@ void main() {
 }
 
 class Apk02LibraryDiagnosticApp extends StatefulWidget {
-  const Apk02LibraryDiagnosticApp({super.key});
+  /// Widget tests inject a fictional private root/state to isolate first-run
+  /// presentation from Android MethodChannel and native filesystem timing.
+  /// The actual Android app always supplies neither parameter.
+  final Directory? debugTestPrivateRoot;
+  final FictionalActivationState? debugTestActivationState;
+  const Apk02LibraryDiagnosticApp({
+    super.key,
+    this.debugTestPrivateRoot,
+    this.debugTestActivationState,
+  });
 
   @override
   State<Apk02LibraryDiagnosticApp> createState() =>
@@ -73,7 +82,8 @@ class Apk02LibraryDiagnosticAppState
       _status = 'Unlocking fictional encrypted journal…';
     });
     try {
-      final root = await _diagnostic.invokeMethod<String>('getPrivateRoot');
+      final root = widget.debugTestPrivateRoot?.path ??
+          await _diagnostic.invokeMethod<String>('getPrivateRoot');
       if (root == null || root.trim().isEmpty) {
         throw StateError('App private root is unavailable');
       }
@@ -88,8 +98,9 @@ class Apk02LibraryDiagnosticAppState
       final envelope = File(
         folder.path + Platform.pathSeparator + 'envelope.json');
       final rootDirectory = Directory(root);
-      final state = await FictionalRecoveryActivator.inspect(
-          trustedPrivateRoot: rootDirectory);
+      final state = widget.debugTestActivationState ??
+          await FictionalRecoveryActivator.inspect(
+            trustedPrivateRoot: rootDirectory);
       final legacy = legacyDb.existsSync();
       final activated = activeRecoveredDb.existsSync();
       if (legacy && activated) {
@@ -287,7 +298,9 @@ class Apk02LibraryDiagnosticAppState
               const Divider(),
               const SizedBox(height: 17),
               FictionalActivationConsentPanel(
-                inspect: _inspectActivation,
+                inspect: widget.debugTestActivationState == null
+                    ? _inspectActivation
+                    : () async => widget.debugTestActivationState!,
                 activateApproved: _activateApproved,
                 onActivated: () => _open(),
               ),
