@@ -27,6 +27,14 @@ for i in $(seq 1 120); do
 done
 [[ "$ready" == 1 ]] || { echo "::error::Emulator PM not ready"; exit 2; }
 
+# Do not use adb exec-out's process exit status for existence probes:
+# it streams stdout and has not reliably propagated remote test(1) failure.
+app_path_exists() {
+  local path="$1"
+  adb -s "$SERIAL" shell run-as "$PACKAGE" ls -ld "$path" 2>/dev/null |
+    grep -F -q -- "${path##*/}"
+}
+
 marker() {
   adb -s "$SERIAL" exec-out run-as "$PACKAGE" \
     cat files/nj_crash_phase.txt 2>/dev/null | tr -d '\r' || true
@@ -86,8 +94,7 @@ adb -s "$SERIAL" install -r -t "$APK"
 # The new app has not launched yet: getFilesDir() has not necessarily run.
 # Ensure only its empty private files directory exists before streaming data.
 adb -s "$SERIAL" shell run-as "$PACKAGE" mkdir -p files
-if adb -s "$SERIAL" exec-out run-as "$PACKAGE" \
-    test -e files/portable_export.njr 2>/dev/null; then
+if app_path_exists files/portable_export.njr; then
   echo "::error::Original app sandbox unexpectedly survived reinstall"; exit 1
 fi
 
@@ -112,16 +119,14 @@ adb -s "$SERIAL" shell -T run-as "$PACKAGE" sh -c \
   'umask 077; cat > files/portable_wrong.key' < "$WRONG"
 phase reject_wrong_key PORTABLE_WRONG_KEY
 for path in portable-restored-vault portable-restored-envelope.json; do
-  if adb -s "$SERIAL" exec-out run-as "$PACKAGE" \
-      test -e "files/$path" 2>/dev/null; then
+  if app_path_exists "files/$path"; then
     echo "::error::Wrong key caused $path to be created"; exit 1
   fi
 done
 stop_app
 
 phase restore_fixture PORTABLE_RESTORE_OK
-if adb -s "$SERIAL" exec-out run-as "$PACKAGE" \
-    test -e files/portable_import.key 2>/dev/null; then
+if app_path_exists files/portable_import.key; then
   echo "::error::One-time recovery key input was not deleted"; exit 1
 fi
 stop_app
