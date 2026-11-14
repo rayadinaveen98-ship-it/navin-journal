@@ -1,6 +1,6 @@
 # APK 02 — Encrypted Library discovery and read-only history
 
-**Status: 16/16 real-worker Flutter integration/unit tests VERIFIED on Linux. Android debug APK compilation is a separate gate.** This feature only operates on fictional fixture pages. Private personal diary input remains disabled.
+**Status: 16/16 real-worker Flutter integration/unit tests VERIFIED; Android APK 02 debug build and upload also PASSED.** [Successful Library APK run 43567465722](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43567465722), artifact **14102649452** (fictional-only debug APK). This feature only operates on fictional fixture pages; personal diary input remains disabled.
 
 ## Functional changes
 
@@ -26,7 +26,7 @@ The approved Still Pages / Memory Atelier palette and Folded Page branding remai
 
 [Successful real-worker Flutter CI run 43567462174](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43567462174) passed strict static analysis and **16/16** tests. It includes six pure index tests (stable timestamp/title sorting, case folding, Telugu title/body matching, Trash exclusion, no results, unmodifiable outputs) and ten real encrypted Library → Reader → Writer widget tests. Three new UI tests cover Telugu/English saved pages and preset filters, earlier version inspection without alteration, and version-1 empty history. The pre-existing seven UI tests also passed.
 
-The [APK 02 fictional Library Android build](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/workflows/apk02-library-debug.yml) gates its debug APK on these sixteen tests as well as its existing encrypted editor/recovery and visual checks. **Do not claim a new APK artifact or physical Android UX test until verified.**
+The [APK 02 fictional Library Android build](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/workflows/apk02-library-debug.yml) gates its debug APK on these sixteen tests as well as its existing encrypted editor/recovery and visual checks. **The Android debug APK compiled and artifact 14102649452 was uploaded successfully in run 43567465722.** This is a build check, not proof of screen behavior on a physical phone or tablet.
 
 ## Remaining development gates
 
