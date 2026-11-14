@@ -304,4 +304,105 @@ void main() {
     }
   });
 
+
+  testWidgets('encrypted Library presets filter actual Telugu/English saved pages',
+      (tester) async {
+    Future<String> seed(String title, String body) async {
+      final session = await workerCall(tester, () =>
+          worker.startSession(journalId: journal));
+      session.controller.update(title: title, body: body);
+      await workerVoid(tester, session.save);
+      final id = (await workerCall(tester, session.persistedEntryId))!;
+      expect(await workerCall(tester, session.closeSafely), isTrue);
+      return id;
+    }
+
+    final afternoonId = await seed(
+      'A Quiet Afternoon', 'A completely invented moment.',
+    );
+    final teluguId = await seed(
+      'Moonlit Room', 'తెలుగు fictional example',
+    );
+    await mount(tester);
+    expect(find.byKey(ValueKey('library-open-' + afternoonId)), findsOneWidget);
+    expect(find.byKey(ValueKey('library-open-' + teluguId)), findsOneWidget);
+    expect(find.textContaining('2 of 2 fictional pages'), findsOneWidget);
+
+    await tapVisible(tester, 'library-filter-telugu');
+    expect(find.byKey(ValueKey('library-open-' + teluguId)), findsOneWidget);
+    expect(find.byKey(ValueKey('library-open-' + afternoonId)), findsNothing);
+    expect(find.textContaining('1 of 2 fictional pages'), findsOneWidget);
+
+    await tapVisible(tester, 'library-filter-afternoon');
+    expect(find.byKey(ValueKey('library-open-' + afternoonId)), findsOneWidget);
+    expect(find.byKey(ValueKey('library-open-' + teluguId)), findsNothing);
+
+    await tapVisible(tester, 'library-filter-imagined');
+    expect(find.byKey(const ValueKey('library-filter-empty')), findsOneWidget);
+
+    await tapVisible(tester, 'library-filter-all');
+    expect(find.byKey(ValueKey('library-open-' + afternoonId)), findsOneWidget);
+    expect(find.byKey(ValueKey('library-open-' + teluguId)), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('reader shows encrypted historical version without restoring it',
+      (tester) async {
+    final session = await workerCall(tester, () =>
+        worker.startSession(journalId: journal));
+    session.controller.update(
+      title: 'First made-up chapter', body: 'Original fictional scene తెలుగు',
+    );
+    await workerVoid(tester, session.save);
+    final id = (await workerCall(tester, session.persistedEntryId))!;
+    session.controller.update(
+      title: 'Second made-up chapter', body: 'Current fictional scene only',
+    );
+    await workerVoid(tester, session.save);
+    expect(await workerCall(tester, session.closeSafely), isTrue);
+
+    await mount(tester);
+    await tapVisible(tester, 'library-open-' + id);
+    expect(find.text('Second made-up chapter'), findsOneWidget);
+    expect(find.byKey(const ValueKey('reader-history-version-1')), findsNothing);
+
+    await tapVisible(tester, 'reader-history');
+    expect(find.byKey(const ValueKey('reader-history-safe-note')), findsOneWidget);
+    expect(find.byKey(const ValueKey('reader-history-version-1')), findsOneWidget);
+    expect(find.text('First made-up chapter'), findsOneWidget);
+    expect(find.textContaining('Original fictional scene'), findsOneWidget);
+    expect(find.text('Second made-up chapter'), findsOneWidget);
+    expect(find.byKey(const ValueKey('reader-history-error')), findsNothing);
+
+    // Seeing an old version never writes it back over the current record.
+    final current = await workerCall(tester, () => worker.readEntry(id));
+    expect(current!['version'], 2);
+    expect(current['title'], 'Second made-up chapter');
+    expect(await workerCall(tester, () => worker.historyCount(id)), 1);
+    await tapVisible(tester, 'reader-back');
+    expect(find.byKey(const ValueKey('reader-history-version-1')), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a first version exposes only an explicit empty history state',
+      (tester) async {
+    final session = await workerCall(tester, () =>
+        worker.startSession(journalId: journal));
+    session.controller.update(
+      title: 'Only fictional version', body: 'One saved test chapter',
+    );
+    await workerVoid(tester, session.save);
+    final id = (await workerCall(tester, session.persistedEntryId))!;
+    expect(await workerCall(tester, session.closeSafely), isTrue);
+    await mount(tester);
+    await tapVisible(tester, 'library-open-' + id);
+    await tapVisible(tester, 'reader-history');
+    expect(find.byKey(const ValueKey('reader-history-empty')), findsOneWidget);
+    expect(find.byKey(const ValueKey('reader-history-version-1')), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
 }
