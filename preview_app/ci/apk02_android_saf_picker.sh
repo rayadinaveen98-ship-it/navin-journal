@@ -210,19 +210,44 @@ PY
   return 1
 }
 
+cancel_picker() {
+  local wanted="$1" state focused
+  # The emulator may display DocumentsUI as resumed before its window can
+  # receive BACK. Only send BACK while the picker is actually in foreground.
+  for i in $(seq 1 24); do
+    state="$(marker)"
+    if [[ "$state" == "$wanted" ]]; then
+      echo "PASSED $wanted — real Android picker cancellation"
+      return 0
+    fi
+    if [[ "$state" == FAILED ]]; then
+      echo "::error::Fictional picker reported a cancellation failure"
+      return 1
+    fi
+    focused="$(adb -s "$SERIAL" shell dumpsys window 2>/dev/null |
+      grep -E 'mCurrentFocus|mFocusedApp' | head -n 3 || true)"
+    if echo "$focused" | grep -Eiq 'documentsui|documents.ui'; then
+      adb -s "$SERIAL" shell input keyevent KEYCODE_BACK
+    fi
+    sleep 1
+  done
+  echo "::error::Picker cancellation not acknowledged; last phase: $(marker)"
+  adb -s "$SERIAL" shell dumpsys window 2>/dev/null |
+    grep -E 'mCurrentFocus|mFocusedApp' | head -n 3 || true
+  return 1
+}
+
 reset_probe
 launch saf_export_cancel
 wait_marker SAF_EXPORT_READY
 wait_picker
-adb -s "$SERIAL" shell input keyevent KEYCODE_BACK
-wait_marker SAF_EXPORT_CANCELLED
+cancel_picker SAF_EXPORT_CANCELLED
 reset_probe
 
 launch saf_import_cancel
 wait_marker SAF_IMPORT_READY
 wait_picker
-adb -s "$SERIAL" shell input keyevent KEYCODE_BACK
-wait_marker SAF_IMPORT_CANCELLED
+cancel_picker SAF_IMPORT_CANCELLED
 reset_probe
 
 launch saf_roundtrip
