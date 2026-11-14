@@ -1,6 +1,7 @@
 package com.navinjournal.navin_journal_bridge_probe
 
 import android.app.Activity
+import java.io.ByteArrayOutputStream
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.os.Handler
@@ -30,6 +31,7 @@ class MainActivity : FlutterActivity() {
         const val TEST_LIFECYCLE_CHANNEL = "navin_journal/test_lifecycle_v1"
         const val FICTIONAL_EXPORT_CHANNEL = "navin_journal/fictional_export_v1"
         private const val CREATE_FICTIONAL_ARCHIVE = 7481
+        private const val OPEN_FICTIONAL_ARCHIVE = 7482
         private const val MAX_FICTIONAL_ARCHIVE_BYTES = 32 * 1024 * 1024
         private const val TEST_MARKER_FILE = "nj_crash_phase.txt"
     }
@@ -45,6 +47,40 @@ class MainActivity : FlutterActivity() {
         val reply: MethodChannel.Result,
     )
     private var pendingFictionalExport: PendingFictionalExport? = null
+    private var pendingFictionalImport: MethodChannel.Result? = null
+    private var fictionalExportSecure = false
+    private var fictionalImportSecure = false
+
+    private fun updateSecureWindow() {
+        if (fictionalExportSecure || fictionalImportSecure) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
+
+    private fun readBoundedEncryptedDocument(uri: android.net.Uri): ByteArray {
+        val output = ByteArrayOutputStream()
+        contentResolver.openInputStream(uri)?.use { input ->
+            val block = ByteArray(32 * 1024)
+            try {
+                while (true) {
+                    val n = input.read(block)
+                    if (n < 0) break
+                    if (n == 0) continue
+                    if (output.size().toLong() + n >
+                        MAX_FICTIONAL_ARCHIVE_BYTES.toLong()) {
+                        throw IllegalArgumentException("Archive exceeds import bound")
+                    }
+                    output.write(block, 0, n)
+                }
+            } finally {
+                block.fill(0)
+            }
+        } ?: throw IllegalStateException("Document cannot be read")
+        if (output.size() == 0) throw IllegalArgumentException("Empty archive")
+        return output.toByteArray()
+    }
 
     private fun isDebugHarness(): Boolean =
         (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
@@ -82,6 +118,54 @@ class MainActivity : FlutterActivity() {
         requestCode: Int, resultCode: Int, data: Intent?
     ) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == OPEN_FICTIONAL_ARCHIVE) {
+            val waiting = pendingFictionalImport ?: return
+            pendingFictionalImport = null
+            val selected = if (resultCode == Activity.RESULT_OK) data?.data else null
+            if (selected == null) {
+                fictionalImportSecure = false
+                updateSecureWindow()
+                waiting.success(null)
+                return
+            }
+            try {
+                executor.execute {
+                    var encrypted: ByteArray? = null
+                    try {
+                        encrypted = readBoundedEncryptedDocument(selected)
+                        val valid = encrypted
+                        mainHandler.post {
+                            if (valid != null && !isFinishing && !isDestroyed) {
+                                // Secure flag was set BEFORE launching the
+                                // picker; never return private key-entry UI
+                                // to an unprotected window.
+                                waiting.success(valid)
+                            } else {
+                                fictionalImportSecure = false
+                                updateSecureWindow()
+                                waiting.error("IMPORT_UNAVAILABLE",
+                                    "Chosen document could not be read", null)
+                            }
+                            valid?.fill(0)
+                        }
+                    } catch (_: Exception) {
+                        encrypted?.fill(0)
+                        mainHandler.post {
+                            fictionalImportSecure = false
+                            updateSecureWindow()
+                            waiting.error("IMPORT_UNAVAILABLE",
+                                "Chosen document could not be read", null)
+                        }
+                    }
+                }
+            } catch (_: RejectedExecutionException) {
+                fictionalImportSecure = false
+                updateSecureWindow()
+                waiting.error("IMPORT_UNAVAILABLE",
+                    "Document reader unavailable", null)
+            }
+            return
+        }
         if (requestCode != CREATE_FICTIONAL_ARCHIVE) return
         val pending = pendingFictionalExport ?: return
         pendingFictionalExport = null
@@ -106,7 +190,8 @@ class MainActivity : FlutterActivity() {
                     if (verified && !isFinishing && !isDestroyed) {
                         // Establish screenshot protection BEFORE Dart receives
                         // the result containing the manually transcribed key.
-                        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                        fictionalExportSecure = true
+                        updateSecureWindow()
                         pending.reply.success(true)
                     } else {
                         pending.reply.error(
@@ -149,7 +234,8 @@ class MainActivity : FlutterActivity() {
                     val raw = call.argument<ByteArray>("archive")
                     if (raw == null || raw.isEmpty() ||
                         raw.size > MAX_FICTIONAL_ARCHIVE_BYTES ||
-                        pendingFictionalExport != null) {
+                        pendingFictionalExport != null ||
+                        pendingFictionalImport != null) {
                         result.error("INVALID_ARGUMENT", "Export unavailable", null)
                     } else {
                         // Native copies this encrypted payload. No raw DEK or
@@ -175,8 +261,38 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                 }
+                "openFictionalArchive" -> {
+                    if (pendingFictionalImport != null ||
+                        pendingFictionalExport != null) {
+                        result.error("IMPORT_BUSY", "File picker unavailable", null)
+                    } else {
+                        fictionalImportSecure = true
+                        updateSecureWindow()
+                        pendingFictionalImport = result
+                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "*/*"
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        try {
+                            startActivityForResult(intent, OPEN_FICTIONAL_ARCHIVE)
+                        } catch (_: Exception) {
+                            pendingFictionalImport = null
+                            fictionalImportSecure = false
+                            updateSecureWindow()
+                            result.error("PICKER_UNAVAILABLE",
+                                "Document picker unavailable", null)
+                        }
+                    }
+                }
+                "hideImportRecoveryInput" -> {
+                    fictionalImportSecure = false
+                    updateSecureWindow()
+                    result.success(true)
+                }
                 "hideRecoveryKey" -> {
-                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    fictionalExportSecure = false
+                    updateSecureWindow()
                     result.success(true)
                 }
                 else -> result.notImplemented()
@@ -315,6 +431,12 @@ class MainActivity : FlutterActivity() {
             it.reply.error("EXPORT_CANCELLED", "The app closed during export", null)
         }
         pendingFictionalExport = null
+        pendingFictionalImport?.error(
+            "IMPORT_CANCELLED", "App closed during import", null)
+        pendingFictionalImport = null
+        fictionalImportSecure = false
+        fictionalExportSecure = false
+        updateSecureWindow()
         fictionalExportChannel?.setMethodCallHandler(null)
         fictionalExportChannel = null
         diagnosticChannel?.setMethodCallHandler(null)

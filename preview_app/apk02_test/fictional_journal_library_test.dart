@@ -2,6 +2,7 @@
 // Full encrypted Library → Reader → Writer Flutter integration.
 // Fictional data and disposable SQLite3MultipleCiphers vault ONLY.
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:navin_journal_autosave_spike/draft_autosave.dart';
@@ -13,6 +14,7 @@ import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
 import 'package:navin_journal_editor/fictional_recovery_rehearsal.dart';
 import 'package:navin_journal_editor/fictional_archive_exporter.dart';
+import 'package:navin_journal_editor/fictional_archive_importer.dart';
 import 'package:navin_journal_editor/portable_recovery_worker.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_recovery_archive_spike/product_encrypted_archive.dart';
@@ -88,6 +90,10 @@ void main() {
     Future<FictionalRecoveryRehearsalReport> Function()? rehearsal,
     Future<FictionalArchiveExportReceipt?> Function()? externalExport,
     Future<void> Function()? hideExternalKey,
+    Future<Uint8List?> Function()? selectedArchive,
+    Future<FictionalArchiveImportReport> Function(
+        Uint8List archive, String manualKey)? importedArchive,
+    Future<void> Function()? hideImportKey,
   }) async {
     await tester.pumpWidget(MaterialApp(home: FictionalJournalLibrary(
       worker: worker, journalId: journal,
@@ -97,6 +103,9 @@ void main() {
       testRehearsal: rehearsal,
       testExternalExport: externalExport,
       testHideRecoveryKey: hideExternalKey,
+      testPickEncryptedDocument: selectedArchive,
+      testInspectEncryptedDocument: importedArchive,
+      testHideImportedKey: hideImportKey,
     )));
     await settleRealWorker(tester);
   }
@@ -434,6 +443,63 @@ void main() {
     expect(find.text(keyText), findsNothing);
     expect(hides, greaterThanOrEqualTo(1));
     expect(find.byKey(ValueKey('library-open-' + id)), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('Library import route explicitly verifies copied fictional '
+      'encrypted file without changing currently opened journal',
+      (tester) async {
+    final session = await workerCall(tester,
+        () => worker.startSession(journalId: journal));
+    session.controller.update(title: 'Imaginary original',
+      body: 'తెలుగు fictional existing journal');
+    await workerVoid(tester, session.save);
+    final entryId = (await workerCall(tester, session.persistedEntryId))!;
+    expect(await workerCall(tester, session.closeSafely), isTrue);
+    final original = await workerCall(tester, () => worker.readEntry(entryId));
+    var selected = 0;
+    var checked = 0;
+    var hidden = 0;
+    const exampleKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+    final observations = await workerCall(tester,
+        () => RestoreStagingInventory.inspect(temp));
+    await mount(tester, recoveryRoot: temp,
+      inventoryLoader: (_) async => observations,
+      selectedArchive: () async {
+        selected++;
+        return Uint8List.fromList([6, 7, 8]);
+      },
+      importedArchive: (bytes, manualKey) async {
+        checked++;
+        expect(manualKey, exampleKey);
+        expect(bytes, [6, 7, 8]);
+        return const FictionalArchiveImportReport(
+          journals: 1, entries: 1, revisions: 0, attachments: 0);
+      },
+      hideImportKey: () async { hidden++; },
+    );
+    await tapVisible(tester, 'library-review-recovery');
+    expect(find.byKey(const ValueKey('import-safety-warning')), findsOneWidget);
+    expect(selected, 0);
+    await tapVisible(tester, 'import-select-document');
+    expect(selected, 1);
+    await tester.enterText(find.byKey(const ValueKey('import-recovery-key')),
+        exampleKey);
+    await tester.pumpAndSettle();
+    await tapVisible(tester, 'import-verify');
+    expect(checked, 1);
+    expect(find.byKey(const ValueKey('import-verified')), findsOneWidget);
+    expect(find.byKey(const ValueKey('import-not-installed')),
+      findsOneWidget);
+    expect(find.text(exampleKey), findsNothing);
+    expect(await workerCall(tester, () => worker.readEntry(entryId)),
+      original);
+    expect(await workerCall(tester, worker.integrityCheck), isTrue);
+    await tapVisible(tester, 'reader-back');
+    expect(find.byKey(ValueKey('library-open-' + entryId)),
+      findsOneWidget);
+    expect(hidden, greaterThanOrEqualTo(1));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });

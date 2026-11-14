@@ -9,11 +9,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_core/restore_staging_inventory.dart';
+import 'dart:typed_data';
 import 'package:navin_journal_editor/fictional_archive_exporter.dart';
+import 'package:navin_journal_editor/fictional_archive_importer.dart';
 import 'package:navin_journal_editor/fictional_recovery_rehearsal.dart';
 
 import 'recovery_assessment_review.dart';
 import 'fictional_external_export_section.dart';
+import 'fictional_external_import_section.dart';
 import 'visuals.dart';
 
 class RecoverySafetyScreen extends StatefulWidget {
@@ -30,6 +33,11 @@ class RecoverySafetyScreen extends StatefulWidget {
   /// Native Android SAF provider export, or test callback; no user text.
   final Future<FictionalArchiveExportReceipt?> Function()? externalExport;
   final Future<void> Function()? hideExternalRecoveryKey;
+  /// Debug-only bounded ciphertext selection + key-entry verification.
+  final Future<Uint8List?> Function()? selectEncryptedDocument;
+  final Future<FictionalArchiveImportReport> Function(
+      Uint8List archive, String manuallyEnteredKey)? inspectEncryptedDocument;
+  final Future<void> Function()? hideImportedKeyInput;
 
   const RecoverySafetyScreen({
     super.key,
@@ -39,6 +47,9 @@ class RecoverySafetyScreen extends StatefulWidget {
     this.rehearsal,
     this.externalExport,
     this.hideExternalRecoveryKey,
+    this.selectEncryptedDocument,
+    this.inspectEncryptedDocument,
+    this.hideImportedKeyInput,
   });
 
   @override
@@ -294,6 +305,18 @@ class RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
           FictionalExternalExportSection(
             export: widget.externalExport!,
             hideKey: widget.hideExternalRecoveryKey!,
+          ),
+        ],
+        if (widget.selectEncryptedDocument != null &&
+            widget.inspectEncryptedDocument != null &&
+            widget.hideImportedKeyInput != null) ...[
+          const SizedBox(height: 26),
+          Divider(color: c.stroke),
+          const SizedBox(height: 15),
+          FictionalExternalImportSection(
+            selectEncryptedDocument: widget.selectEncryptedDocument!,
+            inspect: widget.inspectEncryptedDocument!,
+            hideProtectedInput: widget.hideImportedKeyInput!,
           ),
         ],
         const SizedBox(height: 20),

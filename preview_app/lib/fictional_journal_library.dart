@@ -14,6 +14,7 @@ import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_core/restore_staging_inventory.dart';
 import 'package:navin_journal_editor/fictional_recovery_rehearsal.dart';
 import 'package:navin_journal_editor/fictional_archive_exporter.dart';
+import 'package:navin_journal_editor/fictional_archive_importer.dart';
 import 'connected_writing_studio.dart';
 import 'fictional_library_index.dart';
 import 'recovery_safety_screen.dart';
@@ -38,6 +39,11 @@ class FictionalJournalLibrary extends StatefulWidget {
   /// Widget test injection. Real Android always uses system picker + readback.
   final Future<FictionalArchiveExportReceipt?> Function()? testExternalExport;
   final Future<void> Function()? testHideRecoveryKey;
+  /// Fake picker/test-verdict boundaries; never supplied by real Android.
+  final Future<Uint8List?> Function()? testPickEncryptedDocument;
+  final Future<FictionalArchiveImportReport> Function(
+      Uint8List archive, String key)? testInspectEncryptedDocument;
+  final Future<void> Function()? testHideImportedKey;
   const FictionalJournalLibrary({
     super.key,
     required this.worker,
@@ -49,6 +55,9 @@ class FictionalJournalLibrary extends StatefulWidget {
     this.testRehearsal,
     this.testExternalExport,
     this.testHideRecoveryKey,
+    this.testPickEncryptedDocument,
+    this.testInspectEncryptedDocument,
+    this.testHideImportedKey,
   });
 
   @override
@@ -68,6 +77,29 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
 
   Future<void> _hideFictionalRecoveryKey() async {
     await _fictionalDocumentChannel.invokeMethod<void>('hideRecoveryKey');
+  }
+
+  Future<Uint8List?> _selectFictionalArchive() async {
+    return await _fictionalDocumentChannel.invokeMethod<Uint8List>(
+      'openFictionalArchive',
+    );
+  }
+
+  Future<FictionalArchiveImportReport> _inspectFictionalArchive(
+      Uint8List archive, String key) async {
+    final trusted = widget.recoveryPrivateRoot;
+    if (trusted == null) throw const FictionalArchiveImportRejected();
+    return FictionalArchiveImporter.inspect(
+      encryptedArchive: archive,
+      manuallyEnteredRecoveryKey: key,
+      trustedPrivateRoot: trusted,
+    );
+  }
+
+  Future<void> _hideFictionalImportKey() async {
+    await _fictionalDocumentChannel.invokeMethod<void>(
+      'hideImportRecoveryInput',
+    );
   }
   // Journal metadata and page content stay only in live widget memory.
   // No journal selection, title or snippet is written to preferences/cache.
@@ -596,6 +628,12 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
                       _exportFictionalDocument,
                   hideExternalRecoveryKey: widget.testHideRecoveryKey ??
                       _hideFictionalRecoveryKey,
+                  selectEncryptedDocument: widget.testPickEncryptedDocument ??
+                      _selectFictionalArchive,
+                  inspectEncryptedDocument: widget.testInspectEncryptedDocument ??
+                      _inspectFictionalArchive,
+                  hideImportedKeyInput: widget.testHideImportedKey ??
+                      _hideFictionalImportKey,
                 )
               else _libraryView(c),
             ]),
