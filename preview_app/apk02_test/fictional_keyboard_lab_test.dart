@@ -1,8 +1,8 @@
+// ignore_for_file: deprecated_member_use
 // The physical Keyboard Lab is nonpersistent and accepts only fictional QA.
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:navin_journal_keyboard_lab/fictional_keyboard_lab.dart';
+import 'package:navin_journal_preview/fictional_keyboard_lab.dart';
 
 void main() {
   testWidgets('lab starts empty, private-writing warning remains visible',
