@@ -38,6 +38,8 @@
 
 | NJ-031 | Android user-selected fictional encrypted archive export + separate manual recovery key | APK02 ENGINEERING VERIFIED 2026-11-14; OFF-DEVICE RECOVERY STILL OPEN | ACTION_CREATE_DOCUMENT writes v2 AES-GCM ciphertext; native provider readback checks length/SHA-256 before FLAG_SECURE and ephemeral key display. 41/41 worker tests and 29/29 Library integration tests, Android APK build and API34 regression passed (43581837392/43581837391). Off-device key custody, physical SAF picker and clean-device document import/restore remain unproven; private-data beta blocked. |
 
+| NJ-032 | Fictional Android SAF archive import with manually re-entered recovery key and disposable clean-vault inspection | ENGINEERING VERIFIED 2026-11-14; NOT DURABLE RESTORE | Bounded ACTION_OPEN_DOCUMENT input, FLAG_SECURE masked key, real v2 AES-GCM restore into isolated temporary encrypted vault, independent reopen/checks; wrong key/tampering/cancel fail closed. 45/45 worker, 30/30 Library, Android APK and API-34 regression pass (43583688287/43583688293). No persistent new-device key envelope, activation, physical picker proof or private-data beta signoff. |
+
 ## Pending high-impact decisions
 
 - Final consumer brand name, trademark/availability review and production launcher/splash approval; Folded Page direction approved.
