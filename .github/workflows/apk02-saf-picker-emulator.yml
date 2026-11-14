@@ -142,10 +142,10 @@ jobs:
           api-level: 34
           target: google_apis
           arch: x86_64
-          profile: pixel_6
-          disable-animations: false
+          profile: pixel_4
+          disable-animations: true
           emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -camera-back none -no-snapshot-load -no-snapshot-save -memory 3072 -cores 2
+          emulator-options: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -camera-back none -no-snapshot-load -no-snapshot-save -memory 4096 -cores 4
           script: bash "$GITHUB_WORKSPACE/preview_app/ci/apk02_android_saf_picker.sh"
       - name: Retain ONLY disposable fictional SAF test APK after successful Android gate
         if: success()

@@ -101,44 +101,54 @@ wait_picker() {
 # Inspect the actual Android accessibility hierarchy, not a screenshot, OCR,
 # hardcoded pixel position, synthetic ActivityResult, or ADB-injected file URI.
 node_center() {
-  python3 - "$WORK/hierarchy.xml" "$1" <<'PY'
+  python3 - "$WORK/hierarchy.xml" "$1" "${2:-row}" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
 pattern = re.compile(sys.argv[2], re.I)
 try:
     root = ET.parse(sys.argv[1]).getroot()
 except Exception:
     raise SystemExit(1)
-# Android DocumentsUI often puts the filename on a non-clickable child
-# TextView inside a clickable document-row container. Tapping the text's
-# reported bounds may hit only selection affordances. Prefer its nearest
-# visible clickable ancestor, then fall back to the label rectangle.
-parents = {child: parent for parent in root.iter("node")
-           for child in parent}
+# The filename may be a non-clickable child inside a clickable document row.
+# Avoid tapping a large list container; alternate small-row and label targets.
+mode = sys.argv[3]
+parents = {child: parent for parent in root.iter("node") for child in parent}
+bounds_rx = re.compile(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]")
+def rect(node):
+    match = bounds_rx.match(node.attrib.get("bounds", ""))
+    if not match:
+        return None
+    r = tuple(int(v) for v in match.groups())
+    return r if r[2] > r[0] and r[3] > r[1] else None
 matches = []
 for node in root.iter("node"):
     attrs = node.attrib
     if not any(pattern.search(attrs.get(key, "")) for key in
                ("text", "content-desc", "resource-id")):
         continue
+    original = rect(node)
+    if original is None:
+        continue
     target = node
-    current = node
-    for _ in range(4):
-        if current.attrib.get("clickable") == "true" and (
-                current.attrib.get("enabled") != "false"):
-            target = current
-            break
-        current = parents.get(current)
-        if current is None:
-            break
-    bounds = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]",
-                      target.attrib.get("bounds", ""))
-    if not bounds:
-        continue
-    x1, y1, x2, y2 = [int(v) for v in bounds.groups()]
-    if x2 <= x1 or y2 <= y1:
-        continue
-    matches.append((target.attrib.get("clickable") == "true",
-                    (x1 + x2) // 2, (y1 + y2) // 2))
+    if mode == "row":
+        area = (original[2] - original[0]) * (original[3] - original[1])
+        current = node
+        for _ in range(4):
+            candidate = rect(current)
+            if candidate is not None:
+                size = (candidate[2] - candidate[0]) * (candidate[3] - candidate[1])
+                if (current.attrib.get("clickable") == "true" and
+                    current.attrib.get("enabled") != "false" and
+                    size <= min(500000, 12 * area)):
+                    target = current
+                    break
+            current = parents.get(current)
+            if current is None:
+                break
+    chosen = rect(target)
+    if chosen is not None:
+        matches.append((target.attrib.get("clickable") == "true",
+                        (chosen[0] + chosen[2]) // 2,
+                        (chosen[1] + chosen[3]) // 2))
 if not matches:
     raise SystemExit(1)
 matches.sort(reverse=True)
@@ -146,9 +156,9 @@ print(matches[0][1], matches[0][2])
 PY
 }
 tap_label() {
-  local pattern="$1" coords
+  local pattern="$1" mode="${2:-row}" coords
   for i in $(seq 1 20); do
-    if capture_ui && coords="$(node_center "$pattern")"; then
+    if capture_ui && coords="$(node_center "$pattern" "$mode")"; then
       # Expected trusted coordinates extracted from on-device Android UI.
       adb -s "$SERIAL" shell input tap $coords
       return 0
@@ -191,13 +201,27 @@ wait_roundtrip() {
       echo "::error::SAF import failed; last nonsecret phase: $state"
       return 1
     fi
-    if [[ "$i" == 9 || "$i" == 22 ]]; then
+    if [[ "$i" == 7 || "$i" == 18 || "$i" == 34 ]]; then
       focused="$(adb -s "$SERIAL" shell dumpsys window 2>/dev/null |
         grep -E 'mCurrentFocus|mFocusedApp' | head -n 3 || true)"
-      if echo "$focused" | grep -Eiq 'documentsui|documents.ui'; then
-        if capture_ui && coords="$(node_center '^(Open|OPEN)$')"; then
-          echo "Android DocumentsUI displayed an explicit Open confirmation"
-          adb -s "$SERIAL" shell input tap $coords
+      if echo "$focused" | grep -Eiq 'Application Not Responding'; then
+        echo "::error::Android emulator system ANR; not a journal test pass"
+        return 1
+      fi
+      if [[ "$state" == SAF_ROUNDTRIP_IMPORT_READY ]] &&
+         echo "$focused" | grep -Eiq 'documentsui|documents.ui'; then
+        if capture_ui; then
+          if coords="$(node_center '^(Open|OPEN)$' row)"; then
+            echo "Real DocumentsUI displayed explicit Open confirmation"
+            adb -s "$SERIAL" shell input tap $coords
+          else
+            mode=row
+            [[ "$i" == 18 ]] && mode=label
+            if coords="$(node_center 'navin-journal-FICTIONAL-only' "$mode")"; then
+              echo "Retried actual fictional file selection using $mode target"
+              adb -s "$SERIAL" shell input tap $coords
+            fi
+          fi
         fi
       fi
     fi
@@ -275,7 +299,7 @@ tap_label '^(Save|SAVE)$'
 wait_marker SAF_ROUNDTRIP_IMPORT_READY
 wait_picker
 select_downloads
-tap_label 'navin-journal-FICTIONAL-only'
+tap_label 'navin-journal-FICTIONAL-only' label
 wait_roundtrip
 
 # Only now is the real Android provider export+import round trip accepted.
