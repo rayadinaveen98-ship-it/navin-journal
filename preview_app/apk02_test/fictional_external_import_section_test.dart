@@ -69,7 +69,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: Scaffold(body:
       FictionalExternalImportSection(
         selectEncryptedDocument: () async { calls++; return null; },
-        inspect: (_, __) async => throw const FictionalArchiveImportRejected(),
+        inspect: (_, _) async => throw const FictionalArchiveImportRejected(),
         hideProtectedInput: () async {},
       ),
     )));
@@ -86,7 +86,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: Scaffold(body:
       FictionalExternalImportSection(
         selectEncryptedDocument: () async => Uint8List.fromList([1, 2, 3]),
-        inspect: (_, __) async {
+        inspect: (_, _) async {
           attempted++;
           throw const FictionalArchiveImportRejected();
         },
@@ -109,7 +109,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: Scaffold(body:
       FictionalExternalImportSection(
         selectEncryptedDocument: () async => Uint8List.fromList([1, 2, 3]),
-        inspect: (_, __) async =>
+        inspect: (_, _) async =>
             throw const FictionalArchiveImportRejected(),
         hideProtectedInput: () async {},
       ),
@@ -135,7 +135,7 @@ void main() {
           chosen = Uint8List.fromList([1, 2, 3, 4]);
           return chosen;
         },
-        inspect: (_, __) async =>
+        inspect: (_, _) async =>
             throw const FictionalArchiveImportRejected(),
         hideProtectedInput: () async { hideCalls++; },
       ),
@@ -161,7 +161,7 @@ void main() {
           calls++;
           return pending.future;
         },
-        inspect: (_, __) async =>
+        inspect: (_, _) async =>
             throw const FictionalArchiveImportRejected(),
         hideProtectedInput: () async {},
       ),
