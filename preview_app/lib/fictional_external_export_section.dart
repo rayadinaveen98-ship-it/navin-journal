@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings
+// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings, curly_braces_in_flow_control_structures
 /// Fictional-only external encrypted document export and one-time key display.
 /// This is NOT a production backup/restore UI and accepts no private writing.
 library;
