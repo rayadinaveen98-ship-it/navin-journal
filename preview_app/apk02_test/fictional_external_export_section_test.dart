@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use
 // No private data and no real Android SAF transaction in widget tests.
 import 'dart:async';
 import 'package:flutter/material.dart';
