@@ -26,6 +26,10 @@ class FictionalJournalLibrary extends StatefulWidget {
   final Directory? recoveryPrivateRoot;
   final Future<RestoreAssessment> Function()? authenticatedAssessment;
   final Future<List<StagingObservation>> Function(Directory)? inventoryLoader;
+  /// Test-only: precomputed real encrypted recovery result can be injected
+  /// outside Flutter's fake-time widget runner, as with stage assessment.
+  /// Normal Android always calls the real recovery rehearsal service.
+  final Future<FictionalRecoveryRehearsalReport> Function()? testRehearsal;
   const FictionalJournalLibrary({
     super.key,
     required this.worker,
@@ -34,6 +38,7 @@ class FictionalJournalLibrary extends StatefulWidget {
     this.recoveryPrivateRoot,
     this.authenticatedAssessment,
     this.inventoryLoader,
+    this.testRehearsal,
   });
 
   @override
@@ -561,9 +566,10 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
                   privateRoot: widget.recoveryPrivateRoot!,
                   authenticatedAssessment: widget.authenticatedAssessment,
                   inventoryLoader: widget.inventoryLoader,
-                  rehearsal: () => FictionalRecoveryRehearsal.run(
-                    source: widget.worker,
-                  ),
+                  rehearsal: widget.testRehearsal ??
+                    () => FictionalRecoveryRehearsal.run(
+                      source: widget.worker,
+                    ),
                 )
               else _libraryView(c),
             ]),
