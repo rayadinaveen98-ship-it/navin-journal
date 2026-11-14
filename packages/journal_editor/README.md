@@ -2,7 +2,7 @@
 
 **Stage:** developer-only fictional fixture. **Not** a private journaling application.
 
-**Latest verified CI:** [Editor and portable recovery tests 43556363294](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43556363294) — **29/29 tests passed**, strict analyzer clean on Linux. [Android clean-uninstall/reinstall proof 43558301280](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43558301280) — **4/4 fictional recovery markers passed** with a new Android Keystore key, plus 29 editor/recovery and 13 Flutter tests.
+**Latest verified CI:** [Editor/recovery suite 43562993019](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43562993019) — **32/32 tests passed** with simulated ENOSPC at the real background isolate and strict analysis; [Android API-34 fault-injection/reinstall 43563086930](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43563086930) — **7/7 scripted fictional native markers**, 32 editor/recovery tests and 13 Flutter checks passed, with a real force-stop between ambiguous publication and Keystore reopen.
 
 ## What this adds
 
@@ -19,7 +19,7 @@
 - [portable_recovery_worker.dart](lib/portable_recovery_worker.dart): decrypts/authenticates independently keyed `NJR-RECOVERY-2` archives, stages a full journal into a *previously absent* destination with a new SQLite3MC database key on a background isolate, and rejects wrong keys/tampering/collisions. [portable_recovery_worker_test.dart](test/portable_recovery_worker_test.dart) adds six test cases.
 - `JournalEditorWorker.exportRecoveryArchive` produces the portable authenticated archive from a consistent encrypted vault snapshot without storing a plaintext draft/export.
 
-**29/29 Linux worker/editor/recovery tests passed. An API-34 Android fictional-data clean uninstall/reinstall test also passed (independent backup key, original app deleted, wrong key rejected, new Keystore key, historical revision recovered, force-stop reopen).** These are engineering proofs only, not physical-device private diary approval.
+**32/32 Linux worker/editor/recovery tests passed.** The Android API-34 fictional-data reinstall probe also passed seven phases: encrypted export, wrong-key rejection, synthetic ENOSPC before publication, synthetic ENOSPC after publication, independent Keystore reopen after force-stop, ordinary restored-vault creation and ordinary force-stop reopen. These are engineering proofs only, **not** physical device disk-exhaustion/power-loss or private diary approval.
 
 ## Next integration boundary
 
