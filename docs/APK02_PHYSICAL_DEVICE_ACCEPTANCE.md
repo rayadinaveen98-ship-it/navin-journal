@@ -5,13 +5,29 @@
 
 ## Exact candidate and automated evidence
 
-- PR [#12](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/12), source head `3207e475636344042fcf649a27f2cf43f87d714a`, squash merge `597041cca9f929ae36d32c5bb8ae76bf24750aa9`.
-- [Successful Android Library build 43593015820](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43593015820). Artifact **14113870149**: `navin-apk02-FICTIONAL-LIBRARY-NOT-PRIVATE-DIARY` (GitHub Actions artifact ZIP containing debug APK, expires 28 November 2026). Android app ID: `com.navinjournal.navin_journal_library_probe`.
-- [API-34 native Telugu HOME/force-stop regression 43593015839](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43593015839) **SUCCESS**.
-- [API-34 clean reinstall, encrypted retained-candidate activation, force-stop and alias-loss 43593015884](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43593015884) **SUCCESS**. This was an **ADB diagnostic**, **NOT** a real Android SAF/user interaction.
-- Test report: [Stage 5A safe activation](STAGE5A_SAFE_ACTIVATION_2026-11-14.md).
+**Use the current validated Library diagnostic APK, not an earlier APK02 recovery fixture or the SAF-only driver.**
 
-Download only the **Library** artifact for ordinary fictional UX testing. The separate portable-reinstall artifact is an automated ADB fixture and not the end-user Library screen.
+- Source: [merged Stage 5B PR #14](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/14), merged commit `6aff5fe0b9c281b6ea26b12c333e9663e93f420b`.
+- [Successful encrypted Library Android debug build 43620412516](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43620412516), artifact ID **14124505027**, artifact name **`navin-apk02-FICTIONAL-LIBRARY-NOT-PRIVATE-DIARY`**. Artifact expires **28 November 2026**. Download the artifact ZIP from the Actions run, extract `app-debug.apk`, and install only this Library APK.
+- APK SHA-256: `3c2c90f3bd28b04902b9df57ac525556aa1b1d40ed91c266574215af57f09e98` (verified against the exact GitHub Actions build log). Application ID `com.navinjournal.navin_journal_library_probe`.
+- [Real Android API34 DocumentsUI fictional encrypted SAF export/import 43620412491](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43620412491) **SUCCESS**; [Telugu lifecycle 43620412493](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43620412493) **SUCCESS**; [portable clean-reinstall 43620412555](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43620412555) **SUCCESS**. The Android SAF test app is **not** the user-facing Library APK.
+
+**Physical-device outcomes remain NOT RUN.** The emulator proof does not substitute for manual phone/tablet, storage, recovery-key, accessibility or security approval.
+
+## Quick phone + tablet acceptance (fictional only)
+
+Test the **same exact Library APK** on the phone and tablet. The app is local/offline: do not expect journals to sync between devices, and do not set up accounts or a backend.
+
+1. **Install:** open the APK on a device and approve the Android install prompt for that trusted source only. If Android reports an incompatible existing debug signature, **do not clear or uninstall an app containing any real content**; stop and report the message. Only replace an entirely disposable fictional-only test installation.
+2. **First launch:** confirm the create-or-recover choice appears *before* a journal is created; take a redacted screenshot of this initial screen if it has no private content.
+3. **Create and reopen:** create the scripted fictional journal, save the supplied sample as v1, edit via the scripted sample to v2, inspect revision history, return HOME, then force-stop only this test app in Android Settings and reopen. Both versions must survive.
+4. **Navigation:** exercise Library, fictional search, Trash/Restore and settings. Report any missing button, clipped text, spinner, unexpected permission or crash.
+5. **Layout and accessibility:** repeat basic navigation at a larger system font size, rotate the tablet where supported, and test Android Back. Readability and button accessibility are mandatory.
+6. **Encrypted export/import without uninstalling:** test a cancelled export, then a successful fictional encrypted document export. The system file picker must appear, cancellation must not claim success, and a separate recovery key must be shown only for a successful exported file. **Do not screenshot, paste, or send the key.** Attempt encrypted document import using that file and key on an empty disposable installation only, following optional Track B below.
+
+Stop immediately if the app allows ordinary private writing or silently overwrites a vault. **Do not uninstall or clear app data for Track B until the fictional encrypted archive and separately retained key are confirmed.**
+
+For each device, record only its model and Android version; test case ID, PASS / FAIL / BLOCKED / NOT RUN; short observed behavior; and optional redacted screenshots with fictional text. **A single device pass is not sufficient for phone+tablet approval.**
 
 ## Prerequisites and reporting
 
