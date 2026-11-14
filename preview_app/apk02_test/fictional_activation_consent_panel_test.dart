@@ -1,5 +1,5 @@
 // ignore_for_file: deprecated_member_use
-/// Fictional-only user approval gate: a picker/import is NOT activation consent.
+// Fictional-only user approval gate: a picker/import is NOT activation consent.
 import 'dart:async';
 
 import 'package:flutter/material.dart';
