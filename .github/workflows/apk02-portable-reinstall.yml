@@ -1,0 +1,151 @@
+name: APK 02 Portable Archive Android Clean Reinstall Proof
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'preview_app/lib/apk02_portable_recovery_main.dart'
+      - 'preview_app/ci/apk02_portable_reinstall.sh'
+      - 'packages/journal_editor/**'
+      - 'packages/journal_core/**'
+      - 'spikes/recovery_archive/**'
+      - 'spikes/key_lifecycle/**'
+      - 'spikes/flutter_bridge_probe/native/MainActivity.kt'
+      - '.github/workflows/apk02-portable-reinstall.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apk02-portable-android-reinstall
+  cancel-in-progress: true
+
+jobs:
+  portable-reinstall:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create disposable fictional Android recovery app
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$GITHUB_WORKSPACE"
+          TARGET="$ROOT/preview_app/_portable_reinstall_generated"
+          flutter create --org com.navinjournal \
+            --project-name navin_journal_portable_probe --platforms=android "$TARGET"
+          cp "$ROOT/preview_app/lib/"*.dart "$TARGET/lib/"
+          rm -f "$TARGET/test/widget_test.dart"
+          cp "$ROOT/preview_app/test/"*.dart "$TARGET/test/"
+          cp "$ROOT/preview_app/apk02_test/connected_writing_studio_test.dart" "$TARGET/test/"
+          sed -i 's#package:navin_journal_preview/#package:navin_journal_portable_probe/#g' "$TARGET/test/"*.dart
+
+          NATIVE="$TARGET/android/app/src/main/kotlin"
+          mkdir -p "$NATIVE/com/navinjournal/navin_journal_portable_probe"
+          mkdir -p "$NATIVE/com/navinjournal/security/spike"
+          cp "$ROOT/spikes/flutter_bridge_probe/native/MainActivity.kt" \
+            "$NATIVE/com/navinjournal/navin_journal_portable_probe/MainActivity.kt"
+          sed -i 's/package com.navinjournal.navin_journal_bridge_probe/package com.navinjournal.navin_journal_portable_probe/' \
+            "$NATIVE/com/navinjournal/navin_journal_portable_probe/MainActivity.kt"
+          cp "$ROOT/spikes/key_lifecycle/android/src/main/kotlin/com/navinjournal/security/spike/AndroidKeystoreKeyProtector.kt" \
+            "$NATIVE/com/navinjournal/security/spike/"
+          python3 - "$TARGET/pubspec.yaml" "$ROOT" <<'PY'
+          from pathlib import Path
+          import sys
+          dest, root = Path(sys.argv[1]), Path(sys.argv[2])
+          s = dest.read_text()
+          deps = (
+            "  navin_journal_core:\n"
+            f"    path: {root / 'packages/journal_core'}\n"
+            "  navin_journal_editor:\n"
+            f"    path: {root / 'packages/journal_editor'}\n"
+            "  navin_journal_autosave_spike:\n"
+            f"    path: {root / 'spikes/autosave_coordinator'}\n"
+            "  navin_journal_encrypted_spike:\n"
+            f"    path: {root / 'spikes/encrypted_store'}\n"
+            "  navin_journal_recovery_archive_spike:\n"
+            f"    path: {root / 'spikes/recovery_archive'}\n"
+            "  navin_journal_bridge_probe:\n"
+            f"    path: {root / 'spikes/flutter_bridge_probe'}\n"
+            "  navin_journal_key_lifecycle_spike:\n"
+            f"    path: {root / 'spikes/key_lifecycle'}\n"
+          )
+          s = s.replace("dependencies:\n", "dependencies:\n" + deps, 1)
+          s += "\nhooks:\n  user_defines:\n    sqlite3:\n      source: sqlite3mc\n"
+          dest.write_text(s)
+          PY
+          echo "PORTABLE_APK_ROOT=$TARGET" >> "$GITHUB_ENV"
+
+      - name: Resolve native encryption and strict Flutter analysis
+        shell: bash
+        run: |
+          cd "$PORTABLE_APK_ROOT"
+          flutter pub get
+          dart format lib test
+          flutter analyze --no-pub
+
+      - name: Confirm editor and portable recovery contract tests
+        shell: bash
+        run: |
+          cd "$GITHUB_WORKSPACE/packages/journal_editor"
+          dart pub get
+          dart analyze --fatal-infos
+          dart test --reporter expanded
+
+      - name: Confirm stable Flutter writing and navigation widgets
+        shell: bash
+        run: |
+          cd "$PORTABLE_APK_ROOT"
+          flutter test test/preview_widget_test.dart test/connected_writing_studio_test.dart \
+            --reporter expanded --concurrency=1 --timeout=90s
+
+      - name: Compile fictional portable recovery Android diagnostic
+        shell: bash
+        run: |
+          cd "$PORTABLE_APK_ROOT"
+          flutter build apk --debug -t lib/apk02_portable_recovery_main.dart
+          test -s build/app/outputs/flutter-apk/app-debug.apk
+          sha256sum build/app/outputs/flutter-apk/app-debug.apk
+
+      - name: Grant Android emulator hardware acceleration when available
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -c /dev/kvm ]]; then
+            sudo chmod a+rw /dev/kvm
+            test -r /dev/kvm && test -w /dev/kvm
+            ls -l /dev/kvm
+          else
+            echo "::warning::No KVM available; emulation may be slow"
+          fi
+
+      - name: Actual clean uninstall and separate-key restore on Android
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: false
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -camera-back none -no-snapshot-load -no-snapshot-save -memory 3072 -cores 2
+          script: bash "$GITHUB_WORKSPACE/preview_app/ci/apk02_portable_reinstall.sh"
+
+      - name: Preserve test-only Android binary after all checks pass
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk02-PORTABLE-REINSTALL-FICTIONAL-ONLY-NOT-BETA
+          path: preview_app/_portable_reinstall_generated/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
+          if-no-files-found: error
