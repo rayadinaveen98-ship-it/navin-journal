@@ -321,6 +321,8 @@ class MainActivity : FlutterActivity() {
                             "SAF_EXPORT_READY", "SAF_IMPORT_READY",
                             "SAF_ROUNDTRIP_EXPORT_READY",
                             "SAF_ROUNDTRIP_IMPORT_READY",
+                            "SAF_ROUNDTRIP_BYTES_RETURNED",
+                            "SAF_ROUNDTRIP_AUTH_OK",
                             "IME_PREEDIT_READY", "IME_BACKGROUND_ACK_V1",
                             "IME_FINAL_ACK_V2", "IME_REOPENED_V2",
                         )

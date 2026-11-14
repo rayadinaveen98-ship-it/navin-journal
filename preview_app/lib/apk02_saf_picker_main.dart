@@ -189,12 +189,14 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
           try {
             picked = await _picker.invokeMethod<Uint8List>(
               'openFictionalArchive');
+            await _mark('SAF_ROUNDTRIP_BYTES_RETURNED');
             if (picked == null || !listEquals(picked, archive)) {
               throw StateError('Selected SAF bytes differ from export');
             }
             final verified = await ProductEncryptedArchiveCodec().verify(
               archive: picked, recoveryKey: key);
             _verifyFictionalSnapshot(verified);
+            await _mark('SAF_ROUNDTRIP_AUTH_OK');
           } finally {
             picked?.fillRange(0, picked.length, 0);
             await _picker.invokeMethod<void>('hideImportRecoveryInput');
