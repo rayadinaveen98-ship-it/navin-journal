@@ -83,6 +83,9 @@ if adb -s "$SERIAL" shell pm path "$PACKAGE" 2>/dev/null | grep -q '^package:'; 
 fi
 echo "Original app and device-bound database removed"
 adb -s "$SERIAL" install -r -t "$APK"
+# The new app has not launched yet: getFilesDir() has not necessarily run.
+# Ensure only its empty private files directory exists before streaming data.
+adb -s "$SERIAL" shell run-as "$PACKAGE" mkdir -p files
 if adb -s "$SERIAL" exec-out run-as "$PACKAGE" \
     test -e files/portable_export.njr 2>/dev/null; then
   echo "::error::Original app sandbox unexpectedly survived reinstall"; exit 1
