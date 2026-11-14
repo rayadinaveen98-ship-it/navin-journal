@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:navin_journal_core/journal_vault.dart';
 import 'package:navin_journal_core/native_restore_publisher.dart';
+import 'package:navin_journal_core/restore_staging_inventory.dart';
 import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
 import 'package:navin_journal_editor/portable_recovery_worker.dart';
@@ -80,11 +81,13 @@ void main() {
   Future<void> mount(WidgetTester tester, {
     Directory? recoveryRoot,
     Future<RestoreAssessment> Function()? assessment,
+    Future<List<StagingObservation>> Function(Directory)? inventoryLoader,
   }) async {
     await tester.pumpWidget(MaterialApp(home: FictionalJournalLibrary(
       worker: worker, journalId: journal,
       recoveryPrivateRoot: recoveryRoot,
       authenticatedAssessment: assessment,
+      inventoryLoader: inventoryLoader,
     )));
     await settleRealWorker(tester);
   }
@@ -189,7 +192,10 @@ void main() {
 
   testWidgets('Library recovery safety route scans and returns without mutation',
       (tester) async {
-    await mount(tester, recoveryRoot: temp);
+    final items = await workerCall(tester,
+        () => RestoreStagingInventory.inspect(temp));
+    await mount(tester, recoveryRoot: temp,
+      inventoryLoader: (_) async => items);
     await tapVisible(tester, 'library-review-recovery');
     expect(find.byKey(const ValueKey('recovery-safety-screen')), findsOneWidget);
     expect(find.text('No interrupted restore folders detected.'), findsOneWidget);
@@ -210,7 +216,10 @@ void main() {
     final orphan = Directory(temp.path + '/' +
         NativeRestorePublisher.stagePrefix + 'unknownABC123')..createSync();
     File(orphan.path + '/journal.sqlite3').writeAsBytesSync([1, 2, 3]);
-    await mount(tester, recoveryRoot: temp);
+    final items = await workerCall(tester,
+        () => RestoreStagingInventory.inspect(temp));
+    await mount(tester, recoveryRoot: temp,
+      inventoryLoader: (_) async => items);
     await tapVisible(tester, 'library-review-recovery');
     expect(find.text('Interrupted restore candidates detected: 1'), findsOneWidget);
     expect(find.byKey(const ValueKey('recovery-assessment-locked')),
@@ -258,14 +267,20 @@ void main() {
           vault.close();
         }
       });
+      final items = await workerCall(tester,
+          () => RestoreStagingInventory.inspect(temp));
+      final authenticated = await workerCall(tester,
+          () => PortableRecoveryWorker.assessQuarantinedStage(
+            privateParent: temp,
+            candidateBasename: stageName,
+            encryptedArchive: encryptedArchive,
+            recoveryKey: recoveryKey,
+            stagedDatabaseKey: stageKey,
+          ));
+      expect(authenticated.isAuthenticatedMatch, isTrue);
       await mount(tester, recoveryRoot: temp,
-        assessment: () => PortableRecoveryWorker.assessQuarantinedStage(
-          privateParent: temp,
-          candidateBasename: stageName,
-          encryptedArchive: encryptedArchive,
-          recoveryKey: recoveryKey,
-          stagedDatabaseKey: stageKey,
-        ),
+        inventoryLoader: (_) async => items,
+        assessment: () async => authenticated,
       );
       await tapVisible(tester, 'library-review-recovery');
       expect(find.text('Interrupted restore candidates detected: 1'),
