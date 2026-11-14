@@ -199,11 +199,14 @@ class FictionalRetainedRecoveryCandidate {
     } catch (_) {
       throw const FictionalRetainedRecoveryRejected();
     } finally {
-      await opened?.close();
-      databaseKey?.destroy();
-      databaseKeyBytes?.fillRange(0, databaseKeyBytes.length, 0);
-      recovery?.destroy();
-      encryptedArchive.fillRange(0, encryptedArchive.length, 0);
+      try {
+        await opened?.close();
+      } finally {
+        databaseKey?.destroy();
+        databaseKeyBytes?.fillRange(0, databaseKeyBytes.length, 0);
+        recovery?.destroy();
+        encryptedArchive.fillRange(0, encryptedArchive.length, 0);
+      }
     }
   }
 
@@ -250,13 +253,30 @@ class FictionalRetainedRecoveryCandidate {
         }
         revisions += await opened.historyCount(item['id'] as String);
       }
-      // Attachment count needs an authenticated snapshot, not a page count.
-      // Only the independent retained data read has been proven here.
+      // Count retained media from an independently authenticated *new*
+      // encrypted full-schema export, never from a guessed page count.
+      final reviewKey = RecoveryKey.random();
+      Uint8List? reviewArchive;
+      int attachments;
+      try {
+        reviewArchive = await opened.exportRecoveryArchive(reviewKey);
+        final snapshot = await ProductEncryptedArchiveCodec().verify(
+          archive: reviewArchive, recoveryKey: reviewKey);
+        attachments = (snapshot['attachments'] as List).length;
+        if ((snapshot['journals'] as List).length != journals.length ||
+            (snapshot['entries'] as List).length != entries.length ||
+            (snapshot['revisions'] as List).length != revisions) {
+          throw const FictionalRetainedRecoveryRejected();
+        }
+      } finally {
+        reviewArchive?.fillRange(0, reviewArchive.length, 0);
+        reviewKey.destroy();
+      }
       return FictionalRetainedRecoveryReport(
         journals: journals.length,
         entries: entries.length,
         revisions: revisions,
-        attachments: 0,
+        attachments: attachments,
       );
     } catch (_) {
       throw const FictionalRetainedRecoveryRejected();
