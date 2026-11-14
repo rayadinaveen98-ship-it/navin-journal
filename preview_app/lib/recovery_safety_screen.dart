@@ -15,6 +15,9 @@ import 'visuals.dart';
 
 class RecoverySafetyScreen extends StatefulWidget {
   final Directory privateRoot;
+  /// Optional injected inventory for deterministic Flutter tests. The actual
+  /// Android app leaves this null and scans its real private filesystem.
+  final Future<List<StagingObservation>> Function(Directory)? inventoryLoader;
   /// Only a test caller holding the separately authenticated archive AND the
   /// staged database key may provide this. Never infer keys from filenames.
   final Future<RestoreAssessment> Function()? authenticatedAssessment;
@@ -23,6 +26,7 @@ class RecoverySafetyScreen extends StatefulWidget {
     super.key,
     required this.privateRoot,
     this.authenticatedAssessment,
+    this.inventoryLoader,
   });
 
   @override
@@ -59,7 +63,7 @@ class RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
     try {
       // This is ONLY a bounded read-only candidate inventory. It does not
       // open, decrypt, delete, rename or clean up any staging directory.
-      final items = await RestoreStagingInventory.inspect(widget.privateRoot);
+      final items = await (widget.inventoryLoader ?? RestoreStagingInventory.inspect)(widget.privateRoot);
       if (mounted) setState(() => _candidates = items.length);
     } on StagingInventoryLimitExceeded {
       if (mounted) setState(() =>
