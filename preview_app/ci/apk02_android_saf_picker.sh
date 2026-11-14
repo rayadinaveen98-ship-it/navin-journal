@@ -108,20 +108,36 @@ try:
     root = ET.parse(sys.argv[1]).getroot()
 except Exception:
     raise SystemExit(1)
+# Android DocumentsUI often puts the filename on a non-clickable child
+# TextView inside a clickable document-row container. Tapping the text's
+# reported bounds may hit only selection affordances. Prefer its nearest
+# visible clickable ancestor, then fall back to the label rectangle.
+parents = {child: parent for parent in root.iter("node")
+           for child in parent}
 matches = []
 for node in root.iter("node"):
     attrs = node.attrib
     if not any(pattern.search(attrs.get(key, "")) for key in
                ("text", "content-desc", "resource-id")):
         continue
+    target = node
+    current = node
+    for _ in range(4):
+        if current.attrib.get("clickable") == "true" and (
+                current.attrib.get("enabled") != "false"):
+            target = current
+            break
+        current = parents.get(current)
+        if current is None:
+            break
     bounds = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]",
-                      attrs.get("bounds", ""))
+                      target.attrib.get("bounds", ""))
     if not bounds:
         continue
     x1, y1, x2, y2 = [int(v) for v in bounds.groups()]
     if x2 <= x1 or y2 <= y1:
         continue
-    matches.append((attrs.get("clickable") == "true",
+    matches.append((target.attrib.get("clickable") == "true",
                     (x1 + x2) // 2, (y1 + y2) // 2))
 if not matches:
     raise SystemExit(1)
