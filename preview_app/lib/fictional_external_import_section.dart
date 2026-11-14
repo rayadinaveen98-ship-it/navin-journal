@@ -21,7 +21,7 @@ class FictionalExternalImportSection extends StatefulWidget {
       Uint8List document, String recoveryKey) inspect;
   final Future<void> Function() hideProtectedInput;
   final Future<FictionalRetainedRecoveryReport> Function(
-      Uint8List archive, String manualKey)? retainCandidate;
+      Uint8List archive, String key)? retainCandidate;
   final Future<FictionalRetainedRecoveryReport> Function()? reopenCandidate;
   const FictionalExternalImportSection({
     super.key,
@@ -277,7 +277,14 @@ class FictionalExternalImportSectionState
             OutlinedButton.icon(
               key: const ValueKey('import-retain-candidate'),
               onPressed: _checking ||
-                  !RegExp(r'^[A-Za-z0-9_-]{43}
+                  !RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(_manualKey.text)
+                  ? null : () => _activeWork = _verify(retain: true),
+              icon: const Icon(Icons.archive_outlined),
+              label: const Text('Keep separate protected candidate (test)'),
+            ),
+          ],
+          TextButton(
+            key: const ValueKey('import-cancel'),
             onPressed: _checking ? null : () {
               _clearSelection();
               setState(() =>
@@ -325,56 +332,6 @@ class FictionalExternalImportSectionState
             style: TextStyle(color: c.clay,
               fontWeight: FontWeight.w700, fontSize: 12)),
         ],
-        if (_report != null) ...[
-          const SizedBox(height: 13),
-          Text('Separate fictional encrypted restore verified',
-            key: const ValueKey('import-verified'),
-            style: TextStyle(color: c.success,
-              fontWeight: FontWeight.w700)),
-          const SizedBox(height: 7),
-          Text('${_report!.journals} notebooks · ${_report!.entries} '
-            'pages · ${_report!.revisions} revisions · '
-            '${_report!.attachments} attachments',
-            key: const ValueKey('import-counts'),
-            style: TextStyle(color: c.ink)),
-          const SizedBox(height: 7),
-          Text('TEMPORARY REVIEW ONLY · restored test vault was removed. '
-            'No existing journal was changed and no new usable journal '
-            'was installed.',
-            key: const ValueKey('import-not-installed'),
-            style: TextStyle(color: c.clay, height: 1.5,
-              fontSize: 12, fontWeight: FontWeight.w700)),
-        ],
-      ],
-    );
-  }
-}
-).hasMatch(_manualKey.text)
-                  ? null : () => _activeWork = _verify(retain: true),
-              icon: const Icon(Icons.archive_outlined),
-              label: const Text('Keep separate protected candidate (test)'),
-            ),
-          ],
-          TextButton(
-            key: const ValueKey('import-cancel'),
-            onPressed: _checking ? null : () {
-              _clearSelection();
-              setState(() =>
-                  _notice = 'Import cancelled. No journal was changed.');
-            },
-            child: const Text('Cancel without restoring'),
-          ),
-        ],
-        if (_selecting || _checking) const Padding(
-          padding: EdgeInsets.only(top: 10),
-          child: LinearProgressIndicator(key: ValueKey('import-progress')),
-        ),
-        if (_notice != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Text(_notice!, key: const ValueKey('import-notice'),
-              style: TextStyle(color: c.clay, height: 1.5)),
-          ),
         if (_report != null) ...[
           const SizedBox(height: 13),
           Text('Separate fictional encrypted restore verified',
