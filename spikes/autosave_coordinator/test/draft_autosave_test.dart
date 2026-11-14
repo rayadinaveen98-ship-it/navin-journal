@@ -214,6 +214,44 @@ void main() {
         'Partial fictional composition');
   });
 
+  test('unfinished Telugu IME composition blocks safe dismissal', () async {
+    controller.startComposition();
+    controller.update(title: 'ఊహించిన దృశ్యం', body: 'తె');
+    expect(controller.isComposing, isTrue);
+    expect(await controller.closeSafely(), isFalse);
+    expect(port.calls, 0);
+    expect(controller.draft.body, 'తె');
+
+    // Best-effort background persistence is allowed, but a partial preedit
+    // may NEVER be treated as permission to close the active editor.
+    await controller.flush();
+    expect(controller.indicator.phase, SavePhase.saved);
+    expect(await controller.closeSafely(), isFalse);
+
+    controller.update(title: 'ఊహించిన దృశ్యం', body: 'తెలుగు');
+    controller.endComposition();
+    expect(await controller.closeSafely(), isTrue);
+    expect(port.records['fictional-e1']?.content.body, 'తెలుగు');
+    expect(controller.indicator.databaseVersion, 2);
+  });
+
+  test('composition started during an in-flight save blocks close', () async {
+    port.gate = Completer<void>();
+    controller.update(title: '', body: 'First fictional draft');
+    final first = controller.flush();
+    controller.startComposition();
+    controller.update(title: '', body: 'తెలుగు unfinished');
+    final close = controller.closeSafely();
+    port.gate!.complete();
+    await first;
+    expect(await close, isFalse);
+    expect(controller.draft.body, 'తెలుగు unfinished');
+    controller.endComposition();
+    expect(await controller.closeSafely(), isTrue);
+    expect(port.records['fictional-e1']?.content.body,
+        'తెలుగు unfinished');
+  });
+
   test('blank new draft does not create empty persistent records', () async {
     controller.update(title: ' ', body: '\n ');
     await controller.flush();
