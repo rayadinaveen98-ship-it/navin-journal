@@ -9,6 +9,7 @@ on:
       - 'preview_app/apk02_test/**'
       - 'packages/journal_core/**'
       - 'packages/journal_editor/**'
+      - 'spikes/autosave_coordinator/**'
       - 'spikes/flutter_bridge_probe/native/MainActivity.kt'
       - 'spikes/flutter_bridge_probe/lib/android_key_bridge.dart'
       - 'spikes/key_lifecycle/**'
@@ -21,6 +22,7 @@ on:
       - 'preview_app/apk02_test/**'
       - 'packages/journal_core/**'
       - 'packages/journal_editor/**'
+      - 'spikes/autosave_coordinator/**'
       - 'spikes/flutter_bridge_probe/native/MainActivity.kt'
       - 'spikes/flutter_bridge_probe/lib/android_key_bridge.dart'
       - 'spikes/key_lifecycle/**'
@@ -114,7 +116,14 @@ jobs:
         run: |
           cd "$APK02_LIBRARY_ROOT"
           flutter analyze --no-pub
-      - name: Verify 23 encrypted journal/editor worker contract tests
+      - name: Verify autosave controller and unfinished IME dismissal safety
+        shell: bash
+        run: |
+          cd "$GITHUB_WORKSPACE/spikes/autosave_coordinator"
+          dart pub get
+          dart analyze --fatal-infos
+          dart test --reporter expanded
+      - name: Verify encrypted journal/editor worker contract tests
         shell: bash
         run: |
           cd "$GITHUB_WORKSPACE/packages/journal_editor"
