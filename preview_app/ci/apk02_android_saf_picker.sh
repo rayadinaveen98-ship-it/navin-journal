@@ -243,6 +243,28 @@ try:
               for n in nodes))
     print("Open confirmation visible:",
           any(n.attrib.get("text", "").lower() == "open" for n in nodes))
+    # Diagnostic data is restricted to the fictional document's own Android
+    # widget hierarchy: class/interaction flags/bounds, never arbitrary UI
+    # text, ciphertext, recovery keys, provider URIs or personal data.
+    parents = {child: parent for parent in nodes for child in parent}
+    docs = [n for n in nodes if "navin-journal-FICTIONAL-only"
+            in n.attrib.get("text", "")]
+    print("Fictional document matches:", len(docs))
+    for node in docs[:2]:
+        current = node
+        for depth in range(5):
+            attrs = current.attrib
+            print("Document node ancestor", depth, {
+                "widget": attrs.get("class", "").split(".")[-1],
+                "clickable": attrs.get("clickable"),
+                "enabled": attrs.get("enabled"),
+                "focusable": attrs.get("focusable"),
+                "selected": attrs.get("selected"),
+                "bounds": attrs.get("bounds"),
+            })
+            current = parents.get(current)
+            if current is None:
+                break
 except Exception:
     print("No readable picker UI hierarchy")
 PY
