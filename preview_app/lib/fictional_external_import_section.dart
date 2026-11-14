@@ -90,8 +90,10 @@ class FictionalExternalImportSectionState
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _clearSelection();
+    // Do not trigger setState from TextEditingController listeners during
+    // widget teardown.
     _manualKey.removeListener(_textChanged);
+    _clearSelection();
     _manualKey.dispose();
     super.dispose();
   }
