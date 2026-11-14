@@ -36,6 +36,8 @@
 
 | NJ-030 | Fictional encrypted export/clean-vault recovery rehearsal in existing Restore Safety UX | DEBUG VERIFIED 2026-11-14; NOT RECOVERABLE BACKUP | 37/37 worker and 28/28 Library tests pass; Android debug APK and API34 native regression pass in runs 43579984505 and 43579984540. It uses ephemeral keys and a throwaway encrypted vault, never exports a user-retained archive, never touches the existing vault, and must never be described as off-device recovery. Real key custody/SAF/clean-device proof and security gate remain open. |
 
+| NJ-031 | Android user-selected fictional encrypted archive export + separate manual recovery key | APK02 ENGINEERING VERIFIED 2026-11-14; OFF-DEVICE RECOVERY STILL OPEN | ACTION_CREATE_DOCUMENT writes v2 AES-GCM ciphertext; native provider readback checks length/SHA-256 before FLAG_SECURE and ephemeral key display. 41/41 worker tests and 29/29 Library integration tests, Android APK build and API34 regression passed (43581837392/43581837391). Off-device key custody, physical SAF picker and clean-device document import/restore remain unproven; private-data beta blocked. |
+
 ## Pending high-impact decisions
 
 - Final consumer brand name, trademark/availability review and production launcher/splash approval; Folded Page direction approved.
