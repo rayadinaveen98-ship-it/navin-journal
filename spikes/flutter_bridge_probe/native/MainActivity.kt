@@ -328,6 +328,7 @@ class MainActivity : FlutterActivity() {
                             "SAF_ERROR_SELECTED_BYTES",
                             "SAF_ERROR_AUTH", "SAF_ERROR_CLEANUP",
                             "SAF_ERROR_IMPORT_HIDE",
+                            "SAF_ERROR_RETURNED_BYTES_ZEROIZE",
                             "SAF_ERROR_ARCHIVE_ZEROIZE",
                             "SAF_ERROR_WORKER_CLOSE",
                             "SAF_ERROR_KEY_ZEROIZE",
