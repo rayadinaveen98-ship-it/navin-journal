@@ -179,42 +179,7 @@ wait_roundtrip() {
       focused="$(adb -s "$SERIAL" shell dumpsys window 2>/dev/null |
         grep -E 'mCurrentFocus|mFocusedApp' | head -n 3 || true)"
       if echo "$focused" | grep -Eiq 'documentsui|documents.ui'; then
-        if capture_ui && coords="$(node_center '^(Open|OPEN)
-wait_marker SAF_EXPORT_READY
-wait_picker
-adb -s "$SERIAL" shell input keyevent KEYCODE_BACK
-wait_marker SAF_EXPORT_CANCELLED
-reset_probe
-
-launch saf_import_cancel
-wait_marker SAF_IMPORT_READY
-wait_picker
-adb -s "$SERIAL" shell input keyevent KEYCODE_BACK
-wait_marker SAF_IMPORT_CANCELLED
-reset_probe
-
-launch saf_roundtrip
-wait_marker SAF_ROUNDTRIP_EXPORT_READY
-wait_picker
-select_downloads
-tap_label '^(Save|SAVE)$'
-# Native checks exact encrypted provider readback before the next Open intent.
-wait_marker SAF_ROUNDTRIP_IMPORT_READY
-wait_picker
-select_downloads
-tap_label 'navin-journal-FICTIONAL-only'
-wait_marker SAF_ROUNDTRIP_VERIFIED
-
-# Only now is the real Android provider export+import round trip accepted.
-# Core API34 clean-uninstall recovery and full UI/physical acceptance are
-# tracked separately and are NOT implied by this automated picker gate.
-adb -s "$SERIAL" shell am force-stop "$PACKAGE"
-adb -s "$SERIAL" uninstall "$PACKAGE" | grep -q Success
-echo "VERIFIED: real API34 DocumentsUI export cancellation, import cancellation,"
-echo "verified ciphertext write/readback, provider re-selection and authenticated"
-echo "fictional Telugu current+historical revision after imported-byte equality."
-echo "NOT physical OEM/Gboard, manual recovery-key entry or private diary release."
-)"; then
+        if capture_ui && coords="$(node_center '^(Open|OPEN)$')"; then
           echo "Android DocumentsUI displayed an explicit Open confirmation"
           adb -s "$SERIAL" shell input tap $coords
         fi
