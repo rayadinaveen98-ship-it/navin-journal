@@ -56,7 +56,13 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
       _selectedJournal?['name'] as String? ??
       (_activeJournalId == widget.journalId
           ? widget.journalName : 'Fictional journal');
-  bool get _canWrite => _loaded && _selectedJournal?['archived'] == false;
+  bool get _canWrite => _loaded &&
+      _selectedJournal?['deletedAtMs'] == null &&
+      _selectedJournal?['archived'] == false;
+  List<Map<String, Object?>> get _availableJournals =>
+      _journals.where((j) => j['deletedAtMs'] == null).toList();
+  List<Map<String, Object?>> get _trashedJournals =>
+      _journals.where((j) => j['deletedAtMs'] != null).toList();
   Map<String, Object?>? _reading;
   FictionalPageFilter _filter = FictionalPageFilter.all;
   FictionalPageOrder _order = FictionalPageOrder.newest;
@@ -165,6 +171,80 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
     } catch (_) {
       if (mounted) setState(() =>
           _error = 'Unable to create a fictional journal.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// All management actions are fictional-only, use the existing encrypted
+  /// worker, and update visible catalog/pages from one committed response.
+  /// No widget preferences or plaintext database index is created.
+  Future<void> _manageJournal(String operation, {String? targetId}) async {
+    if (_busy || !_loaded || _screen != _Screen.library) return;
+    final id = targetId ?? _activeJournalId;
+    final selected = _journals.where((j) => j['id'] == id).toList();
+    if (selected.length != 1) return;
+    if (operation == 'trash') {
+      if (_availableJournals.length < 2) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Move fictional notebook to Trash?'),
+          content: const Text('Encrypted sample pages and their history '
+              'stay intact. You can restore this notebook. '
+              'Nothing is permanently deleted.'),
+          actions: [
+            TextButton(
+              key: const ValueKey('journal-trash-cancel'),
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Keep notebook'),
+            ),
+            FilledButton(
+              key: const ValueKey('journal-trash-confirm'),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Move to Trash'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || confirmed != true || _busy ||
+          _screen != _Screen.library) return;
+    }
+    final originalName = selected.single['name'] as String;
+    const suffix = ' · revised';
+    final baseName = originalName.endsWith(suffix)
+        ? originalName.substring(0, originalName.length - suffix.length)
+        : originalName;
+    final scriptedName = originalName.endsWith(suffix)
+        ? baseName
+        : (baseName.length > 35 ? baseName.substring(0, 35) : baseName) +
+            suffix;
+    setState(() { _busy = true; _error = null; });
+    try {
+      final shelf = await widget.worker.manageFictionalJournal(
+        journalId: id,
+        activeJournalId: _activeJournalId,
+        operation: operation,
+        fictionalNewName: operation == 'rename' ? scriptedName : null,
+      );
+      if (!shelf.journals.any((j) => j['id'] == shelf.journalId &&
+          j['deletedAtMs'] == null) ||
+          shelf.pages.any((p) => p['journalId'] != shelf.journalId ||
+              p['deletedAtMs'] != null)) {
+        throw StateError('Journal management scope mismatch');
+      }
+      if (!mounted) return;
+      setState(() {
+        _activeJournalId = shelf.journalId;
+        _journals = shelf.journals;
+        _pages = shelf.pages;
+        _loaded = true;
+        _filter = FictionalPageFilter.all;
+        _order = FictionalPageOrder.newest;
+      });
+    } catch (_) {
+      if (mounted) setState(() =>
+          _error = 'Could not complete this encrypted journal change.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -404,7 +484,7 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
             isExpanded: true,
             value: _activeJournalId,
             items: [
-              for (final journal in _journals)
+              for (final journal in _availableJournals)
                 DropdownMenuItem<String>(
                   value: journal['id'] as String,
                   child: Text(
@@ -430,7 +510,36 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
         Text('Each notebook has its own encrypted pages. '
           'Switching never merges entries or stores a plaintext index.',
           style: TextStyle(color: c.secondary, fontSize: 12)),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          OutlinedButton.icon(
+            key: const ValueKey('library-journal-rename'),
+            onPressed: _busy ? null :
+              () => unawaited(_manageJournal('rename')),
+            icon: const Icon(Icons.drive_file_rename_outline, size: 17),
+            label: const Text('Rename sample'),
+          ),
+          OutlinedButton.icon(
+            key: const ValueKey('library-journal-archive'),
+            onPressed: _busy ? null :
+              () => unawaited(_manageJournal(
+                  _selectedJournal?['archived'] == true
+                      ? 'unarchive' : 'archive')),
+            icon: Icon(_selectedJournal?['archived'] == true
+                ? Icons.unarchive_outlined : Icons.archive_outlined,
+                size: 17),
+            label: Text(_selectedJournal?['archived'] == true
+                ? 'Unarchive' : 'Archive'),
+          ),
+          OutlinedButton.icon(
+            key: const ValueKey('library-journal-trash'),
+            onPressed: _busy || _availableJournals.length < 2
+                ? null : () => unawaited(_manageJournal('trash')),
+            icon: const Icon(Icons.delete_outline, size: 17),
+            label: const Text('Move to Trash'),
+          ),
+        ]),
+        const SizedBox(height: 14),
       ],
       FilledButton.icon(
         key: const ValueKey('library-create-fictional'),
@@ -460,6 +569,35 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
         const SizedBox(height: 5),
         Text('Read-only scan. No restore or delete actions.',
           style: TextStyle(color: c.secondary, fontSize: 12)),
+      ],
+      if (_loaded && _trashedJournals.isNotEmpty) ...[
+        const SizedBox(height: 23),
+        Text('Notebook Trash', style: editorial(c, 23)),
+        const SizedBox(height: 6),
+        Text('Restorable fictional notebooks · no permanent delete',
+          style: TextStyle(color: c.secondary, fontSize: 12)),
+        for (final journal in _trashedJournals)
+          Container(
+            key: ValueKey('library-trashed-' + (journal['id'] as String)),
+            margin: const EdgeInsets.only(top: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: c.paper,
+              border: Border.all(color: c.stroke),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(children: [
+              Expanded(child: Text(journal['name'] as String,
+                maxLines: 2, overflow: TextOverflow.ellipsis)),
+              TextButton(
+                key: ValueKey('library-restore-' + (journal['id'] as String)),
+                onPressed: _busy ? null : () =>
+                  unawaited(_manageJournal('restore',
+                    targetId: journal['id'] as String)),
+                child: const Text('Restore'),
+              ),
+            ]),
+          ),
       ],
       const SizedBox(height: 27),
       Row(children: [
