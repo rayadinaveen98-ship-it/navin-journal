@@ -32,6 +32,8 @@
 | NJ-026 | A4.1 independent random recovery-key authenticated portable archive | LINUX TESTED 2026-11-13 | 16/16 Dart tests passed for AES-256-GCM verify-only fictional export, tamper, schema and path limits. NOT a password KDF, production backup, clean-device restore or release-security claim |
 | NJ-027 | Android A3.4 force-stop survival of acknowledged fictional encrypted entries | ANDROID EMULATOR TESTED 2026-11-13 | Verified run 43427287021: ACK_V1 / force-stop / ACK_V2 / force-stop / RECOVERED_V2 with same app-private database and AndroidKeyStore key; physical phone/reinstall and A3.3 editor pending |
 | NJ-028 | A4.2 authenticated archive staged restoration to new encrypted SQLite vault | LINUX TESTED 2026-11-13 | 34/34 A4 tests passed, including 18 staged import/fault/collision/byte-verification cases; fictional schema only, no true clean-device Android recovery or security approval |
+| NJ-029 | Reversible per-page encrypted Trash/restore, exact expected version and journal ownership | VERIFIED FICTIONAL APK02 2026-11-14 | Reader requires confirmation, worker refuses cross-journal/stale/archived actions, restore preserves ID and revisions; 26/26 Library tests and Android APK built in run 43577505729, native regression run 43577505674 passed. No permanent delete or private-data beta approval. |
+
 ## Pending high-impact decisions
 
 - Final consumer brand name, trademark/availability review and production launcher/splash approval; Folded Page direction approved.
