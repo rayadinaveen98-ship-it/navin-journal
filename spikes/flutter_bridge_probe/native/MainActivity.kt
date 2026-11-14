@@ -53,6 +53,8 @@ class MainActivity : FlutterActivity() {
                     if (marker !in setOf(
                             "ACK_V1", "ACK_V2", "RECOVERED_V1",
                             "RECOVERED_V2", "FAILED",
+                            "PORTABLE_EXPORT_READY", "PORTABLE_WRONG_KEY",
+                            "PORTABLE_RESTORE_OK", "PORTABLE_REOPEN_OK",
                         )
                     ) {
                         result.error("INVALID_ARGUMENT", "Unknown test marker", null)
