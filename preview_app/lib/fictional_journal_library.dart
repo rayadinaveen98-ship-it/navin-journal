@@ -10,6 +10,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
 import 'package:navin_journal_core/restore_staging_assessment.dart';
+import 'package:navin_journal_core/restore_staging_inventory.dart';
 import 'connected_writing_studio.dart';
 import 'recovery_safety_screen.dart';
 import 'visuals.dart';
@@ -22,6 +23,7 @@ class FictionalJournalLibrary extends StatefulWidget {
   final String journalName;
   final Directory? recoveryPrivateRoot;
   final Future<RestoreAssessment> Function()? authenticatedAssessment;
+  final Future<List<StagingObservation>> Function(Directory)? inventoryLoader;
   const FictionalJournalLibrary({
     super.key,
     required this.worker,
@@ -29,6 +31,7 @@ class FictionalJournalLibrary extends StatefulWidget {
     this.journalName = 'Fictional Pages',
     this.recoveryPrivateRoot,
     this.authenticatedAssessment,
+    this.inventoryLoader,
   });
 
   @override
@@ -220,6 +223,7 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
                 RecoverySafetyScreen(
                   privateRoot: widget.recoveryPrivateRoot!,
                   authenticatedAssessment: widget.authenticatedAssessment,
+                  inventoryLoader: widget.inventoryLoader,
                 )
               else _libraryView(c),
             ]),
