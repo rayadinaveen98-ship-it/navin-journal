@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:navin_journal_preview/apk02_library_main.dart';
+import 'package:navin_journal_preview/fictional_activation_consent_panel.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -28,12 +29,14 @@ void main() {
 
   testWidgets('new installation offers explicit create or recover without '
       'silently creating an active encrypted journal', (tester) async {
-    await tester.pumpWidget(const Apk02LibraryDiagnosticApp());
-    // The real app-private filesystem checks execute outside Flutter's
-    // fake clock. Give those I/O operations a real asynchronous turn.
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 160));
-    });
+    final key = GlobalKey<Apk02LibraryDiagnosticAppState>();
+    await tester.pumpWidget(Apk02LibraryDiagnosticApp(key: key));
+    await tester.runAsync(() => key.currentState!.waitForFirstBoot());
+    await tester.pump();
+    final consent = find.byType(FictionalActivationConsentPanel);
+    expect(consent, findsOneWidget);
+    await tester.runAsync(() => tester
+        .state<FictionalActivationConsentPanelState>(consent).waitForIdle());
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('first-run-choice')), findsOneWidget);
     expect(find.byKey(const ValueKey('first-run-new-journal')),
@@ -57,12 +60,10 @@ void main() {
       ..createSync();
     final marker = File('${occupied.path}/unknown-stage')
       ..writeAsStringSync('UNKNOWN CURRENT USER STATE');
-    await tester.pumpWidget(const Apk02LibraryDiagnosticApp());
-    // The real app-private filesystem checks execute outside Flutter's
-    // fake clock. Give those I/O operations a real asynchronous turn.
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 160));
-    });
+    final key = GlobalKey<Apk02LibraryDiagnosticAppState>();
+    await tester.pumpWidget(Apk02LibraryDiagnosticApp(key: key));
+    await tester.runAsync(() => key.currentState!.waitForFirstBoot());
+    await tester.pump();
     await tester.pumpAndSettle();
     expect(find.textContaining('No data has been reset'), findsOneWidget);
     expect(find.byKey(const ValueKey('first-run-new-journal')), findsNothing);
