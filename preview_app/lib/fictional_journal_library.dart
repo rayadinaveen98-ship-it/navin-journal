@@ -95,19 +95,17 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
     final requestedId = _activeJournalId;
     setState(() { _busy = true; _error = null; });
     try {
-      final journals = await widget.worker.listJournals();
-      if (!journals.any((item) =>
-          item['id'] == requestedId && item['deletedAtMs'] == null)) {
-        throw StateError('Selected journal is unavailable');
-      }
-      final pages = await widget.worker.listEntries(journalId: requestedId);
-      if (pages.any((item) => item['journalId'] != requestedId ||
-          item['deletedAtMs'] != null)) {
-        throw StateError('Journal scope mismatch');
+      final shelf = await widget.worker.loadJournalShelf(requestedId);
+      if (!shelf.journals.any((item) =>
+          item['id'] == requestedId && item['deletedAtMs'] == null) ||
+          shelf.pages.any((item) =>
+              item['journalId'] != requestedId ||
+              item['deletedAtMs'] != null)) {
+        throw StateError('Encrypted journal scope mismatch');
       }
       if (mounted && _activeJournalId == requestedId) setState(() {
-        _journals = journals;
-        _pages = pages;
+        _journals = shelf.journals;
+        _pages = shelf.pages;
         _loaded = true;
       });
     } catch (_) {
