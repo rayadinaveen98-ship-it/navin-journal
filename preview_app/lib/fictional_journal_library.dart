@@ -12,6 +12,7 @@ import 'package:navin_journal_editor/journal_editor_isolate.dart';
 import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_core/restore_staging_inventory.dart';
 import 'connected_writing_studio.dart';
+import 'fictional_library_index.dart';
 import 'recovery_safety_screen.dart';
 import 'visuals.dart';
 
@@ -42,6 +43,12 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
   _Screen _screen = _Screen.library;
   List<Map<String, Object?>> _pages = [];
   Map<String, Object?>? _reading;
+  FictionalPageFilter _filter = FictionalPageFilter.all;
+  FictionalPageOrder _order = FictionalPageOrder.newest;
+  List<Map<String, Object?>> _revisions = [];
+  bool _historyLoaded = false;
+  bool _historyBusy = false;
+  String? _historyError;
   IsolateJournalEditorSession? _editor;
   EditorSaveNotifier? _notifier;
   FictionalWritingPreset? _fixture;
@@ -87,11 +94,48 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
           row['deletedAtMs'] != null) {
         throw StateError('Entry missing or trashed');
       }
-      if (mounted) setState(() { _reading = row; _screen = _Screen.reader; });
+      if (mounted) setState(() {
+        _reading = row;
+        _revisions = [];
+        _historyLoaded = false;
+        _historyError = null;
+        _screen = _Screen.reader;
+      });
     } catch (_) {
       if (mounted) setState(() => _error = 'Could not open this page.');
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Reads real encrypted historical rows on demand. The recovered records
+  /// are never written to the clipboard, preferences, a search index, or the
+  /// current draft. The diagnostic has no destructive restore-version action.
+  Future<void> _loadHistory() async {
+    final reading = _reading;
+    if (reading == null || _historyLoaded || _historyBusy || _busy) return;
+    setState(() { _historyBusy = true; _historyError = null; });
+    try {
+      final entryId = reading['id'] as String;
+      final history = await widget.worker.readRevisions(entryId);
+      if (history.any((rev) =>
+          rev['entryId'] != entryId ||
+          rev['journalId'] != widget.journalId ||
+          (rev['version'] as int) >= (reading['version'] as int) ||
+          (rev['version'] as int) < 1)) {
+        throw StateError('Invalid version history');
+      }
+      history.sort((a, b) =>
+        (b['version'] as int).compareTo(a['version'] as int));
+      if (mounted && _reading?['id'] == entryId) setState(() {
+        _revisions = history;
+        _historyLoaded = true;
+      });
+    } catch (_) {
+      if (mounted) setState(() =>
+        _historyError = 'Earlier versions could not be verified.');
+    } finally {
+      if (mounted) setState(() => _historyBusy = false);
     }
   }
 
@@ -149,6 +193,8 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
     _notifier = null;
     _fixture = null;
     _reading = null;
+    _revisions = [];
+    _historyLoaded = false;
     if (!mounted) {
       old?.dispose();
       return;
@@ -160,7 +206,13 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
 
   Future<void> _backToLibrary() async {
     if (!mounted) return;
-    setState(() { _screen = _Screen.library; _reading = null; });
+    setState(() {
+      _screen = _Screen.library;
+      _reading = null;
+      _revisions = [];
+      _historyLoaded = false;
+      _historyError = null;
+    });
     await _refresh();
   }
 
@@ -286,6 +338,62 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
           icon: const Icon(Icons.refresh),
         ),
       ]),
+      if (_loaded && _pages.isNotEmpty) ...[
+        const SizedBox(height: 11),
+        Text('Find an imagined page · preset searches only',
+          style: TextStyle(color: c.secondary, fontSize: 12)),
+        const SizedBox(height: 10),
+        Wrap(spacing: 7, runSpacing: 7, children: [
+          for (final filter in FictionalPageFilter.values)
+            ChoiceChip(
+              key: ValueKey('library-filter-' + filter.name),
+              label: Text(switch (filter) {
+                FictionalPageFilter.all => 'All pages',
+                FictionalPageFilter.telugu => 'తెలుగు',
+                FictionalPageFilter.afternoon => 'Afternoon',
+                FictionalPageFilter.imagined => 'Imagined',
+              }),
+              selected: _filter == filter,
+              onSelected: _busy ? null : (_) =>
+                setState(() => _filter = filter),
+            ),
+        ]),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: Text(
+            'Showing ' + FictionalLibraryIndex.visible(
+              source: _pages, filter: _filter, order: _order,
+            ).length.toString() + ' of ' + _pages.length.toString() +
+            ' fictional pages',
+            key: const ValueKey('library-filter-count'),
+            style: TextStyle(color: c.secondary, fontSize: 12),
+          )),
+          DropdownButton<FictionalPageOrder>(
+            key: const ValueKey('library-sort'),
+            value: _order,
+            items: const [
+              DropdownMenuItem(value: FictionalPageOrder.newest,
+                child: Text('Newest')),
+              DropdownMenuItem(value: FictionalPageOrder.oldest,
+                child: Text('Oldest')),
+              DropdownMenuItem(value: FictionalPageOrder.title,
+                child: Text('Title A–Z')),
+            ],
+            onChanged: _busy ? null : (order) {
+              if (order != null) setState(() => _order = order);
+            },
+          ),
+        ]),
+        if (FictionalLibraryIndex.visible(
+          source: _pages, filter: _filter, order: _order,
+        ).isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Text('No fictional pages match this preset.',
+              key: const ValueKey('library-filter-empty'),
+              style: TextStyle(color: c.secondary)),
+          ),
+      ],
       if (_busy && !_loaded) const LinearProgressIndicator(),
       if (_error != null)
         Padding(padding: const EdgeInsets.all(10),
@@ -304,7 +412,9 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
             'insert the scripted sample, save, and return here.',
             style: TextStyle(color: c.secondary, height: 1.5)),
         ),
-      for (final row in _pages)
+      for (final row in FictionalLibraryIndex.visible(
+        source: _pages, filter: _filter, order: _order,
+      ))
         Container(
           key: ValueKey('library-saved-' + (row['id'] as String)),
           margin: const EdgeInsets.only(top: 12),
@@ -370,6 +480,60 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
         icon: const Icon(Icons.edit_outlined),
         label: const Text('Edit fictional page'),
       ),
+      const SizedBox(height: 20),
+      OutlinedButton.icon(
+        key: const ValueKey('reader-history'),
+        onPressed: _historyBusy || _busy || _historyLoaded
+          ? null : () => unawaited(_loadHistory()),
+        icon: const Icon(Icons.history),
+        label: const Text('View earlier versions'),
+      ),
+      if (_historyBusy) const Padding(
+        padding: EdgeInsets.symmetric(vertical: 13),
+        child: LinearProgressIndicator(
+          key: ValueKey('reader-history-loading')),
+      ),
+      if (_historyError != null)
+        Padding(padding: const EdgeInsets.only(top: 10),
+          child: Text(_historyError!,
+            key: const ValueKey('reader-history-error'),
+            style: TextStyle(color: c.clay))),
+      if (_historyLoaded) ...[
+        const SizedBox(height: 13),
+        Text('Read-only version history · never replaces current page',
+          key: const ValueKey('reader-history-safe-note'),
+          style: TextStyle(color: c.secondary, fontSize: 12)),
+        if (_revisions.isEmpty)
+          Padding(padding: const EdgeInsets.only(top: 10),
+            child: Text('No earlier versions saved.',
+              key: const ValueKey('reader-history-empty'),
+              style: TextStyle(color: c.secondary))),
+        for (final previous in _revisions)
+          Container(
+            key: ValueKey('reader-history-version-' +
+              (previous['version'] as int).toString()),
+            width: double.infinity,
+            margin: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: c.subtle,
+              border: Border.all(color: c.stroke),
+              borderRadius: BorderRadius.circular(15)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('VERSION ' + (previous['version'] as int).toString(),
+                  style: TextStyle(color: c.action,
+                    letterSpacing: 1.3, fontSize: 11,
+                    fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                Text(previous['title'] as String,
+                  style: editorial(c, 21)),
+                const SizedBox(height: 8),
+                Text(previous['body'] as String,
+                  style: TextStyle(color: c.ink, height: 1.6)),
+              ]),
+          ),
+      ],
       const SizedBox(height: 20),
       Text('This diagnostic accepts only scripted fictional revisions.',
         style: TextStyle(color: c.secondary, fontSize: 12)),
