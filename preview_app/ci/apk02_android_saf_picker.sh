@@ -212,129 +212,17 @@ wait_roundtrip() {
       if [[ "$state" == SAF_ROUNDTRIP_IMPORT_READY ]] &&
          echo "$focused" | grep -Eiq 'documentsui|documents.ui'; then
         if capture_ui; then
-          if coords="$(node_center '^(Open|OPEN)
-      fi
-    fi
-    sleep 1
-  done
-  echo "::error::SAF authenticated roundtrip not confirmed; last phase: $(marker)"
-  adb -s "$SERIAL" shell dumpsys window 2>/dev/null |
-    grep -E 'mCurrentFocus|mFocusedApp' | head -n 3 || true
-  if capture_ui; then
-    python3 - "$WORK/hierarchy.xml" <<'PY'
-import sys, xml.etree.ElementTree as ET
-try:
-    root = ET.parse(sys.argv[1]).getroot()
-    nodes = list(root.iter("node"))
-    packages = sorted(set(n.attrib.get("package", "") for n in nodes))
-    print("Foreground UI packages:", ", ".join(p for p in packages if p)[:320])
-    print("Fictional test document still visible:",
-          any("navin-journal-FICTIONAL-only" in n.attrib.get("text", "")
-              for n in nodes))
-    print("Open confirmation visible:",
-          any(n.attrib.get("text", "").lower() == "open" for n in nodes))
-    # Diagnostic data is restricted to the fictional document's own Android
-    # widget hierarchy: class/interaction flags/bounds, never arbitrary UI
-    # text, ciphertext, recovery keys, provider URIs or personal data.
-    parents = {child: parent for parent in nodes for child in parent}
-    docs = [n for n in nodes if "navin-journal-FICTIONAL-only"
-            in n.attrib.get("text", "")]
-    print("Fictional document matches:", len(docs))
-    for node in docs[:2]:
-        current = node
-        for depth in range(5):
-            attrs = current.attrib
-            print("Document node ancestor", depth, {
-                "widget": attrs.get("class", "").split(".")[-1],
-                "clickable": attrs.get("clickable"),
-                "enabled": attrs.get("enabled"),
-                "focusable": attrs.get("focusable"),
-                "selected": attrs.get("selected"),
-                "bounds": attrs.get("bounds"),
-            })
-            current = parents.get(current)
-            if current is None:
-                break
-except Exception:
-    print("No readable picker UI hierarchy")
-PY
-  fi
-  return 1
-}
-
-cancel_picker() {
-  local wanted="$1" state focused
-  # The emulator may display DocumentsUI as resumed before its window can
-  # receive BACK. Only send BACK while the picker is actually in foreground.
-  for i in $(seq 1 24); do
-    state="$(marker)"
-    if [[ "$state" == "$wanted" ]]; then
-      echo "PASSED $wanted — real Android picker cancellation"
-      return 0
-    fi
-    if [[ "$state" == FAILED ]]; then
-      echo "::error::Fictional picker reported a cancellation failure"
-      return 1
-    fi
-    focused="$(adb -s "$SERIAL" shell dumpsys window 2>/dev/null |
-      grep -E 'mCurrentFocus|mFocusedApp' | head -n 3 || true)"
-    if echo "$focused" | grep -Eiq 'documentsui|documents.ui'; then
-      adb -s "$SERIAL" shell input keyevent KEYCODE_BACK
-    fi
-    sleep 1
-  done
-  echo "::error::Picker cancellation not acknowledged; last phase: $(marker)"
-  adb -s "$SERIAL" shell dumpsys window 2>/dev/null |
-    grep -E 'mCurrentFocus|mFocusedApp' | head -n 3 || true
-  return 1
-}
-
-reset_probe
-launch saf_export_cancel
-wait_marker SAF_EXPORT_READY
-wait_picker
-cancel_picker SAF_EXPORT_CANCELLED
-reset_probe
-
-launch saf_import_cancel
-wait_marker SAF_IMPORT_READY
-wait_picker
-cancel_picker SAF_IMPORT_CANCELLED
-reset_probe
-
-launch saf_roundtrip
-wait_marker SAF_ROUNDTRIP_EXPORT_READY
-wait_picker
-select_downloads
-tap_label '^(Save|SAVE)$'
-# Native checks exact encrypted provider readback before the next Open intent.
-wait_marker SAF_ROUNDTRIP_IMPORT_READY
-wait_picker
-select_downloads
-tap_label 'navin-journal-FICTIONAL-only' label
-wait_roundtrip
-
-# Only now is the real Android provider export+import round trip accepted.
-# Core API34 clean-uninstall recovery and full UI/physical acceptance are
-# tracked separately and are NOT implied by this automated picker gate.
-adb -s "$SERIAL" shell am force-stop "$PACKAGE"
-adb -s "$SERIAL" uninstall "$PACKAGE" | grep -q Success
-echo "VERIFIED: real API34 DocumentsUI export cancellation, import cancellation,"
-echo "verified ciphertext write/readback, provider re-selection and authenticated"
-echo "fictional Telugu current+historical revision after imported-byte equality."
-echo "NOT physical OEM/Gboard, manual recovery-key entry or private diary release."
- row)"; then
+          if coords="$(node_center '^(Open|OPEN)$' row)"; then
             echo "Real DocumentsUI displayed explicit Open confirmation"
             adb -s "$SERIAL" shell input tap $coords
           elif [[ "$i" == 34 ]]; then
-            # The diagnostic saw the fictional document in a selectable
-            # CardView nested in a GridView. Try the actual visible toolbar
-            # list-mode switch rather than ungrounded screen coordinates.
+            # The previous run saw an enabled, clickable CardView child of
+            # GridView. Request the real list-mode affordance if it exists.
             if coords="$(node_center 'Switch to list view|Show as list|List view|list_view' row)"; then
               echo "Android DocumentsUI offered list-mode control"
               adb -s "$SERIAL" shell input tap $coords
             else
-              echo "No DocumentsUI list-mode control present; no fallback bypass"
+              echo "No list-mode toolbar action visible; no synthetic fallback"
             fi
           else
             mode=row
