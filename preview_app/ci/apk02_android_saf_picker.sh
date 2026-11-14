@@ -93,9 +93,8 @@ except Exception:
 matches = []
 for node in root.iter("node"):
     attrs = node.attrib
-    content = " ".join(attrs.get(key, "") for key in
-                       ("text", "content-desc", "resource-id"))
-    if not pattern.search(content):
+    if not any(pattern.search(attrs.get(key, "")) for key in
+               ("text", "content-desc", "resource-id")):
         continue
     bounds = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]",
                       attrs.get("bounds", ""))
