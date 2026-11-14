@@ -119,6 +119,11 @@ jobs:
         run: |
           cd "$APK02_LIBRARY_ROOT"
           flutter test test/fictional_journal_library_test.dart --reporter expanded --concurrency=1 --timeout=40s
+      - name: Verify all read-only encrypted recovery assessment verdicts
+        shell: bash
+        run: |
+          cd "$APK02_LIBRARY_ROOT"
+          flutter test test/recovery_assessment_review_test.dart --reporter expanded --concurrency=1 --timeout=45s
       - name: Compile standalone Android Library / Reader / Writer debug APK
         shell: bash
         run: |
