@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings
+// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings, curly_braces_in_flow_control_structures
 /// APK02 read-only, fictional-only app navigation for interrupted restore
 /// inspection. Not a consumer backup, resume, discard, or recovery interface.
 library;
