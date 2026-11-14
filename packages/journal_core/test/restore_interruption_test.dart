@@ -39,6 +39,7 @@ void main() {
       );
       original.editEntry(
         id: savedId, expectedVersion: 1,
+        journalId: journal, eventAtMs: null,
         title: 'An invented morning, revisited',
         body: 'An imaginary later chapter. 🌷',
       );
@@ -152,7 +153,7 @@ void main() {
     try {
       expect(recovered.integrityCheck(), isTrue);
       expect(recovered.readEntry(savedId)!['version'], 2);
-      expect(recovered.readRevisions(savedId), hasLength(1));
+      expect(recovered.listRevisions(savedId), hasLength(1));
       expect(recovered.snapshot()['attachments'], hasLength(1));
     } finally {
       recovered.close();
@@ -271,7 +272,7 @@ void main() {
           expect(recovered.integrityCheck(), isTrue);
           expect(recovered.readEntry(savedId)!['version'], 2);
           expect(recovered.snapshot()['attachments'], hasLength(1));
-          expect(recovered.readRevisions(savedId), hasLength(1));
+          expect(recovered.listRevisions(savedId), hasLength(1));
         } finally {
           recovered.close();
         }
