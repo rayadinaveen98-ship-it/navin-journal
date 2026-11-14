@@ -29,6 +29,11 @@ void main() {
   testWidgets('new installation offers explicit create or recover without '
       'silently creating an active encrypted journal', (tester) async {
     await tester.pumpWidget(const Apk02LibraryDiagnosticApp());
+    // The real app-private filesystem checks execute outside Flutter's
+    // fake clock. Give those I/O operations a real asynchronous turn.
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 160));
+    });
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('first-run-choice')), findsOneWidget);
     expect(find.byKey(const ValueKey('first-run-new-journal')),
@@ -53,6 +58,11 @@ void main() {
     final marker = File('${occupied.path}/unknown-stage')
       ..writeAsStringSync('UNKNOWN CURRENT USER STATE');
     await tester.pumpWidget(const Apk02LibraryDiagnosticApp());
+    // The real app-private filesystem checks execute outside Flutter's
+    // fake clock. Give those I/O operations a real asynchronous turn.
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 160));
+    });
     await tester.pumpAndSettle();
     expect(find.textContaining('No data has been reset'), findsOneWidget);
     expect(find.byKey(const ValueKey('first-run-new-journal')), findsNothing);
