@@ -405,4 +405,133 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('encrypted journal switching never mixes saved pages',
+      (tester) async {
+    final second = await workerCall(tester,
+      () => worker.createJournal('Second Fictional Notebook'));
+    final session = await workerCall(tester,
+      () => worker.startSession(journalId: second));
+    session.controller.update(
+      title: 'Another imaginary notebook',
+      body: 'A fictional passage in journal two · తెలుగు',
+    );
+    await workerVoid(tester, session.save);
+    final secondEntry = (await workerCall(tester,
+      session.persistedEntryId))!;
+    expect(await workerCall(tester, session.closeSafely), isTrue);
+
+    await mount(tester);
+    expect(find.byKey(const ValueKey('library-empty')), findsOneWidget);
+    expect(find.byKey(ValueKey('library-open-' + secondEntry)), findsNothing);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('library-journal-switch')));
+    await tester.tap(find.byKey(const ValueKey('library-journal-switch')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Second Fictional Notebook').last);
+    await settleRealWorker(tester);
+    expect(find.byKey(ValueKey('library-open-' + secondEntry)),
+      findsOneWidget);
+
+    await tapVisible(tester, 'library-open-' + secondEntry);
+    expect(find.text('Another imaginary notebook'), findsOneWidget);
+    expect(find.textContaining('journal two'), findsOneWidget);
+    await tapVisible(tester, 'reader-back');
+
+    // Scripted save is scoped to the explicitly selected journal.
+    await tapVisible(tester, 'library-create-fictional');
+    await tapVisible(tester, 'insert-fictional-sample');
+    await tapVisible(tester, 'connected-back');
+    final secondPages = await workerCall(tester,
+      () => worker.listEntries(journalId: second));
+    final firstPages = await workerCall(tester,
+      () => worker.listEntries(journalId: journal));
+    expect(secondPages.length, 2);
+    expect(firstPages, isEmpty);
+    expect(secondPages.every((row) => row['journalId'] == second), isTrue);
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('library-journal-switch')));
+    await tester.tap(find.byKey(const ValueKey('library-journal-switch')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fictional Pages').last);
+    await settleRealWorker(tester);
+    expect(find.byKey(ValueKey('library-open-' + secondEntry)), findsNothing);
+    expect(find.byKey(const ValueKey('library-empty')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('predefined fictional notebook persists without plaintext selection',
+      (tester) async {
+    await mount(tester);
+    await tapVisible(tester, 'library-create-journal');
+    final journals = await workerCall(tester, worker.listJournals);
+    expect(journals.length, 2);
+    final newId = journals.firstWhere(
+      (j) => j['name'] == 'Imagined Notebook 2')['id'] as String;
+    expect(find.text('Imagined Notebook 2'), findsWidgets);
+
+    await tapVisible(tester, 'library-create-fictional');
+    await tapVisible(tester, 'insert-fictional-sample');
+    await tapVisible(tester, 'connected-back');
+    expect((await workerCall(tester,
+      () => worker.listEntries(journalId: newId))).length, 1);
+    expect(await workerCall(tester,
+      () => worker.listEntries(journalId: journal)), isEmpty);
+
+    // Restart the widget: the catalog is re-read from encrypted SQLite.
+    // The starting selection is explicit and is not restored from a plaintext
+    // preference, so the initial fictional journal opens again.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await mount(tester);
+    expect(find.byKey(const ValueKey('library-empty')), findsOneWidget);
+    expect(find.byKey(const ValueKey('library-journal-switch')),
+      findsOneWidget);
+    expect((await workerCall(tester, worker.listJournals)).length, 2);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('archived encrypted notebooks can be read but not written',
+      (tester) async {
+    await workerVoid(tester, worker.close);
+    late String archived;
+    late String archivedEntry;
+    final vault = JournalVault.open(path, key: key);
+    try {
+      archived = vault.createJournal('Archived Fictional Scenes');
+      archivedEntry = vault.createEntry(
+        journalId: archived,
+        title: 'The imagined archive',
+        body: 'A read-only fictional record',
+      );
+      vault.archiveJournal(archived, archived: true);
+    } finally {
+      vault.close();
+    }
+    worker = await workerCall(tester,
+      () => JournalEditorWorker.open(path, key: key));
+    await mount(tester);
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('library-journal-switch')));
+    await tester.tap(find.byKey(const ValueKey('library-journal-switch')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Archived Fictional Scenes · archived').last);
+    await settleRealWorker(tester);
+    expect(find.byKey(const ValueKey('library-archived-readonly')),
+      findsOneWidget);
+    expect(tester.widget<FilledButton>(
+        find.byKey(const ValueKey('library-create-fictional'))).onPressed,
+      isNull);
+    await tapVisible(tester, 'library-open-' + archivedEntry);
+    expect(find.text('The imagined archive'), findsOneWidget);
+    expect(tester.widget<FilledButton>(
+        find.byKey(const ValueKey('reader-edit'))).onPressed, isNull);
+    expect((await workerCall(tester,
+        () => worker.readEntry(archivedEntry)))!['journalId'], archived);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
 }
