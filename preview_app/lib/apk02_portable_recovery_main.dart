@@ -6,6 +6,9 @@
 ///   reject_wrong_key    - new install must reject wrong key without writing
 ///   restore_fixture     - independently keyed vault, fresh Android Keystore
 ///   reopen_fixture      - same restored vault after Android force-stop
+///   fault_pre_publish   - simulated ENOSPC leaves no published vault
+///   fault_post_publish  - simulated ENOSPC after native rename preserves vault
+///   reopen_faulted      - Keystore unlock after force-stop of ambiguous restore
 ///
 /// The host test retrieves archive + separate secret outside the app sandbox,
 /// uninstalls this entire diagnostic package, reinstalls, and only then
@@ -18,6 +21,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:navin_journal_autosave_spike/draft_autosave.dart';
+import 'package:navin_journal_core/native_restore_publisher.dart';
+import 'package:navin_journal_core/restore_staging_inventory.dart';
+import 'package:navin_journal_core/staged_product_restore.dart';
 import 'package:navin_journal_bridge_probe/android_key_bridge.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
 import 'package:navin_journal_editor/portable_recovery_worker.dart';
@@ -75,6 +81,15 @@ class _PortableRecoveryDiagnosticAppState
         case 'reject_wrong_key':
           await _rejectWrongKey(Directory(root));
           await _marker('PORTABLE_WRONG_KEY');
+        case 'fault_pre_publish':
+          await _faultBeforePublication(Directory(root));
+          await _marker('PORTABLE_ENOSPC_PRE');
+        case 'fault_post_publish':
+          await _faultAfterPublication(Directory(root));
+          await _marker('PORTABLE_ENOSPC_POST');
+        case 'reopen_faulted':
+          await _reopenFaulted(Directory(root));
+          await _marker('PORTABLE_ENOSPC_REOPEN');
         case 'restore_fixture':
           await _restoreFixture(Directory(root));
           await _marker('PORTABLE_RESTORE_OK');
@@ -222,6 +237,107 @@ class _PortableRecoveryDiagnosticAppState
       wrong.destroy();
       bytes.fillRange(0, bytes.length, 0);
       await wrongFile.delete();
+    }
+  }
+
+  /// Synthetic ENOSPC on the real Android encrypted background worker,
+  /// before native no-clobber publication. No destination may be visible.
+  Future<void> _faultBeforePublication(Directory privateRoot) async {
+    final archiveFile = File(privateRoot.path + '/portable_import.njr');
+    final keyFile = File(privateRoot.path + '/portable_import.key');
+    final target = Directory(privateRoot.path + '/fault-pre-vault');
+    if (!archiveFile.existsSync() || !keyFile.existsSync() ||
+        target.existsSync()) {
+      throw StateError('Pre-publish fixture preconditions failed');
+    }
+    final archive = await archiveFile.readAsBytes();
+    final recovery = RecoveryKey.parse((await keyFile.readAsString()).trim());
+    final transientKey = TestVaultKey.random();
+    try {
+      var rejected = false;
+      try {
+        await PortableRecoveryWorker.restoreToNewVault(
+          encryptedArchive: archive,
+          recoveryKey: recovery,
+          destinationKey: transientKey,
+          destination: target,
+          faultCheckpointForDiagnostics: 'after_ready_marker_write',
+        );
+      } on ProductRestoreRejected {
+        rejected = true;
+      }
+      if (!rejected || target.existsSync() ||
+          await NativeRestorePublisher.isReady(target) ||
+          (await RestoreStagingInventory.inspect(privateRoot)).isNotEmpty) {
+        throw StateError('Prepublication storage fault exposed a journal');
+      }
+    } finally {
+      transientKey.destroy();
+      recovery.destroy();
+      archive.fillRange(0, archive.length, 0);
+    }
+  }
+
+  /// An ENOSPC acknowledgement failure AFTER the kernel published a complete
+  /// encrypted vault. Keep the new Android Keystore key for revalidation on
+  /// a separate process launch. Never auto-delete or overwrite this target.
+  Future<void> _faultAfterPublication(Directory privateRoot) async {
+    final archiveFile = File(privateRoot.path + '/portable_import.njr');
+    final keyFile = File(privateRoot.path + '/portable_import.key');
+    final target = Directory(privateRoot.path + '/fault-post-vault');
+    final envelope = File(privateRoot.path + '/fault-post-envelope.json');
+    final database = target.path + '/journal.sqlite3';
+    if (!archiveFile.existsSync() || !keyFile.existsSync() ||
+        target.existsSync() || envelope.existsSync()) {
+      throw StateError('Post-publish fixture preconditions failed');
+    }
+    final archive = await archiveFile.readAsBytes();
+    final recovery = RecoveryKey.parse((await keyFile.readAsString()).trim());
+    TestVaultKey? freshKey;
+    try {
+      freshKey = await _newDeviceKey(_envelope(envelope), database);
+      var rejected = false;
+      try {
+        await PortableRecoveryWorker.restoreToNewVault(
+          encryptedArchive: archive,
+          recoveryKey: recovery,
+          destinationKey: freshKey,
+          destination: target,
+          faultCheckpointForDiagnostics: 'before_parent_post_rename_fsync',
+        );
+      } on ProductRestoreRejected {
+        rejected = true;
+      }
+      if (!rejected || !await NativeRestorePublisher.isReady(target) ||
+          (await RestoreStagingInventory.inspect(privateRoot)).isNotEmpty) {
+        throw StateError('Ambiguous commit was deleted or not quarantined');
+      }
+      // A marker alone is not trusted: independently open the encrypted DB.
+      await _verifyRestored(database, freshKey);
+    } finally {
+      recovery.destroy();
+      freshKey?.destroy();
+      archive.fillRange(0, archive.length, 0);
+    }
+  }
+
+  /// Called only after the Android host test has force-stopped the process.
+  Future<void> _reopenFaulted(Directory privateRoot) async {
+    final target = Directory(privateRoot.path + '/fault-post-vault');
+    final envelope = File(privateRoot.path + '/fault-post-envelope.json');
+    final database = target.path + '/journal.sqlite3';
+    if (!await NativeRestorePublisher.isReady(target) ||
+        !envelope.existsSync()) {
+      throw StateError('No independently recoverable post-rename journal');
+    }
+    final key = await _unlockDeviceKey(_envelope(envelope), database);
+    try {
+      await _verifyRestored(database, key);
+      if ((await RestoreStagingInventory.inspect(privateRoot)).isNotEmpty) {
+        throw StateError('Unexpected abandoned restore stage');
+      }
+    } finally {
+      key.destroy();
     }
   }
 
