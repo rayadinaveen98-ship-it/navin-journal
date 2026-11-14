@@ -1,5 +1,5 @@
 // ignore_for_file: deprecated_member_use
-/// New APK02 installations must offer recovery BEFORE occupying active slot.
+// New APK02 installations must offer recovery BEFORE occupying active slot.
 import 'dart:io';
 
 import 'package:flutter/material.dart';
