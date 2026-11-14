@@ -34,6 +34,8 @@ Stop immediately if the app allows ordinary private writing or silently overwrit
 
 For each device, record only its model and Android version; test case ID, PASS / FAIL / BLOCKED / NOT RUN; short observed behavior; and optional redacted screenshots with fictional text. **A single device pass is not sufficient for phone+tablet approval.**
 
+**Live results ledger:** [Stage 5C two-device acceptance record](STAGE5C_TWO_DEVICE_RESULTS.md). All phone/tablet cases remain **NOT RUN** until actual observations are supplied. The user does not need to edit GitHub; this ledger should be updated from verified, sanitized device reports and screenshots.
+
 ## Prerequisites and reporting
 
 Use a disposable test installation on a phone, and a tablet if available. Enable installation only for the trusted GitHub-generated APK as required by Android, then disable the temporary installation permission afterward. Preserve the artifact/version for repeatability.
