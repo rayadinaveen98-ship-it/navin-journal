@@ -14,6 +14,7 @@ import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_recovery_archive_spike/product_encrypted_archive.dart';
 import 'package:navin_journal_recovery_archive_spike/recovery_archive.dart';
 import 'package:navin_journal_preview/fictional_journal_library.dart';
+import 'package:navin_journal_preview/recovery_safety_screen.dart';
 
 void main() {
   late Directory temp;
@@ -39,8 +40,17 @@ void main() {
   // The encrypted worker is a real Dart isolate, not a fake-async timer.
   // Give the worker event loop a short real-async turn before settling frames.
   Future<void> settleRealWorker(WidgetTester tester) async {
+    // Render the route before waiting on its native filesystem / isolate
+    // work; Flutter's fake time cannot complete native Directory streams.
+    await tester.pump();
     await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 140));
+      final recoveryRoute = find.byType(RecoverySafetyScreen);
+      if (recoveryRoute.evaluate().isNotEmpty) {
+        await tester.state<RecoverySafetyScreenState>(recoveryRoute)
+            .waitForIdle();
+      } else {
+        await Future<void>.delayed(const Duration(milliseconds: 140));
+      }
     });
     await tester.pumpAndSettle();
   }
