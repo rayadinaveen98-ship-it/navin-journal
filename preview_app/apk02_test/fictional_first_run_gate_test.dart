@@ -109,14 +109,13 @@ void main() {
     ));
     await tester.runAsync(() => key.currentState!.waitForFirstBoot());
     await tester.pump();
-    final consent = find.byType(FictionalActivationConsentPanel);
-    await tester.runAsync(() => tester
-        .state<FictionalActivationConsentPanelState>(consent).waitForIdle());
     await tester.pumpAndSettle();
-    expect(tester.widget<FilledButton>(find.byKey(
-      const ValueKey('first-run-new-journal'))).onPressed, isNull);
-    expect(find.byKey(const ValueKey('first-run-candidate-unsafe')),
-      findsOneWidget);
+    // The existing safety gate blocks the entire setup screen for unknown or
+    // interrupted encrypted state. It is safer than a disabled create button.
+    expect(find.textContaining('No data has been reset'), findsOneWidget);
+    expect(find.byKey(const ValueKey('first-run-new-journal')),
+      findsNothing);
+    expect(find.byType(FictionalActivationConsentPanel), findsNothing);
     expect(Directory('${root.path}/nj_apk02_library_fixture')
       .existsSync(), isFalse);
     expect(tester.takeException(), isNull);
