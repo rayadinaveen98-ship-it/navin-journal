@@ -819,6 +819,7 @@ void main() {
         () => worker.readEntry(pageId)))!['version'], 2);
 
     await tapVisible(tester, 'library-journal-rename');
+    await settleRealWorker(tester);
     expect(find.text('Imagined Notebook 2 · revised'), findsWidgets);
     expect((await workerCall(tester, worker.listJournals)).firstWhere(
       (j) => j['id'] == secondId)['name'], 'Imagined Notebook 2 · revised');

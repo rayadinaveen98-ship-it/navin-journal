@@ -133,6 +133,128 @@ class NativeRestorePublisher {
     _sync(parentPath, directory: true);
   }
 
+  /// FICTIONAL STAGE 5A ONLY. Promote an independently verified, complete
+  /// device-wrapped candidate to an ABSENT active directory. Keeps
+  /// envelope.json and vault/ in the SAME atomic no-clobber rename; the
+  /// existing Android Keystore alias and wrapped database key are untouched.
+  ///
+  /// The caller must prove explicit approval and reserve the active slot
+  /// exclusively BEFORE calling. This method never retries, replaces or
+  /// deletes either directory. An exception after rename is an AMBIGUOUS
+  /// committed state requiring independent reopen, not an invitation to
+  /// roll back or erase.
+  static const fictionalActivationMarker = '.navin-activation-approved-v1';
+  static const fictionalActivationContents =
+      'NJR-FICTIONAL-ACTIVATION-APPROVED-V1\n';
+
+  Future<void> activateApprovedFictionalCandidate({
+    required Directory candidate,
+    required Directory activeDestination,
+    required File exclusiveActivationReservation,
+    void Function(String checkpoint)? injectFailure,
+  }) async {
+    final parent = activeDestination.parent.absolute.path;
+    final source = candidate.absolute.path;
+    final target = activeDestination.absolute.path;
+    if (source == target ||
+        candidate.parent.absolute.path != parent ||
+        exclusiveActivationReservation.parent.absolute.path != parent ||
+        await FileSystemEntity.type(parent, followLinks: false) !=
+            FileSystemEntityType.directory ||
+        await FileSystemEntity.type(source, followLinks: false) !=
+            FileSystemEntityType.directory ||
+        await FileSystemEntity.type(target, followLinks: false) !=
+            FileSystemEntityType.notFound ||
+        await FileSystemEntity.type(
+            exclusiveActivationReservation.path, followLinks: false) !=
+            FileSystemEntityType.file) {
+      throw const NativeRestorePublicationUnavailable();
+    }
+    final envelopePath = source + Platform.pathSeparator + 'envelope.json';
+    final vault = Directory(source + Platform.pathSeparator + 'vault');
+    if (await FileSystemEntity.type(envelopePath, followLinks: false) !=
+            FileSystemEntityType.file ||
+        await FileSystemEntity.type(vault.path, followLinks: false) !=
+            FileSystemEntityType.directory ||
+        !await isReady(vault)) {
+      throw const NativeRestorePublicationUnavailable();
+    }
+
+    // Whitelist candidate children and forbid all symlinks and unknown
+    // recovery stages. A previous interrupted partial candidate must not
+    // be promoted just because a database filename exists.
+    final children = await candidate.list(followLinks: false).toList();
+    if (children.length != 2 || children.any((item) =>
+        item.path != envelopePath && item.path != vault.path)) {
+      throw const NativeRestorePublicationUnavailable();
+    }
+    final nested = await vault.list(followLinks: false).toList();
+    if (nested.isEmpty || nested.length > 12) {
+      throw const NativeRestorePublicationUnavailable();
+    }
+    for (final item in nested) {
+      if (await FileSystemEntity.type(item.path, followLinks: false) !=
+          FileSystemEntityType.file) {
+        throw const NativeRestorePublicationUnavailable();
+      }
+    }
+
+    final marker = File(source + Platform.pathSeparator +
+        fictionalActivationMarker);
+    if (await FileSystemEntity.type(marker.path, followLinks: false) !=
+        FileSystemEntityType.notFound) {
+      throw const NativeRestorePublicationUnavailable();
+    }
+    injectFailure?.call('before_activation_approval_marker');
+    await marker.writeAsString(fictionalActivationContents, flush: true);
+    injectFailure?.call('after_activation_approval_marker');
+
+    // Sync the complete encrypted vault and its existing authenticated
+    // wrapped DEK before moving the parent directory. No plaintext export.
+    _sync(exclusiveActivationReservation.path);
+    _sync(envelopePath);
+    for (final item in nested) {
+      _sync(item.path);
+    }
+    _sync(vault.path, directory: true);
+    _sync(marker.path);
+    _sync(source, directory: true);
+    _sync(parent, directory: true);
+    injectFailure?.call('after_activation_sync_before_noreplace');
+
+    final from = source.toNativeUtf8();
+    final to = target.toNativeUtf8();
+    try {
+      if (_rename(_atFdcwd, from, _atFdcwd, to, _renameNoreplace) != 0) {
+        throw const NativeRestorePublicationUnavailable();
+      }
+    } finally {
+      calloc.free(from);
+      calloc.free(to);
+    }
+    injectFailure?.call('after_activation_atomic_rename');
+    // A failure here is ambiguous: the moved vault might be complete.
+    // Never delete it, recreate a key, or silently retry the rename.
+    _sync(parent, directory: true);
+  }
+
+  static Future<bool> isFictionalActivationReady(
+      Directory activeDestination) async {
+    if (await FileSystemEntity.type(activeDestination.path,
+        followLinks: false) != FileSystemEntityType.directory ||
+        !await isReady(Directory(activeDestination.path +
+            Platform.pathSeparator + 'vault'))) return false;
+    final marker = File(activeDestination.path + Platform.pathSeparator +
+        fictionalActivationMarker);
+    if (await FileSystemEntity.type(marker.path, followLinks: false) !=
+        FileSystemEntityType.file) return false;
+    try {
+      return await marker.readAsString() == fictionalActivationContents;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<bool> isReady(Directory destination) async {
     final marker = File(
         destination.path + Platform.pathSeparator + markerName);

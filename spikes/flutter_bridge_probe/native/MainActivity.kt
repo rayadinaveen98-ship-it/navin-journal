@@ -314,6 +314,8 @@ class MainActivity : FlutterActivity() {
                             "PORTABLE_ENOSPC_REOPEN",
                             "CANDIDATE_RETAINED", "CANDIDATE_REOPEN_OK",
                             "CANDIDATE_KEY_LOSS_SAFE",
+                            "ACTIVE_ACTIVATED", "ACTIVE_REOPEN_OK",
+                            "ACTIVE_KEY_LOSS_SAFE",
                             "IME_PREEDIT_READY", "IME_BACKGROUND_ACK_V1",
                             "IME_FINAL_ACK_V2", "IME_REOPENED_V2",
                         )
