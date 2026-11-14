@@ -37,11 +37,13 @@ jobs:
           flutter create --org com.navinjournal --project-name navin_journal_preview --platforms=android "$TARGET"
           cp "$GITHUB_WORKSPACE/preview_app/lib/connected_writing_studio.dart" "$TARGET/lib/"
           cp "$GITHUB_WORKSPACE/preview_app/lib/fictional_journal_library.dart" "$TARGET/lib/"
+          cp "$GITHUB_WORKSPACE/preview_app/lib/fictional_library_index.dart" "$TARGET/lib/"
           cp "$GITHUB_WORKSPACE/preview_app/lib/recovery_safety_screen.dart" "$TARGET/lib/"
           cp "$GITHUB_WORKSPACE/preview_app/lib/recovery_assessment_review.dart" "$TARGET/lib/"
           cp "$GITHUB_WORKSPACE/preview_app/lib/visuals.dart" "$TARGET/lib/"
           rm -f "$TARGET/test/widget_test.dart"
           cp "$GITHUB_WORKSPACE/preview_app/apk02_test/fictional_journal_library_test.dart" "$TARGET/test/"
+          cp "$GITHUB_WORKSPACE/preview_app/apk02_test/fictional_library_index_test.dart" "$TARGET/test/"
           python3 - "$TARGET/pubspec.yaml" "$GITHUB_WORKSPACE" <<'PY'
           from pathlib import Path
           import sys
@@ -75,4 +77,4 @@ jobs:
         shell: bash
         run: |
           cd "$WORKER_WIDGET_ROOT"
-          flutter test test/fictional_journal_library_test.dart --reporter expanded --concurrency=1 --timeout=40s
+          flutter test test/fictional_library_index_test.dart test/fictional_journal_library_test.dart --reporter expanded --concurrency=1 --timeout=60s
