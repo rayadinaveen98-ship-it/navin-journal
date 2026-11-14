@@ -34,6 +34,8 @@
 | NJ-028 | A4.2 authenticated archive staged restoration to new encrypted SQLite vault | LINUX TESTED 2026-11-13 | 34/34 A4 tests passed, including 18 staged import/fault/collision/byte-verification cases; fictional schema only, no true clean-device Android recovery or security approval |
 | NJ-029 | Reversible per-page encrypted Trash/restore, exact expected version and journal ownership | VERIFIED FICTIONAL APK02 2026-11-14 | Reader requires confirmation, worker refuses cross-journal/stale/archived actions, restore preserves ID and revisions; 26/26 Library tests and Android APK built in run 43577505729, native regression run 43577505674 passed. No permanent delete or private-data beta approval. |
 
+| NJ-030 | Fictional encrypted export/clean-vault recovery rehearsal in existing Restore Safety UX | DEBUG VERIFIED 2026-11-14; NOT RECOVERABLE BACKUP | 37/37 worker and 28/28 Library tests pass; Android debug APK and API34 native regression pass in runs 43579984505 and 43579984540. It uses ephemeral keys and a throwaway encrypted vault, never exports a user-retained archive, never touches the existing vault, and must never be described as off-device recovery. Real key custody/SAF/clean-device proof and security gate remain open. |
+
 ## Pending high-impact decisions
 
 - Final consumer brand name, trademark/availability review and production launcher/splash approval; Folded Page direction approved.
