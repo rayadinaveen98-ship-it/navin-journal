@@ -167,7 +167,17 @@ class SafDocumentPickerInstrumentedTest {
         downloads()
         val file = device.wait(Until.findObject(By.textContains(filename)), 15_000L)
         assertTrue("Fictional ciphertext not visible in real picker", file != null)
-        click(file!!)
+        // The API34 picker exposes the filename TextView without a
+        // clickable ancestor in UI Automator's cross-app node snapshot.
+        // UiObject2.click() targets the actual accessibility-selected file
+        // node on screen, without a guessed coordinate or synthetic URI.
+        val fileAction = clickableAncestor(file!!)
+        if (fileAction != null) {
+            fileAction.click()
+        } else {
+            println("DOCUMENTSUI_FILENAME_NODE_DIRECT_UIAUTOMATOR_CLICK")
+            file.click()
+        }
         if (!seen("SAF_ROUNDTRIP_VERIFIED", 12_000L)) {
             val open = device.findObject(By.text("Open"))
                 ?: device.findObject(By.desc("Open"))
