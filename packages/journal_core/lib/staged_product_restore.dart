@@ -5,8 +5,9 @@
 /// separately keyed SQLite3MultipleCiphers vault in one SQL transaction.
 /// After independent close/reopen verification, publish into a NEW directory.
 ///
-/// NOT PRODUCTION: directory rename is not race-free no-replace, native fsync,
-/// disk-full/power-loss handling, Android key custody and migrations are open.
+/// Uses native no-clobber rename and file/directory sync on Linux/Android.
+/// NOT PRODUCTION: power-loss proof, Android key custody, media streaming,
+/// migrations and an independent security review remain open.
 /// Never use this with real private writing or with an existing user vault.
 library;
 
@@ -19,6 +20,7 @@ import 'package:navin_journal_recovery_archive_spike/product_snapshot.dart';
 import 'package:navin_journal_recovery_archive_spike/recovery_archive.dart';
 
 import 'journal_vault.dart';
+import 'native_restore_publisher.dart';
 
 class ProductRestoreRejected implements Exception {
   const ProductRestoreRejected();
@@ -99,10 +101,15 @@ class StagedProductRestorer {
       }
 
       injectFailure?.call('after_verify_before_promotion');
-      // We refuse known pre-existing paths but this check+rename is NOT an
-      // atomic no-replace primitive. Android native fsync/race hardening pending.
+      // The early collision check is only a fast guard. The native kernel
+      // RENAME_NOREPLACE operation is the actual concurrent-write boundary.
+      // Sync the staged encrypted DB, WAL/SHM and directory first; a complete
+      // readiness marker is published in the same atomic directory rename.
       if (await _occupied(destination)) throw const ProductRestoreRejected();
-      await staging.rename(destination.path);
+      await NativeRestorePublisher().publish(
+        staging: staging, destination: destination,
+        injectFailure: injectFailure,
+      );
       published = true;
       return ProductRestoreReceipt(
         directory: destination.path,
