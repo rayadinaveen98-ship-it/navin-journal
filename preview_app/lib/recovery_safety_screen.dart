@@ -5,6 +5,7 @@ library;
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter/material.dart';
 import 'package:navin_journal_core/restore_staging_assessment.dart';
@@ -26,20 +27,26 @@ class RecoverySafetyScreen extends StatefulWidget {
   });
 
   @override
-  State<RecoverySafetyScreen> createState() => _RecoverySafetyScreenState();
+  State<RecoverySafetyScreen> createState() => RecoverySafetyScreenState();
 }
 
-class _RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
+class RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
   bool _scanning = true;
   bool _assessing = false;
   int? _candidates;
   String? _error;
   RestoreAssessment? _report;
+  Future<void>? _activeWork;
+
+  /// Test harnesses can await real filesystem/worker completion rather than
+  /// trying to advance fake Flutter time around native asynchronous I/O.
+  @visibleForTesting
+  Future<void> waitForIdle() async => await _activeWork;
 
   @override
   void initState() {
     super.initState();
-    unawaited(_scan());
+    _activeWork = _scan();
   }
 
   Future<void> _scan() async {
@@ -53,7 +60,9 @@ class _RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
     try {
       // This is ONLY a bounded read-only candidate inventory. It does not
       // open, decrypt, delete, rename or clean up any staging directory.
-      final items = await RestoreStagingInventory.inspect(widget.privateRoot);
+      final rootPath = widget.privateRoot.absolute.path;
+      final items = await Isolate.run(() =>
+          RestoreStagingInventory.inspect(Directory(rootPath)));
       if (mounted) setState(() => _candidates = items.length);
     } on StagingInventoryLimitExceeded {
       if (mounted) setState(() =>
@@ -143,7 +152,9 @@ class _RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
         const SizedBox(height: 17),
         OutlinedButton.icon(
           key: const ValueKey('recovery-rescan'),
-          onPressed: _scanning || _assessing ? null : () => unawaited(_scan()),
+          onPressed: _scanning || _assessing ? null : () {
+            _activeWork = _scan();
+          },
           icon: const Icon(Icons.refresh),
           label: const Text('Check folders again'),
         ),
@@ -153,7 +164,9 @@ class _RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
             FilledButton.icon(
               key: const ValueKey('recovery-assess-test-fixture'),
               onPressed: _scanning || _assessing
-                  ? null : () => unawaited(_assess()),
+                  ? null : () {
+                    _activeWork = _assess();
+                  },
               icon: const Icon(Icons.security),
               label: const Text('Verify fictional stage'),
             )
