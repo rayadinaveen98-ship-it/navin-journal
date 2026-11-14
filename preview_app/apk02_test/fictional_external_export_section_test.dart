@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:navin_journal_preview/fictional_external_export_section.dart';
 import 'package:navin_journal_editor/fictional_archive_exporter.dart';
 
-const safeKey = 'Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'; // 43 chars.
+const safeKey = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; // 43 chars.
 
 void main() {
   testWidgets('manual key appears only after verified external write, '
