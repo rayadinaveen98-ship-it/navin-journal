@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, curly_braces_in_flow_control_structures
 /// Explicit fictional-only approval gate for an independently verified
 /// encrypted candidate. No automatic consent, overwrite or private writing.
 library;
