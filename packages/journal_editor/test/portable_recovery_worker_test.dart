@@ -161,4 +161,78 @@ void main() {
       await reopened.close();
     }
   });
+  test('debug ENOSPC before publication leaves no vault or stage, retry succeeds',
+      () async {
+    await expectLater(
+      PortableRecoveryWorker.restoreToNewVault(
+        encryptedArchive: archive,
+        recoveryKey: offlineKey,
+        destinationKey: newKey,
+        destination: recovered,
+        faultCheckpointForDiagnostics: 'after_ready_marker_write',
+      ),
+      throwsA(isA<ProductRestoreRejected>()),
+    );
+    expect(recovered.existsSync(), isFalse);
+    expect(root.listSync().where((x) =>
+      x.path.contains('.navin-journal-restore-')), isEmpty);
+    expect(await worker.integrityCheck(), isTrue);
+
+    final receipt = await PortableRecoveryWorker.restoreToNewVault(
+      encryptedArchive: archive,
+      recoveryKey: offlineKey,
+      destinationKey: newKey,
+      destination: recovered,
+    );
+    expect(receipt.entries, 1);
+    final reopened = await JournalEditorWorker.open(
+      recovered.path + '/journal.sqlite3', key: newKey);
+    try {
+      expect(await reopened.integrityCheck(), isTrue);
+      expect(await reopened.historyCount(entryId), 1);
+    } finally {
+      await reopened.close();
+    }
+  });
+
+  test('debug ENOSPC after rename keeps authenticated vault for safe reopen',
+      () async {
+    await expectLater(
+      PortableRecoveryWorker.restoreToNewVault(
+        encryptedArchive: archive,
+        recoveryKey: offlineKey,
+        destinationKey: newKey,
+        destination: recovered,
+        faultCheckpointForDiagnostics: 'before_parent_post_rename_fsync',
+      ),
+      throwsA(isA<ProductRestoreRejected>()),
+    );
+    expect(recovered.existsSync(), isTrue);
+    expect(root.listSync().where((x) =>
+      x.path.contains('.navin-journal-restore-')), isEmpty);
+    final marker = File(recovered.path + '/.navin-restore-ready-v1');
+    expect(marker.readAsStringSync(), 'NJR-RESTORE-PUBLISHED-V1\n');
+    final reopened = await JournalEditorWorker.open(
+      recovered.path + '/journal.sqlite3', key: newKey);
+    try {
+      expect(await reopened.integrityCheck(), isTrue);
+      expect((await reopened.readEntry(entryId))!['version'], 2);
+      expect((await reopened.readRevisions(entryId)), hasLength(1));
+    } finally {
+      await reopened.close();
+    }
+  });
+
+  test('unknown diagnostic fault cannot be enabled', () async {
+    await expectLater(
+      PortableRecoveryWorker.restoreToNewVault(
+        encryptedArchive: archive, recoveryKey: offlineKey,
+        destinationKey: newKey, destination: recovered,
+        faultCheckpointForDiagnostics: 'after_stage_created',
+      ),
+      throwsA(isA<ProductRestoreRejected>()),
+    );
+    expect(recovered.existsSync(), isFalse);
+  });
+
 }
