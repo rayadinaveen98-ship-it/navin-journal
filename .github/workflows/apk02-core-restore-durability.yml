@@ -1,0 +1,39 @@
+name: APK 02 Native Restore Publication and Durability Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/journal_core/**'
+      - 'spikes/recovery_archive/**'
+      - 'spikes/encrypted_store/**'
+      - '.github/workflows/apk02-core-restore-durability.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apk02-native-restore-durability
+  cancel-in-progress: true
+
+jobs:
+  native-noreplace-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Resolve SQLite3MC and native FFI dependencies
+        working-directory: packages/journal_core
+        run: dart pub get
+      - name: Strict Dart format and static analysis
+        working-directory: packages/journal_core
+        run: |
+          dart format --output=none --set-exit-if-changed lib/native_restore_publisher.dart lib/staged_product_restore.dart test/staged_product_restore_test.dart
+          dart analyze --fatal-infos
+      - name: Test encrypted restore no-replace and native durability checkpoints
+        working-directory: packages/journal_core
+        run: dart test --reporter expanded
