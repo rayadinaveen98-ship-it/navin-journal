@@ -74,7 +74,7 @@ class StagedProductRestorer {
     Directory? staging;
     var published = false;
     try {
-      staging = await parent.createTemp('.navin-journal-restore-');
+      staging = await parent.createTemp(NativeRestorePublisher.stagePrefix);
       injectFailure?.call('after_stage_created');
       final dbPath = staging.path + Platform.pathSeparator + databaseName;
       writer = JournalVault.open(dbPath,
