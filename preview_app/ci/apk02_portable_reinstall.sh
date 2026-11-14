@@ -193,18 +193,20 @@ stop_app
 phase reopen_candidate CANDIDATE_REOPEN_OK
 stop_app
 
-# Invalidate ONLY the isolated candidate's own alias. Reopen must now fail
-# closed without deleting candidate bytes; the older independent restored
-# vault must remain independently unlockable.
+# Explicit diagnostic approval promotes the complete encrypted candidate
+# into a previously ABSENT active slot via native no-replace rename.
+# The original independently keyed journal must remain unchanged.
+# A later force-stop reopens the moved vault; retiring ONLY its own alias
+# must fail closed without deleting the active encrypted files.
 phase activate_candidate ACTIVE_ACTIVATED
 stop_app
 phase reopen_activated ACTIVE_REOPEN_OK
 stop_app
 phase retire_active_alias ACTIVE_KEY_LOSS_SAFE
-if ! app_path_exists files/nj-fictional-retained-candidate-v1/vault/journal.sqlite3 ||
-   ! app_path_exists files/nj-fictional-retained-candidate-v1/envelope.json ||
-   ! app_path_exists files/nj-fictional-retained-candidate-v1.reservation; then
-  echo "::error::Key-loss erroneously erased retained encrypted candidate"
+if ! app_path_exists files/nj_apk02_library_fixture/vault/journal.sqlite3 ||
+   ! app_path_exists files/nj_apk02_library_fixture/envelope.json ||
+   ! app_path_exists files/nj_apk02_library_fixture.activation-reservation; then
+  echo "::error::Active key-loss incorrectly deleted encrypted journal"
   exit 1
 fi
 stop_app
@@ -219,4 +221,4 @@ echo "Native Android Stage 5A: isolated candidate wrapped by its own Keystore al
 echo "exclusive no-replace reservation, independent force-stop reopen,"
 echo "fictional Telugu revision verification, and missing-alias fail-closed."
 echo "NOT verified for actual personal data, manual SAF UX, physical power"
-echo "loss, retained-vault activation, or production private-data recovery."
+echo "loss, physical-device activation, or production private-data recovery."
