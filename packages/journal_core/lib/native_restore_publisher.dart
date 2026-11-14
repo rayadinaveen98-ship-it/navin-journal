@@ -29,6 +29,7 @@ class NativeRestorePublicationUnavailable implements Exception {
 }
 
 class NativeRestorePublisher {
+  static const stagePrefix = '.navin-journal-restore-';
   static const markerName = '.navin-restore-ready-v1';
   static const markerContents = 'NJR-RESTORE-PUBLISHED-V1\n';
   static const _atFdcwd = -100;
@@ -97,7 +98,10 @@ class NativeRestorePublisher {
       throw const NativeRestorePublicationUnavailable();
     }
     // Readiness marker is a commit-state flag, not a crypto authenticator.
+    injectFailure?.call('before_ready_marker_write');
     await marker.writeAsString(markerContents, flush: true);
+    injectFailure?.call('after_ready_marker_write');
+    injectFailure?.call('before_staged_file_fsync');
     final synced = await staging.list(followLinks: false).toList();
     for (final item in synced) {
       if (await FileSystemEntity.type(item.path, followLinks: false) !=
@@ -106,7 +110,9 @@ class NativeRestorePublisher {
       }
       _sync(item.path);
     }
+    injectFailure?.call('before_staging_dir_fsync');
     _sync(sourcePath, directory: true);
+    injectFailure?.call('before_parent_pre_rename_fsync');
     _sync(parentPath, directory: true);
     injectFailure?.call('after_durable_stage_before_noreplace');
 
@@ -123,6 +129,7 @@ class NativeRestorePublisher {
     // The directory is now visible: a failed parent fsync is an ambiguous
     // commit that must NOT be cleaned up or silently retried.
     injectFailure?.call('after_atomic_noreplace_rename');
+    injectFailure?.call('before_parent_post_rename_fsync');
     _sync(parentPath, directory: true);
   }
 
