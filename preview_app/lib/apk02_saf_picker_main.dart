@@ -220,7 +220,9 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
             await _mark('SAF_ROUNDTRIP_AUTH_OK');
             failurePhase = 'SAF_ERROR_IMPORT_HIDE';
           } finally {
+            failurePhase = 'SAF_ERROR_RETURNED_BYTES_ZEROIZE';
             picked?.fillRange(0, picked.length, 0);
+            failurePhase = 'SAF_ERROR_IMPORT_HIDE';
             await _picker.invokeMethod<void>('hideImportRecoveryInput');
             if (failurePhase == 'SAF_ERROR_IMPORT_HIDE') {
               // Authentication passed; now closing only disposable source
