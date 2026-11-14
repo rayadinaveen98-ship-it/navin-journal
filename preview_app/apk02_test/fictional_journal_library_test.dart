@@ -469,6 +469,10 @@ void main() {
     expect(journals.length, 2);
     final newId = journals.firstWhere(
       (j) => j['name'] == 'Imagined Notebook 2')['id'] as String;
+    // Creation and the subsequent encrypted shelf refresh are two separate
+    // isolate operations. Wait for the UI's second acknowledgement instead
+    // of asserting while Flutter's fake-async frame is still pending.
+    await settleRealWorker(tester);
     expect(find.text('Imagined Notebook 2'), findsWidgets);
 
     await tapVisible(tester, 'library-create-fictional');
