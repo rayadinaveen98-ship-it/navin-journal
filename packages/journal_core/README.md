@@ -1,14 +1,15 @@
 # Navin Journal — Shared Encrypted Core
 
-**Current status (2026-11-13): fictional-fixture Linux engineering tests only.**
-**CI:** [43444827657](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43444827657) — 21/21 tests passed, strict analysis clean.
+**Current status (2026-11-14): fictional-fixture Linux encrypted-core plus Android API-34 native recovery engineering verified.**
+**CI:** [43560381700](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43560381700) — **25/25 core tests passed**, strict analysis clean; [Android 43560295633](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43560295633) — portable clean-install recovery passed with new native no-clobber publisher.
 
 This package is the initial reusable storage/recovery engine for APK 02. It is not wired to APK 01 and is NOT approved for real private writing.
 
 ## Modules
 
 - lib/journal_vault.dart: SQLite3MultipleCiphers whole-journal encrypted schema, journal and entry create/edit, version history, optimistic conflicts, archived/deleted records, encrypted in-db media blobs with SHA-256, consistent WAL snapshot, and independent-key v2 archive export.
-- lib/staged_product_restore.dart: authenticated, staged import into a NEW encrypted directory; exact full-schema reopen verification; refuses known destination collisions and simulated partial-write failures.
+- lib/staged_product_restore.dart: authenticated, staged import into a NEW encrypted directory; exact full-schema reopen verification, simulated partial-write failures and safe publication.
+- lib/native_restore_publisher.dart: Linux/Android libc FFI `renameat2(RENAME_NOREPLACE)` atomic no-overwrite publish, encrypted file/directory fsync and non-secret readiness marker; rejects unsupported platforms instead of unsafe fallback. **Power-loss durability is not yet independently verified.**
 
 ## Run tests
 
@@ -21,12 +22,12 @@ The pubspec contains an explicit sqlite3mc build hook; ordinary SQLite must not 
 
 ## Verify these gates before real user data
 
-- Android Keystore key custody + Flutter background isolate adapter + lifecycle autosave, crash recovery and full application install tests.
-- Native atomic no-clobber directory publication and durability (fsync, power loss, disk full, migrations), replace-or-merge policy and key custody.
-- Real clean-install restore with missing original Android Keystore alias and a separately retained recovery key.
+- Android API-34 fictional Keystore/worker crash recovery and clean-install restoration have passed, but physical device, key custody UX and real-data signoff remain open.
+- No-clobber publish with native fsync is now Linux/API-34 integration tested; still require real power-loss, disk-full, OEM filesystem, abandoned stage, migration and commit-ambiguity tests.
+- Independently retained recovery-key onboarding, secure transfer/export flow and readable restore UX are not yet implemented for users.
 - Media mutation/thumbnail/index protection, large-size bounded-memory archive streaming, secure memory/cache behavior and independent security review.
 - Device/tablet accessibility, Telugu IME composition, native performance and signed stable beta.
 
 Test fixture caps: 100 journals, 1,000 entries, 4,000 revisions, 25 attachments, 2 MiB/media, 6 MiB snapshot. These are NOT real product usage limits.
 
-**No real diary content in this module yet. No APK 02 delivered yet.**
+**Fictional-only APK 02 Library/debug artifacts exist; no production or real-private-diary beta has been approved.**
