@@ -15,6 +15,7 @@ import 'dart:isolate';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_core/staged_product_restore.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_recovery_archive_spike/product_snapshot.dart';
@@ -22,6 +23,65 @@ import 'package:navin_journal_recovery_archive_spike/recovery_archive.dart';
 
 class PortableRecoveryWorker {
   const PortableRecoveryWorker._();
+
+  /// Non-destructive, fictional-only assessment of one quarantined stage.
+  /// All decryption and SQLite operations are performed on an encrypted COPY
+  /// in a background isolate. The caller receives only status and row counts;
+  /// never plaintext journal content or the raw recovery/database keys.
+  static Future<RestoreAssessment> assessQuarantinedStage({
+    required Directory privateParent,
+    required String candidateBasename,
+    required Uint8List encryptedArchive,
+    required RecoveryKey recoveryKey,
+    required TestVaultKey stagedDatabaseKey,
+  }) async {
+    if (encryptedArchive.isEmpty ||
+        encryptedArchive.length > ProductSnapshotCodec.maxPayloadBytes * 2) {
+      throw const ProductRestoreRejected();
+    }
+    final archiveTransfer = TransferableTypedData.fromList([encryptedArchive]);
+    final recoveryBytes = recoveryKey.snapshot();
+    final databaseHex = stagedDatabaseKey.hex;
+    final databaseBytes = Uint8List.fromList([
+      for (var i = 0; i < databaseHex.length; i += 2)
+        int.parse(databaseHex.substring(i, i + 2), radix: 16),
+    ]);
+    final recoveryTransfer = TransferableTypedData.fromList([recoveryBytes]);
+    final databaseTransfer = TransferableTypedData.fromList([databaseBytes]);
+    final parentPath = privateParent.path;
+    try {
+      return await Isolate.run(() async {
+        final archive = archiveTransfer.materialize().asUint8List();
+        final rawRecovery = recoveryTransfer.materialize().asUint8List();
+        final rawDatabase = databaseTransfer.materialize().asUint8List();
+        RecoveryKey? isolatedRecovery;
+        TestVaultKey? isolatedDatabase;
+        try {
+          isolatedRecovery = RecoveryKey.parse(
+            base64Url.encode(rawRecovery).replaceAll('=', ''),
+          );
+          isolatedDatabase = TestVaultKey.fromBytes(rawDatabase);
+          return await RestoreStagingAssessment.assess(
+            privateParent: Directory(parentPath),
+            candidateBasename: candidateBasename,
+            encryptedArchive: archive,
+            recoveryKey: isolatedRecovery,
+            stagedDatabaseKey: isolatedDatabase,
+          );
+        } finally {
+          isolatedRecovery?.destroy();
+          isolatedDatabase?.destroy();
+          archive.fillRange(0, archive.length, 0);
+          rawRecovery.fillRange(0, rawRecovery.length, 0);
+          rawDatabase.fillRange(0, rawDatabase.length, 0);
+        }
+      });
+    } finally {
+      recoveryBytes.fillRange(0, recoveryBytes.length, 0);
+      databaseBytes.fillRange(0, databaseBytes.length, 0);
+    }
+  }
+
 
   /// Refuses to replace any existing destination. The source archive is
   /// authenticated before a staging directory is created by the restorer.
