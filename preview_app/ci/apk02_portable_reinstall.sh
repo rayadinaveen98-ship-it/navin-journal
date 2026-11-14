@@ -100,10 +100,12 @@ fi
 
 # Stream the encrypted backup and separately held key into a fresh sandbox.
 # ADB -T disables PTY newline conversion for exact authenticated byte transfer.
-adb -s "$SERIAL" shell -T run-as "$PACKAGE" sh -c \
-  'umask 077; cat > files/portable_import.njr' < "$ARCHIVE"
-adb -s "$SERIAL" shell -T run-as "$PACKAGE" sh -c \
-  'umask 077; cat > files/portable_import.key' < "$KEY"
+adb -s "$SERIAL" shell -T run-as "$PACKAGE" \
+  tee files/portable_import.njr < "$ARCHIVE" > /dev/null
+adb -s "$SERIAL" shell -T run-as "$PACKAGE" \
+  tee files/portable_import.key < "$KEY" > /dev/null
+adb -s "$SERIAL" shell run-as "$PACKAGE" \
+  chmod 600 files/portable_import.njr files/portable_import.key
 adb -s "$SERIAL" exec-out run-as "$PACKAGE" \
   cat files/portable_import.njr | cmp - "$ARCHIVE"
 echo "Fresh sandbox contains byte-identical encrypted archive"
@@ -115,8 +117,9 @@ with open(sys.argv[1], 'w', encoding='ascii') as f:
     f.write(s)
 PY
 chmod 600 "$WRONG"
-adb -s "$SERIAL" shell -T run-as "$PACKAGE" sh -c \
-  'umask 077; cat > files/portable_wrong.key' < "$WRONG"
+adb -s "$SERIAL" shell -T run-as "$PACKAGE" \
+  tee files/portable_wrong.key < "$WRONG" > /dev/null
+adb -s "$SERIAL" shell run-as "$PACKAGE" chmod 600 files/portable_wrong.key
 phase reject_wrong_key PORTABLE_WRONG_KEY
 for path in portable-restored-vault portable-restored-envelope.json; do
   if app_path_exists "files/$path"; then
