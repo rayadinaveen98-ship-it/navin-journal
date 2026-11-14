@@ -64,6 +64,7 @@ jobs:
           rm -f "$TARGET/test/widget_test.dart"
           cp "$ROOT/preview_app/test/"*.dart "$TARGET/test/"
           cp "$ROOT/preview_app/apk02_test/"*.dart "$TARGET/test/"
+          sed -i 's#package:navin_journal_preview/#package:navin_journal_ime_probe/#g' "$TARGET/test/"*.dart
 
           NATIVE="$TARGET/android/app/src/main/kotlin"
           mkdir -p "$NATIVE/com/navinjournal/navin_journal_ime_probe"
