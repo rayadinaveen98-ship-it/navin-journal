@@ -64,29 +64,43 @@ class SafDocumentPickerInstrumentedTest {
     }
 
     private fun picker() {
-        val googlePicker = device.wait(
-            Until.hasObject(By.pkg(documentsUi)), 22_000L)
-        val platformPicker = if (!googlePicker) device.wait(
-            Until.hasObject(By.pkg("com.android.documentsui")), 12_000L
-        ) else false
-        val pickerVisible = googlePicker || platformPicker
-        if (!pickerVisible) {
-            // Report ONLY known package/system window categories, never a full
-            // accessibility dump or private text, URI, key or archive bytes.
-            val window = shell(
-                "dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' | head -n 2"
-            )
-            val category = when {
-                window.contains("documentsui") -> "documentsui_not_accessible"
-                window.contains("Not Responding") -> "system_anr"
-                window.contains(probe) -> "probe_foreground"
-                else -> "other_system_window"
+        // A newly booted API34 emulator sometimes exposes its system picker
+        // after the probe has already recorded the pre-picker phase. Require
+        // actual DocumentsUI accessibility nodes; never invent an ActivityResult
+        // or accept a focus/window string as proof that a file was selected.
+        val deadline = SystemClock.uptimeMillis() + 50_000L
+        var category = "not_yet_observed"
+        var lastPhase = ""
+        var attempts = 0
+        while (SystemClock.uptimeMillis() < deadline) {
+            lastPhase = marker()
+            if (lastPhase == "FAILED" || lastPhase.startsWith("SAF_ERROR_")) {
+                fail("Disposable probe failed before picker: " + lastPhase)
             }
-            println("PICKER_VISIBILITY category=" + category +
-                " probeAlive=" + shell("pidof $probe").isNotEmpty() +
-                " probePhase=" + marker())
+            if (device.hasObject(By.pkg(documentsUi)) ||
+                device.hasObject(By.pkg("com.android.documentsui"))) {
+                return
+            }
+            // Bounded, nonsecret foreground diagnosis. Never echo complete
+            // window titles, arbitrary UI text, document names, or URIs.
+            if (attempts++ % 5 == 0) {
+                val window = shell(
+                    "dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' | head -n 2"
+                ).lowercase()
+                category = when {
+                    window.contains("not responding") -> "system_anr"
+                    window.contains("documentsui") -> "documentsui_not_accessible"
+                    window.contains(probe) -> "probe_foreground"
+                    else -> "other_system_window"
+                }
+            }
+            SystemClock.sleep(550L)
         }
-        assertTrue("Real DocumentsUI unavailable", pickerVisible)
+        // Keep diagnostics in the assertion itself: CI instrumentation does
+        // not consistently forward println statements from the test process.
+        fail("Real DocumentsUI unavailable; category=" + category +
+            " probePhase=" + lastPhase +
+            " probeAlive=" + shell("pidof $probe").isNotEmpty())
     }
 
     private fun clickableAncestor(node: UiObject2): UiObject2? {
