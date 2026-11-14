@@ -11,12 +11,14 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:navin_journal_autosave_spike/draft_autosave.dart';
 import 'package:navin_journal_core/journal_vault.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
+import 'package:navin_journal_recovery_archive_spike/recovery_archive.dart';
 
 import 'journal_core_draft_port.dart';
 
@@ -160,6 +162,28 @@ class JournalEditorWorker implements DraftCommitPort {
   Future<bool> integrityCheck() async {
     final r = await _send('integrity', {});
     return r['healthy'] == true;
+  }
+
+  /// Generates a portable, authenticated v2 archive while the encrypted
+  /// JournalVault is owned by its background worker. The recovery key is
+  /// independent of the Android Keystore and never persisted by this worker.
+  ///
+  /// Fictional-fixture engineering API only. The recipient MUST safeguard
+  /// the returned encrypted bytes and the recovery key separately.
+  Future<Uint8List> exportRecoveryArchive(RecoveryKey recoveryKey) async {
+    final raw = recoveryKey.snapshot();
+    try {
+      final r = await _send('export_recovery_archive', {
+        'recoveryKey': TransferableTypedData.fromList([raw]),
+      });
+      final archive = r['archive'];
+      if (archive is! TransferableTypedData) {
+        throw const JournalEditorWorkerUnavailable();
+      }
+      return archive.materialize().asUint8List();
+    } finally {
+      raw.fillRange(0, raw.length, 0);
+    }
   }
 
   /// The return type keeps editor state independent of platform specifics.
@@ -310,6 +334,30 @@ Future<void> _editorStorageWorker(List<Object> args) async {
           reply.send({'id': id, 'ok': true, 'revisions': records});
         case 'integrity':
           reply.send({'id': id, 'ok': true, 'healthy': vault.integrityCheck()});
+
+        case 'export_recovery_archive':
+          final transferred = message['recoveryKey'] as TransferableTypedData;
+          final raw = transferred.materialize().asUint8List();
+          RecoveryKey? recovery;
+          try {
+            // The raw recovery key travels only in the isolate message, not
+            // through stdout, on-disk preferences or a plaintext export.
+            recovery = RecoveryKey.parse(
+              base64Url.encode(raw).replaceAll('=', ''),
+            );
+            final archive = await vault.exportEncrypted(recoveryKey: recovery);
+            try {
+              reply.send({
+                'id': id, 'ok': true,
+                'archive': TransferableTypedData.fromList([archive]),
+              });
+            } finally {
+              archive.fillRange(0, archive.length, 0);
+            }
+          } finally {
+            recovery?.destroy();
+            raw.fillRange(0, raw.length, 0);
+          }
         case 'start_session':
           final logical = message['sessionId'] as String;
           if (ports.containsKey(logical)) {
