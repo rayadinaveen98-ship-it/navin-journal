@@ -1,0 +1,83 @@
+name: APK 02 Physical Keyboard Lab — Fictional and Memory-Only
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'preview_app/lib/fictional_keyboard_lab.dart'
+      - 'preview_app/lib/apk02_keyboard_lab_main.dart'
+      - 'preview_app/lib/visuals.dart'
+      - 'preview_app/apk02_test/fictional_keyboard_lab_test.dart'
+      - '.github/workflows/apk02-keyboard-lab.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'preview_app/lib/fictional_keyboard_lab.dart'
+      - 'preview_app/lib/apk02_keyboard_lab_main.dart'
+      - 'preview_app/lib/visuals.dart'
+      - 'preview_app/apk02_test/fictional_keyboard_lab_test.dart'
+      - '.github/workflows/apk02-keyboard-lab.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: navin-apk02-physical-keyboard-lab
+  cancel-in-progress: true
+
+jobs:
+  keyboard-lab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Prepare isolated Flutter Android lab without journal dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET="$GITHUB_WORKSPACE/preview_app/_keyboard_lab_generated"
+          flutter create --org com.navinjournal \
+            --project-name navin_journal_keyboard_lab --platforms=android "$TARGET"
+          cp "$GITHUB_WORKSPACE/preview_app/lib/visuals.dart" "$TARGET/lib/"
+          cp "$GITHUB_WORKSPACE/preview_app/lib/fictional_keyboard_lab.dart" "$TARGET/lib/"
+          cp "$GITHUB_WORKSPACE/preview_app/lib/apk02_keyboard_lab_main.dart" "$TARGET/lib/"
+          rm "$TARGET/test/widget_test.dart"
+          cp "$GITHUB_WORKSPACE/preview_app/apk02_test/fictional_keyboard_lab_test.dart" "$TARGET/test/"
+          sed -i 's#package:navin_journal_preview/#package:navin_journal_keyboard_lab/#g' "$TARGET/test/"*.dart
+          echo "KEYBOARD_LAB_ROOT=$TARGET" >> "$GITHUB_ENV"
+      - name: Format and strictly analyze app and tests
+        shell: bash
+        run: |
+          cd "$KEYBOARD_LAB_ROOT"
+          flutter pub get
+          dart format lib test
+          flutter analyze --no-pub
+      - name: Run memory-only, privacy and responsive QA widget tests
+        shell: bash
+        run: |
+          cd "$KEYBOARD_LAB_ROOT"
+          flutter test test/fictional_keyboard_lab_test.dart --reporter expanded --timeout=90s
+      - name: Build standalone disposable Android keyboard QA APK
+        shell: bash
+        run: |
+          cd "$KEYBOARD_LAB_ROOT"
+          flutter build apk --debug -t lib/apk02_keyboard_lab_main.dart
+          test -s build/app/outputs/flutter-apk/app-debug.apk
+          sha256sum build/app/outputs/flutter-apk/app-debug.apk
+      - name: Upload disposable fictional keyboard QA APK, never a diary
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: navin-apk02-KEYBOARD-LAB-FICTIONAL-NO-STORAGE
+          path: preview_app/_keyboard_lab_generated/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 14
+          if-no-files-found: error
