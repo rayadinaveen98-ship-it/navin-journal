@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_core/restore_staging_inventory.dart';
+import 'package:navin_journal_editor/fictional_recovery_rehearsal.dart';
 
 import 'recovery_assessment_review.dart';
 import 'visuals.dart';
@@ -21,12 +22,16 @@ class RecoverySafetyScreen extends StatefulWidget {
   /// Only a test caller holding the separately authenticated archive AND the
   /// staged database key may provide this. Never infer keys from filenames.
   final Future<RestoreAssessment> Function()? authenticatedAssessment;
+  /// Debug-only: user requests an ephemeral encrypted export -> new-vault
+  /// restore -> independent reopen. No archive or key is exported or kept.
+  final Future<FictionalRecoveryRehearsalReport> Function()? rehearsal;
 
   const RecoverySafetyScreen({
     super.key,
     required this.privateRoot,
     this.authenticatedAssessment,
     this.inventoryLoader,
+    this.rehearsal,
   });
 
   @override
@@ -36,6 +41,9 @@ class RecoverySafetyScreen extends StatefulWidget {
 class RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
   bool _scanning = true;
   bool _assessing = false;
+  bool _rehearsing = false;
+  FictionalRecoveryRehearsalReport? _rehearsalReport;
+  String? _rehearsalError;
   int? _candidates;
   String? _error;
   RestoreAssessment? _report;
@@ -53,7 +61,7 @@ class RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
   }
 
   Future<void> _scan() async {
-    if (!mounted || _assessing) return;
+    if (!mounted || _assessing || _rehearsing) return;
     setState(() {
       _scanning = true;
       _error = null;
@@ -79,7 +87,7 @@ class RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
   Future<void> _assess() async {
     final callback = widget.authenticatedAssessment;
     if (callback == null || _candidates == null || _candidates == 0 ||
-        _assessing || _scanning || !mounted) return;
+        _assessing || _scanning || _rehearsing || !mounted) return;
     setState(() {
       _assessing = true;
       _report = null;
@@ -93,6 +101,33 @@ class RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
           'The encrypted assessment could not be verified. No recovery was performed.');
     } finally {
       if (mounted) setState(() => _assessing = false);
+    }
+  }
+
+  /// A synthetic, in-memory *rehearsal*, never a user-facing backup or
+  /// authorized restore. Source journal and unknown stages remain untouched.
+  Future<void> _runRehearsal() async {
+    final callback = widget.rehearsal;
+    if (callback == null || _rehearsing || _assessing || _scanning ||
+        !mounted) return;
+    setState(() {
+      _rehearsing = true;
+      _rehearsalReport = null;
+      _rehearsalError = null;
+    });
+    try {
+      final report = await callback();
+      // A positive result MUST NEVER be interpreted as an external backup.
+      if (report.isOffDeviceBackup || report.replacedActiveJournal) {
+        throw const RecoveryRehearsalUnavailable();
+      }
+      if (mounted) setState(() => _rehearsalReport = report);
+    } catch (_) {
+      if (mounted) setState(() => _rehearsalError =
+          'Fictional encrypted recovery test did not verify. '
+          'Your current notebook was not replaced.');
+    } finally {
+      if (mounted) setState(() => _rehearsing = false);
     }
   }
 
@@ -123,7 +158,9 @@ class RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
                     fontSize: 11, letterSpacing: 1, color: c.action)),
               const SizedBox(height: 11),
               Text('This screen does not restore, discard, publish, '
-                'or overwrite a journal. A detected folder is not proof '
+                'or overwrite your current journal. An optional fictional '
+                'rehearsal uses a separate disposable vault, never an '
+                'off-device backup. An interrupted folder is not proof '
                 'of recoverable content.',
                 key: const ValueKey('recovery-read-only-disclaimer'),
                 style: TextStyle(color: c.secondary, height: 1.5,
@@ -153,7 +190,7 @@ class RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
         const SizedBox(height: 17),
         OutlinedButton.icon(
           key: const ValueKey('recovery-rescan'),
-          onPressed: _scanning || _assessing ? null : () {
+          onPressed: _scanning || _assessing || _rehearsing ? null : () {
             _activeWork = _scan();
           },
           icon: const Icon(Icons.refresh),
@@ -164,7 +201,7 @@ class RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
           if (widget.authenticatedAssessment != null)
             FilledButton.icon(
               key: const ValueKey('recovery-assess-test-fixture'),
-              onPressed: _scanning || _assessing
+              onPressed: _scanning || _assessing || _rehearsing
                   ? null : () {
                     _activeWork = _assess();
                   },
@@ -188,8 +225,62 @@ class RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
           const SizedBox(height: 20),
           RecoveryAssessmentReview(assessment: _report!),
         ],
+        if (widget.rehearsal != null) ...[
+          const SizedBox(height: 26),
+          Divider(color: c.stroke),
+          const SizedBox(height: 15),
+          Text('Fictional backup rehearsal',
+            style: editorial(c, 24)),
+          const SizedBox(height: 10),
+          Text('Tests a real encrypted snapshot and restore into a '
+            'separate disposable vault. It checks the restored records '
+            'and destroys temporary keys and data. Nothing is saved '
+            'off-device, and your current journal is never replaced.',
+            key: const ValueKey('rehearsal-no-backup-warning'),
+            style: TextStyle(color: c.secondary, height: 1.5)),
+          const SizedBox(height: 15),
+          OutlinedButton.icon(
+            key: const ValueKey('recovery-run-rehearsal'),
+            onPressed: _scanning || _assessing || _rehearsing ? null : () {
+              _activeWork = _runRehearsal();
+            },
+            icon: const Icon(Icons.fact_check_outlined),
+            label: const Text('Test fictional encrypted recovery'),
+          ),
+          if (_rehearsing) const Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: LinearProgressIndicator(
+              key: ValueKey('rehearsal-progress')),
+          ),
+          if (_rehearsalError != null)
+            Padding(padding: const EdgeInsets.only(top: 12),
+              child: Text(_rehearsalError!,
+                key: const ValueKey('rehearsal-error'),
+                style: TextStyle(color: c.clay, height: 1.5))),
+          if (_rehearsalReport != null) ...[
+            const SizedBox(height: 13),
+            Text('Independent encrypted reopen verified',
+              key: const ValueKey('rehearsal-success'),
+              style: TextStyle(color: c.success,
+                fontWeight: FontWeight.w700)),
+            const SizedBox(height: 7),
+            Text(
+              '${_rehearsalReport!.journals} notebooks · '
+              '${_rehearsalReport!.entries} pages · '
+              '${_rehearsalReport!.revisions} revisions · '
+              '${_rehearsalReport!.attachments} attachments',
+              key: const ValueKey('rehearsal-counts'),
+              style: TextStyle(color: c.ink, height: 1.5)),
+            const SizedBox(height: 7),
+            Text('NOT BACKED UP · No archive or recovery key '
+              'was saved outside this temporary test.',
+              key: const ValueKey('rehearsal-not-backup'),
+              style: TextStyle(color: c.clay,
+                fontWeight: FontWeight.w600, fontSize: 12)),
+          ],
+        ],
         const SizedBox(height: 20),
-        Text('No private diary input or automatic cleanup is permitted.',
+        Text('No private diary input or cleanup of unknown restore folders is permitted.',
           style: TextStyle(color: c.clay, height: 1.5, fontSize: 12)),
       ],
     );
