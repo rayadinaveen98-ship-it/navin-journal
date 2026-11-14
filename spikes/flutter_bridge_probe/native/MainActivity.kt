@@ -57,6 +57,8 @@ class MainActivity : FlutterActivity() {
                             "PORTABLE_RESTORE_OK", "PORTABLE_REOPEN_OK",
                             "PORTABLE_ENOSPC_PRE", "PORTABLE_ENOSPC_POST",
                             "PORTABLE_ENOSPC_REOPEN",
+                            "IME_PREEDIT_READY", "IME_BACKGROUND_ACK_V1",
+                            "IME_FINAL_ACK_V2", "IME_REOPENED_V2",
                         )
                     ) {
                         result.error("INVALID_ARGUMENT", "Unknown test marker", null)
