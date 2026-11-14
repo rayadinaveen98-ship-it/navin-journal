@@ -15,6 +15,7 @@ import 'package:navin_journal_editor/journal_editor_isolate.dart';
 import 'package:navin_journal_editor/fictional_recovery_rehearsal.dart';
 import 'package:navin_journal_editor/fictional_archive_exporter.dart';
 import 'package:navin_journal_editor/fictional_archive_importer.dart';
+import 'package:navin_journal_editor/fictional_retained_recovery_candidate.dart';
 import 'package:navin_journal_editor/portable_recovery_worker.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_recovery_archive_spike/product_encrypted_archive.dart';
@@ -94,6 +95,9 @@ void main() {
     Future<FictionalArchiveImportReport> Function(
         Uint8List archive, String manualKey)? importedArchive,
     Future<void> Function()? hideImportKey,
+    Future<FictionalRetainedRecoveryReport> Function(
+      Uint8List archive, String key)? retainCandidate,
+    Future<FictionalRetainedRecoveryReport> Function()? reopenCandidate,
   }) async {
     await tester.pumpWidget(MaterialApp(home: FictionalJournalLibrary(
       worker: worker, journalId: journal,
@@ -106,6 +110,8 @@ void main() {
       testPickEncryptedDocument: selectedArchive,
       testInspectEncryptedDocument: importedArchive,
       testHideImportedKey: hideImportKey,
+      testRetainCandidate: retainCandidate,
+      testReopenCandidate: reopenCandidate,
     )));
     await settleRealWorker(tester);
   }
@@ -500,6 +506,59 @@ void main() {
     expect(find.byKey(ValueKey('library-open-' + entryId)),
       findsOneWidget);
     expect(hidden, greaterThanOrEqualTo(1));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('Stage5A separate protected recovery candidate route '
+      'leaves current encrypted Library intact', (tester) async {
+    final session = await workerCall(tester,
+        () => worker.startSession(journalId: journal));
+    session.controller.update(title: 'Only fictional source',
+      body: 'Preserve this page without any overwrite');
+    await workerVoid(tester, session.save);
+    final id = (await workerCall(tester, session.persistedEntryId))!;
+    expect(await workerCall(tester, session.closeSafely), isTrue);
+    final source = await workerCall(tester, () => worker.readEntry(id));
+    final candidates = await workerCall(tester,
+        () => RestoreStagingInventory.inspect(temp));
+    var started = 0;
+    var revisited = 0;
+    const report = FictionalRetainedRecoveryReport(
+      journals: 1, entries: 1, revisions: 0, attachments: 0);
+    await mount(tester, recoveryRoot: temp,
+      inventoryLoader: (_) async => candidates,
+      selectedArchive: () async => Uint8List.fromList([10, 20, 30]),
+      importedArchive: (_, _) async =>
+          throw const FictionalArchiveImportRejected(),
+      retainCandidate: (archive, keyText) async {
+        started++;
+        expect(archive, [10, 20, 30]);
+        expect(keyText, 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+        return report;
+      },
+      reopenCandidate: () async {
+        revisited++;
+        return report;
+      },
+      hideImportKey: () async {},
+    );
+    await tapVisible(tester, 'library-review-recovery');
+    await tapVisible(tester, 'import-select-document');
+    await tester.enterText(
+      find.byKey(const ValueKey('import-recovery-key')),
+      'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+    await tester.pumpAndSettle();
+    await tapVisible(tester, 'import-retain-candidate');
+    expect(started, 1);
+    expect(find.byKey(const ValueKey('import-retained-not-activated')),
+      findsOneWidget);
+    await tapVisible(tester, 'import-reopen-candidate');
+    expect(revisited, 1);
+    expect(await workerCall(tester, () => worker.readEntry(id)), source);
+    expect(await workerCall(tester, worker.integrityCheck), isTrue);
+    await tapVisible(tester, 'reader-back');
+    expect(find.byKey(ValueKey('library-open-' + id)), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });

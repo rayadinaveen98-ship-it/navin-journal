@@ -12,6 +12,7 @@ import 'package:navin_journal_core/restore_staging_inventory.dart';
 import 'dart:typed_data';
 import 'package:navin_journal_editor/fictional_archive_exporter.dart';
 import 'package:navin_journal_editor/fictional_archive_importer.dart';
+import 'package:navin_journal_editor/fictional_retained_recovery_candidate.dart';
 import 'package:navin_journal_editor/fictional_recovery_rehearsal.dart';
 
 import 'recovery_assessment_review.dart';
@@ -38,6 +39,10 @@ class RecoverySafetyScreen extends StatefulWidget {
   final Future<FictionalArchiveImportReport> Function(
       Uint8List archive, String manuallyEnteredKey)? inspectEncryptedDocument;
   final Future<void> Function()? hideImportedKeyInput;
+  final Future<FictionalRetainedRecoveryReport> Function(
+      Uint8List archive, String manualKey)? retainProtectedCandidate;
+  final Future<FictionalRetainedRecoveryReport> Function()?
+      reopenProtectedCandidate;
 
   const RecoverySafetyScreen({
     super.key,
@@ -50,6 +55,8 @@ class RecoverySafetyScreen extends StatefulWidget {
     this.selectEncryptedDocument,
     this.inspectEncryptedDocument,
     this.hideImportedKeyInput,
+    this.retainProtectedCandidate,
+    this.reopenProtectedCandidate,
   });
 
   @override
@@ -317,6 +324,8 @@ class RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
             selectEncryptedDocument: widget.selectEncryptedDocument!,
             inspect: widget.inspectEncryptedDocument!,
             hideProtectedInput: widget.hideImportedKeyInput!,
+            retainCandidate: widget.retainProtectedCandidate,
+            reopenCandidate: widget.reopenProtectedCandidate,
           ),
         ],
         const SizedBox(height: 20),

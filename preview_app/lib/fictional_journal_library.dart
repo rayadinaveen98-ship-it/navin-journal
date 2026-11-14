@@ -15,6 +15,8 @@ import 'package:navin_journal_core/restore_staging_inventory.dart';
 import 'package:navin_journal_editor/fictional_recovery_rehearsal.dart';
 import 'package:navin_journal_editor/fictional_archive_exporter.dart';
 import 'package:navin_journal_editor/fictional_archive_importer.dart';
+import 'package:navin_journal_editor/fictional_retained_recovery_candidate.dart';
+import 'package:navin_journal_bridge_probe/android_key_bridge.dart';
 import 'connected_writing_studio.dart';
 import 'fictional_library_index.dart';
 import 'recovery_safety_screen.dart';
@@ -44,6 +46,9 @@ class FictionalJournalLibrary extends StatefulWidget {
   final Future<FictionalArchiveImportReport> Function(
       Uint8List archive, String key)? testInspectEncryptedDocument;
   final Future<void> Function()? testHideImportedKey;
+  final Future<FictionalRetainedRecoveryReport> Function(
+      Uint8List archive, String key)? testRetainCandidate;
+  final Future<FictionalRetainedRecoveryReport> Function()? testReopenCandidate;
   const FictionalJournalLibrary({
     super.key,
     required this.worker,
@@ -58,6 +63,8 @@ class FictionalJournalLibrary extends StatefulWidget {
     this.testPickEncryptedDocument,
     this.testInspectEncryptedDocument,
     this.testHideImportedKey,
+    this.testRetainCandidate,
+    this.testReopenCandidate,
   });
 
   @override
@@ -93,6 +100,31 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
       encryptedArchive: archive,
       manuallyEnteredRecoveryKey: key,
       trustedPrivateRoot: trusted,
+    );
+  }
+
+  Future<FictionalRetainedRecoveryReport> _retainFictionalCandidate(
+      Uint8List archive, String key) async {
+    final privateRoot = widget.recoveryPrivateRoot;
+    if (privateRoot == null) {
+      throw const FictionalRetainedRecoveryRejected();
+    }
+    return FictionalRetainedRecoveryCandidate.prepare(
+      encryptedArchive: archive,
+      manuallyEnteredRecoveryKey: key,
+      trustedPrivateRoot: privateRoot,
+      deviceProtector: FlutterAndroidKeyProtector(),
+    );
+  }
+
+  Future<FictionalRetainedRecoveryReport> _reopenFictionalCandidate() async {
+    final privateRoot = widget.recoveryPrivateRoot;
+    if (privateRoot == null) {
+      throw const FictionalRetainedRecoveryRejected();
+    }
+    return FictionalRetainedRecoveryCandidate.reopen(
+      trustedPrivateRoot: privateRoot,
+      deviceProtector: FlutterAndroidKeyProtector(),
     );
   }
 
@@ -634,6 +666,10 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
                       _inspectFictionalArchive,
                   hideImportedKeyInput: widget.testHideImportedKey ??
                       _hideFictionalImportKey,
+                  retainProtectedCandidate: widget.testRetainCandidate ??
+                      _retainFictionalCandidate,
+                  reopenProtectedCandidate: widget.testReopenCandidate ??
+                      _reopenFictionalCandidate,
                 )
               else _libraryView(c),
             ]),
