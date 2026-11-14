@@ -84,6 +84,19 @@ jobs:
           s += "\nhooks:\n  user_defines:\n    sqlite3:\n      source: sqlite3mc\n"
           dest.write_text(s)
           PY
+          # Do not permit Android Auto Backup/restore to repopulate the old
+          # fictional app sandbox after uninstall. This proof must use ONLY
+          # the archive and the independently retained recovery key.
+          python3 - "$TARGET/android/app/src/main/AndroidManifest.xml" <<'PY'
+          from pathlib import Path
+          import sys
+          manifest = Path(sys.argv[1])
+          s = manifest.read_text()
+          assert '<application' in s and 'android:allowBackup' not in s
+          s = s.replace('<application',
+                        '<application android:allowBackup="false"', 1)
+          manifest.write_text(s)
+          PY
           echo "PORTABLE_APK_ROOT=$TARGET" >> "$GITHUB_ENV"
 
       - name: Resolve native encryption and strict Flutter analysis
