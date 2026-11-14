@@ -128,6 +128,27 @@ for path in portable-restored-vault portable-restored-envelope.json; do
 done
 stop_app
 
+# TEST ONLY: the worker throws a simulated ENOSPC after writing the readiness
+# marker but before native no-replace publication. No new vault or stage may
+# be visible afterward; original imported encrypted archive stays intact.
+phase fault_pre_publish PORTABLE_ENOSPC_PRE
+if app_path_exists files/fault-pre-vault; then
+  echo "::error::Pre-publication fault exposed a journal"; exit 1
+fi
+stop_app
+
+# TEST ONLY: a simulated ENOSPC occurs immediately AFTER atomic rename.
+# The result is ambiguous to the caller but must remain independently
+# decryptable under its own new Android Keystore key. Never clear this vault.
+phase fault_post_publish PORTABLE_ENOSPC_POST
+if ! app_path_exists files/fault-post-vault; then
+  echo "::error::Post-publication fault lost its encrypted vault"; exit 1
+fi
+stop_app
+phase reopen_faulted PORTABLE_ENOSPC_REOPEN
+stop_app
+
+# Existing normal independent-key clean-reinstall behavior must still work.
 phase restore_fixture PORTABLE_RESTORE_OK
 if app_path_exists files/portable_import.key; then
   echo "::error::One-time recovery key input was not deleted"; exit 1
@@ -140,4 +161,6 @@ adb -s "$SERIAL" uninstall "$PACKAGE" | grep -q Success
 echo "VERIFIED: fictional v2 archive off device, original Android install deleted,"
 echo "wrong recovery key rejected without staging, fresh device key restore,"
 echo "historical revision recovered and reopened after Android force-stop."
+echo "Android synthetic ENOSPC before publication failed closed; after rename"
+echo "the encrypted journal was preserved and reopened under its own device key."
 echo "NOT verified for actual personal data, media streaming, or production restore."
