@@ -196,7 +196,11 @@ stop_app
 # Invalidate ONLY the isolated candidate's own alias. Reopen must now fail
 # closed without deleting candidate bytes; the older independent restored
 # vault must remain independently unlockable.
-phase retire_candidate_alias CANDIDATE_KEY_LOSS_SAFE
+phase activate_candidate ACTIVE_ACTIVATED
+stop_app
+phase reopen_activated ACTIVE_REOPEN_OK
+stop_app
+phase retire_active_alias ACTIVE_KEY_LOSS_SAFE
 if ! app_path_exists files/nj-fictional-retained-candidate-v1/vault/journal.sqlite3 ||
    ! app_path_exists files/nj-fictional-retained-candidate-v1/envelope.json ||
    ! app_path_exists files/nj-fictional-retained-candidate-v1.reservation; then
