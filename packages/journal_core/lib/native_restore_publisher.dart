@@ -145,7 +145,7 @@ class NativeRestorePublisher {
   /// roll back or erase.
   static const fictionalActivationMarker = '.navin-activation-approved-v1';
   static const fictionalActivationContents =
-      'NJR-FICTIONAL-ACTIVATION-APPROVED-V1\\n';
+      'NJR-FICTIONAL-ACTIVATION-APPROVED-V1\n';
 
   Future<void> activateApprovedFictionalCandidate({
     required Directory candidate,
