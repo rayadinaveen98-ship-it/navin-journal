@@ -10,7 +10,6 @@ library;
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:navin_journal_core/staged_product_restore.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_recovery_archive_spike/recovery_archive.dart';
 
