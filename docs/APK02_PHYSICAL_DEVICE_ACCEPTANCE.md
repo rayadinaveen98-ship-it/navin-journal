@@ -1,18 +1,19 @@
-# Navin Journal · APK 02 physical-device acceptance (Stage 5B entry gate)
+# Navin Journal · APK 02 physical-device acceptance (Stage 5C entry gate)
 
 **Updated:** 14 November 2026  
 **Scope:** Disposable **FICTIONAL-DATA-ONLY Android diagnostic**, NOT a private journaling beta, recovery product or release build. No personal text, media, account information, private passwords or sensitive content may be entered. These are instructions for **manual tests still to be completed**, not claims of physical-device success.
 
 ## Exact candidate and automated evidence
 
-**Use the current validated Library diagnostic APK, not an earlier APK02 recovery fixture or the SAF-only driver.**
+**Stage 5C replacement build — use this latest validated Library APK rather than the earlier Stage 5B archive or SAF-only driver.**
 
-- Source: [merged Stage 5B PR #14](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/14), merged commit `6aff5fe0b9c281b6ea26b12c333e9663e93f420b`.
-- [Successful encrypted Library Android debug build 43620412516](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43620412516), artifact ID **14124505027**, artifact name **`navin-apk02-FICTIONAL-LIBRARY-NOT-PRIVATE-DIARY`**. Artifact expires **28 November 2026**. Download the artifact ZIP from the Actions run, extract `app-debug.apk`, and install only this Library APK.
-- APK SHA-256: `3c2c90f3bd28b04902b9df57ac525556aa1b1d40ed91c266574215af57f09e98` (verified against the exact GitHub Actions build log). Application ID `com.navinjournal.navin_journal_library_probe`.
-- [Real Android API34 DocumentsUI fictional encrypted SAF export/import 43620412491](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43620412491) **SUCCESS**; [Telugu lifecycle 43620412493](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43620412493) **SUCCESS**; [portable clean-reinstall 43620412555](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43620412555) **SUCCESS**. The Android SAF test app is **not** the user-facing Library APK.
+- [Stage 5C PR #17](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/17), merged as `3466fafbd11f9c13f96fbf00bda771e918f089c6`, corrects read-only native MethodChannel ciphertext handling in the **user-facing fictional Library import UI**, without changing key/restore semantics. Two new widget regressions verify read-only Android-like ciphertext input and cancellation.
+- [Successful encrypted Library Android build 43624305760](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43624305760), artifact ID **14125212901** named `navin-apk02-FICTIONAL-LIBRARY-NOT-PRIVATE-DIARY`. GitHub Actions ZIP expiration **28 November 2026**. Extract its one `app-debug.apk` and install this exact version.
+- APK SHA-256: `1d3f119f71110eb8105159c454ccfe5e339c3562ee40a3aa1a8ae70122269a29` (independently checked against CI build log). App ID `com.navinjournal.navin_journal_library_probe`. The GitHub build performed strict Flutter analysis, encrypted worker tests, Library/recovery widget tests and Android debug compilation.
+- [Android API34 Telugu HOME/force-stop regression 43624305758](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43624305758) **SUCCESS** at the same exact PR head.
+- Previously established [Stage 5B real AndroidX DocumentsUI SAF 43620412491](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43620412491), [portable clean reinstall 43620412555](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43620412555) **SUCCESS** on prior head `9acc9438` ([PR #14](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/14)); **these two separate suites were not rerun on PR #17** and are not claims of physical acceptance.
 
-**Physical-device outcomes remain NOT RUN.** The emulator proof does not substitute for manual phone/tablet, storage, recovery-key, accessibility or security approval.
+**Physical-device outcomes remain NOT RUN.** No real diary, personal recovery key, production backend, phone/tablet sign-off or public release is approved. Use only fictional samples; never upload/share manual recovery keys.
 
 ## Quick phone + tablet acceptance (fictional only)
 
