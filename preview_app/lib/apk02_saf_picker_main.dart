@@ -9,7 +9,6 @@ library;
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -63,14 +62,14 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
     Directory root,
     Future<void> Function(Uint8List archive, RecoveryKey key) exercise,
   ) async {
-    final folder = Directory(root.path + '/saf-scripted-source-v1');
+    final folder = Directory('${root.path}/saf-scripted-source-v1');
     if (await FileSystemEntity.type(folder.path, followLinks: false) !=
         FileSystemEntityType.notFound) {
       throw StateError('Refuse reuse of unknown fictional source');
     }
     await folder.create();
-    final db = File(folder.path + '/journal.sqlite3');
-    final envelope = File(folder.path + '/envelope.json');
+    final db = File('${folder.path}/journal.sqlite3');
+    final envelope = File('${folder.path}/envelope.json');
     final wrapper = KeyEnvelopeCoordinator(
       envelopeFile: envelope,
       protector: FlutterAndroidKeyProtector(),
