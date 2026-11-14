@@ -229,7 +229,7 @@ void main() {
     await tester.pumpAndSettle();
 
     const complete = 'తెలుగు కథ 🌿 ఒక ఊహించిన రోజు';
-    view.bodyInput.value = const TextEditingValue(
+    view.bodyInput.value = TextEditingValue(
       text: complete,
       selection: TextSelection.collapsed(offset: complete.length),
     );
