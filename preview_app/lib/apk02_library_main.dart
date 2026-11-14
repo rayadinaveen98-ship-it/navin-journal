@@ -95,12 +95,20 @@ class _Apk02LibraryDiagnosticAppState
         active = await opened.createJournal('Fictional Pages');
       } else {
         final journals = await opened.listJournals();
-        if (journals.length != 1 ||
-            journals.single['deletedAtMs'] != null ||
-            journals.single['archived'] != false) {
-          throw StateError('Unexpected journal selection state');
+        // The encrypted vault may now contain several fictional notebooks.
+        // Never create/reset a journal on an existing installation and never
+        // copy a selection into plaintext SharedPreferences. Select the most
+        // recent writable journal, otherwise the latest archived one for
+        // read-only viewing. A fully trashed vault fails closed.
+        final available = journals.where(
+            (item) => item['deletedAtMs'] == null).toList();
+        if (available.isEmpty) {
+          throw StateError('No accessible fictional journal');
         }
-        active = journals.single['id'] as String;
+        final writable = available.where(
+            (item) => item['archived'] == false).toList();
+        active = (writable.isNotEmpty ? writable.first : available.first)
+            ['id'] as String;
       }
       if (!(await opened.integrityCheck())) {
         throw StateError('Encrypted database integrity check failed');

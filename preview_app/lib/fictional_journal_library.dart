@@ -41,7 +41,22 @@ class FictionalJournalLibrary extends StatefulWidget {
 
 class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
   _Screen _screen = _Screen.library;
+  // Journal metadata and page content stay only in live widget memory.
+  // No journal selection, title or snippet is written to preferences/cache.
+  late String _activeJournalId;
+  List<Map<String, Object?>> _journals = [];
   List<Map<String, Object?>> _pages = [];
+  Map<String, Object?>? get _selectedJournal {
+    for (final item in _journals) {
+      if (item['id'] == _activeJournalId) return item;
+    }
+    return null;
+  }
+  String get _activeJournalName =>
+      _selectedJournal?['name'] as String? ??
+      (_activeJournalId == widget.journalId
+          ? widget.journalName : 'Fictional journal');
+  bool get _canWrite => _loaded && _selectedJournal?['archived'] == false;
   Map<String, Object?>? _reading;
   FictionalPageFilter _filter = FictionalPageFilter.all;
   FictionalPageOrder _order = FictionalPageOrder.newest;
@@ -59,6 +74,7 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
   @override
   void initState() {
     super.initState();
+    _activeJournalId = widget.journalId;
     unawaited(_refresh());
   }
 
@@ -71,15 +87,84 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
     super.dispose();
   }
 
+  /// Reload the selected journal and its page list from the real encrypted
+  /// worker. A missing/trashed journal must fail closed rather than silently
+  /// showing another journal's pages. Archived journals remain readable.
   Future<void> _refresh() async {
     if (!mounted) return;
+    final requestedId = _activeJournalId;
     setState(() { _busy = true; _error = null; });
     try {
-      final list = await widget.worker.listEntries(journalId: widget.journalId);
-      if (mounted) setState(() { _pages = list; _loaded = true; });
+      final shelf = await widget.worker.loadJournalShelf(requestedId);
+      if (!shelf.journals.any((item) =>
+          item['id'] == requestedId && item['deletedAtMs'] == null) ||
+          shelf.pages.any((item) =>
+              item['journalId'] != requestedId ||
+              item['deletedAtMs'] != null)) {
+        throw StateError('Encrypted journal scope mismatch');
+      }
+      if (mounted && _activeJournalId == requestedId) setState(() {
+        _journals = shelf.journals;
+        _pages = shelf.pages;
+        _loaded = true;
+      });
+    } catch (_) {
+      if (mounted && _activeJournalId == requestedId) setState(() {
+        _pages = [];
+        _journals = [];
+        _loaded = false;
+        _error = 'Unable to verify this encrypted journal.';
+      });
+    } finally {
+      if (mounted && _activeJournalId == requestedId) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  /// Journal changes are allowed only from the Library, never while a reader,
+  /// recovery review, or unresolved Writing Studio session is on screen.
+  Future<void> _switchJournal(String journalId) async {
+    if (_busy || _screen != _Screen.library ||
+        journalId == _activeJournalId ||
+        !_journals.any((item) => item['id'] == journalId &&
+            item['deletedAtMs'] == null)) return;
+    setState(() {
+      _activeJournalId = journalId;
+      _pages = [];
+      _loaded = false;
+      _filter = FictionalPageFilter.all;
+      _order = FictionalPageOrder.newest;
+      _error = null;
+    });
+    await _refresh();
+  }
+
+  /// Add a predefined imaginary notebook only. The diagnostic never accepts
+  /// personal journal names or genuine diary input.
+  Future<void> _createFictionalJournal() async {
+    if (_busy || _screen != _Screen.library || !_loaded) return;
+    setState(() { _busy = true; _error = null; });
+    try {
+      final number = _journals.length + 1;
+      final shelf = await widget.worker.createFictionalJournalShelf(
+          'Imagined Notebook ' + number.toString());
+      if (!mounted) return;
+      if (!shelf.journals.any((j) => j['id'] == shelf.journalId) ||
+          shelf.pages.any((p) => p['journalId'] != shelf.journalId)) {
+        throw StateError('New journal scope mismatch');
+      }
+      setState(() {
+        _activeJournalId = shelf.journalId;
+        _journals = shelf.journals;
+        _pages = shelf.pages;
+        _loaded = true;
+        _filter = FictionalPageFilter.all;
+        _order = FictionalPageOrder.newest;
+      });
     } catch (_) {
       if (mounted) setState(() =>
-        _error = 'Unable to read the encrypted journal.');
+          _error = 'Unable to create a fictional journal.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -90,7 +175,7 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
     setState(() { _busy = true; _error = null; });
     try {
       final row = await widget.worker.readEntry(id);
-      if (row == null || row['journalId'] != widget.journalId ||
+      if (row == null || row['journalId'] != _activeJournalId ||
           row['deletedAtMs'] != null) {
         throw StateError('Entry missing or trashed');
       }
@@ -120,7 +205,7 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
       final history = await widget.worker.readRevisions(entryId);
       if (history.any((rev) =>
           rev['entryId'] != entryId ||
-          rev['journalId'] != widget.journalId ||
+          rev['journalId'] != _activeJournalId ||
           (rev['version'] as int) >= (reading['version'] as int) ||
           (rev['version'] as int) < 1)) {
         throw StateError('Invalid version history');
@@ -158,12 +243,12 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
   }
 
   Future<void> _writePage({String? existingEntryId}) async {
-    if (_busy || _screen == _Screen.writer) return;
+    if (_busy || _screen == _Screen.writer || !_canWrite) return;
     setState(() { _busy = true; _error = null; });
     try {
       late final EditorSaveNotifier notifier;
       final session = await widget.worker.startSession(
-        journalId: widget.journalId,
+        journalId: _activeJournalId,
         existingEntryId: existingEntryId,
         debounce: const Duration(days: 1),
         onIndicator: (state) => notifier.acknowledge(state),
@@ -226,7 +311,7 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
         saveStatus: _notifier!,
         fixture: _fixture!,
         scriptOnly: true,
-        journalName: widget.journalName,
+        journalName: _activeJournalName,
         onClose: () => unawaited(_closedEditor()),
       );
     }
@@ -260,7 +345,7 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
                 Expanded(child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.journalName,
+                    Text(_activeJournalName,
                       style: TextStyle(fontSize: 16, color: c.ink,
                         fontWeight: FontWeight.w700)),
                     Text('THE MEMORY ATELIER',
@@ -307,12 +392,60 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
           style: TextStyle(color: c.secondary, height: 1.5, fontSize: 12)),
       ),
       const SizedBox(height: 21),
+      if (_loaded && _journals.isNotEmpty) ...[
+        Text('JOURNAL SHELF',
+          style: TextStyle(color: c.secondary,
+            fontSize: 11, letterSpacing: 1.4,
+            fontWeight: FontWeight.w700)),
+        const SizedBox(height: 9),
+        Row(children: [
+          Expanded(child: DropdownButton<String>(
+            key: const ValueKey('library-journal-switch'),
+            isExpanded: true,
+            value: _activeJournalId,
+            items: [
+              for (final journal in _journals)
+                DropdownMenuItem<String>(
+                  value: journal['id'] as String,
+                  child: Text(
+                    (journal['name'] as String) +
+                      (journal['archived'] == true ? ' · archived' : ''),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+            ],
+            onChanged: _busy ? null : (id) {
+              if (id != null) unawaited(_switchJournal(id));
+            },
+          )),
+          const SizedBox(width: 12),
+          IconButton(
+            key: const ValueKey('library-create-journal'),
+            tooltip: 'Add a scripted fictional notebook',
+            onPressed: _busy ? null :
+              () => unawaited(_createFictionalJournal()),
+            icon: const Icon(Icons.create_new_folder_outlined),
+          ),
+        ]),
+        const SizedBox(height: 9),
+        Text('Each notebook has its own encrypted pages. '
+          'Switching never merges entries or stores a plaintext index.',
+          style: TextStyle(color: c.secondary, fontSize: 12)),
+        const SizedBox(height: 16),
+      ],
       FilledButton.icon(
         key: const ValueKey('library-create-fictional'),
-        onPressed: _busy ? null : () => unawaited(_writePage()),
+        onPressed: _busy || !_canWrite
+          ? null : () => unawaited(_writePage()),
         icon: const Icon(Icons.edit_note_outlined),
         label: const Text('Start a fictional page'),
       ),
+      if (_loaded && !_canWrite)
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Text('Archived fictional journal · reading only.',
+            key: const ValueKey('library-archived-readonly'),
+            style: TextStyle(color: c.secondary, fontSize: 12)),
+        ),
       if (widget.recoveryPrivateRoot != null) ...[
         const SizedBox(height: 14),
         OutlinedButton.icon(
@@ -475,7 +608,7 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
       const SizedBox(height: 20),
       FilledButton.icon(
         key: const ValueKey('reader-edit'),
-        onPressed: _busy ? null :
+        onPressed: _busy || !_canWrite ? null :
           () => unawaited(_writePage(existingEntryId: row['id'] as String)),
         icon: const Icon(Icons.edit_outlined),
         label: const Text('Edit fictional page'),

@@ -13,6 +13,18 @@ on:
       - 'spikes/flutter_bridge_probe/lib/android_key_bridge.dart'
       - 'spikes/key_lifecycle/**'
       - '.github/workflows/apk02-library-debug.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'preview_app/lib/**'
+      - 'preview_app/test/**'
+      - 'preview_app/apk02_test/**'
+      - 'packages/journal_core/**'
+      - 'packages/journal_editor/**'
+      - 'spikes/flutter_bridge_probe/native/MainActivity.kt'
+      - 'spikes/flutter_bridge_probe/lib/android_key_bridge.dart'
+      - 'spikes/key_lifecycle/**'
+      - '.github/workflows/apk02-library-debug.yml'
   workflow_dispatch:
 
 permissions:
