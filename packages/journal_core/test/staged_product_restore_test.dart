@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:navin_journal_core/journal_vault.dart';
+import 'package:navin_journal_core/native_restore_publisher.dart';
 import 'package:navin_journal_core/staged_product_restore.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_recovery_archive_spike/product_encrypted_archive.dart';
@@ -207,6 +208,92 @@ void main() {
       .readAsStringSync(), 'do not remove');
     expect(root.listSync().where((x) =>
       x.path.contains('.navin-journal-restore-')), isEmpty);
+  });
+
+  test('atomic publication exposes readiness only after verified restore', () async {
+    final target = destination('ready-for-reader');
+    expect(await NativeRestorePublisher.isReady(target), isFalse);
+    final receipt = await StagedProductRestorer().restoreNew(
+      encryptedArchive: archive, recoveryKey: recoveryKey,
+      destinationKey: newDeviceKey, destination: target,
+    );
+    expect(receipt.entries, 2);
+    expect(await NativeRestorePublisher.isReady(target), isTrue);
+    final marker = File(target.path + Platform.pathSeparator +
+      NativeRestorePublisher.markerName);
+    expect(await marker.readAsString(),
+      NativeRestorePublisher.markerContents);
+    expect(root.listSync().where((x) =>
+      x.path.contains('.navin-journal-restore-')), isEmpty);
+  });
+
+  test('race at native no-replace boundary cannot overwrite another writer', () async {
+    final target = destination('race-at-kernel-rename');
+    final original = File(target.path);
+    await expectLater(
+      StagedProductRestorer(injectFailure: (checkpoint) {
+        if (checkpoint == 'after_durable_stage_before_noreplace') {
+          original.writeAsStringSync('preserve competing user data', flush: true);
+        }
+      }).restoreNew(
+        encryptedArchive: archive, recoveryKey: recoveryKey,
+        destinationKey: newDeviceKey, destination: target,
+      ), throwsA(isA<ProductRestoreRejected>()),
+    );
+    expect(original.readAsStringSync(), 'preserve competing user data');
+    expect(root.listSync().where((x) =>
+      x.path.contains('.navin-journal-restore-')), isEmpty);
+  });
+
+  test('post-rename sync failure never auto-deletes a committed vault', () async {
+    final target = destination('ambiguous-durable-commit');
+    await expectLater(
+      StagedProductRestorer(injectFailure: (checkpoint) {
+        if (checkpoint == 'after_atomic_noreplace_rename') {
+          throw StateError('simulated power loss before parent sync');
+        }
+      }).restoreNew(
+        encryptedArchive: archive, recoveryKey: recoveryKey,
+        destinationKey: newDeviceKey, destination: target,
+      ), throwsA(isA<ProductRestoreRejected>()),
+    );
+    // After the no-clobber rename succeeded, cleanup MUST NOT delete it.
+    // This marker alone is not sufficient: independently reopen + check crypto.
+    expect(await NativeRestorePublisher.isReady(target), isTrue);
+    final recovered = JournalVault.open(
+      target.path + Platform.pathSeparator +
+        StagedProductRestorer.databaseName, key: newDeviceKey);
+    try {
+      expect(recovered.integrityCheck(), isTrue);
+      expect(recovered.snapshot()['entries'], source.snapshot()['entries']);
+      expect(recovered.snapshot()['revisions'], source.snapshot()['revisions']);
+    } finally {
+      recovered.close();
+    }
+  });
+
+  test('simultaneous restores never replace the first successful publication', () async {
+    final target = destination('two-writers-same-name');
+    final attempts = await Future.wait([
+      for (var i = 0; i < 2; i++)
+        StagedProductRestorer().restoreNew(
+          encryptedArchive: archive, recoveryKey: recoveryKey,
+          destinationKey: newDeviceKey, destination: target,
+        ).then<Object>((result) => result,
+          onError: (Object error, StackTrace _) => error),
+    ]);
+    expect(attempts.whereType<ProductRestoreReceipt>().length, 1);
+    expect(attempts.whereType<ProductRestoreRejected>().length, 1);
+    expect(await NativeRestorePublisher.isReady(target), isTrue);
+    final recovered = JournalVault.open(
+      target.path + Platform.pathSeparator +
+      StagedProductRestorer.databaseName, key: newDeviceKey);
+    try {
+      expect(recovered.integrityCheck(), isTrue);
+      expect(recovered.listEntries(includeTrash: true).length, 2);
+    } finally {
+      recovered.close();
+    }
   });
 
   test('restored vault cannot be opened using the original vault key', () async {
