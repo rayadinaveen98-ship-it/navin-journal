@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use
 // Read-only fictional recovery assessment copy: phone/tablet and safety.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
