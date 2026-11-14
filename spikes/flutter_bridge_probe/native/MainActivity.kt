@@ -55,6 +55,8 @@ class MainActivity : FlutterActivity() {
                             "RECOVERED_V2", "FAILED",
                             "PORTABLE_EXPORT_READY", "PORTABLE_WRONG_KEY",
                             "PORTABLE_RESTORE_OK", "PORTABLE_REOPEN_OK",
+                            "PORTABLE_ENOSPC_PRE", "PORTABLE_ENOSPC_POST",
+                            "PORTABLE_ENOSPC_REOPEN",
                         )
                     ) {
                         result.error("INVALID_ARGUMENT", "Unknown test marker", null)
