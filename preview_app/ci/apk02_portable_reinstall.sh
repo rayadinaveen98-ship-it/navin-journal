@@ -157,10 +157,18 @@ stop_app
 phase reopen_fixture PORTABLE_REOPEN_OK
 stop_app
 
-# STAGE 5A native Keystore retained candidate. Independently re-inject only
-# the test recovery key from the CI host. The app deletes its copy before
-# preparing the candidate. The existing encrypted portable-restored vault
-# MUST remain independent and usable throughout all following phases.
+# STAGE 5A native Keystore retained candidate. The earlier portable
+# restore deliberately removed BOTH its one-time Android archive and key.
+# Re-transfer an independent copy of BOTH from the outside CI host, exactly
+# as a separate user-held backup/key would be supplied to a fresh process.
+# The app deletes them again after preparing the protected candidate.
+# Existing encrypted portable-restored vault must remain intact.
+if app_path_exists files/portable_import.njr ||
+   app_path_exists files/portable_import.key; then
+  echo "::error::Previous portable restore retained one-time input"; exit 1
+fi
+adb -s "$SERIAL" shell -T run-as "$PACKAGE" \
+  tee files/portable_import.njr < "$ARCHIVE" > /dev/null
 adb -s "$SERIAL" shell -T run-as "$PACKAGE" \
   tee files/portable_import.key < "$KEY" > /dev/null
 adb -s "$SERIAL" shell run-as "$PACKAGE" chmod 600 files/portable_import.key
