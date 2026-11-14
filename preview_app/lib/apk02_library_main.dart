@@ -10,13 +10,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:navin_journal_bridge_probe/android_key_bridge.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
+import 'package:navin_journal_editor/fictional_archive_importer.dart';
+import 'package:navin_journal_editor/fictional_retained_recovery_candidate.dart';
+import 'package:navin_journal_editor/fictional_recovery_activator.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_key_lifecycle_spike/key_envelope_coordinator.dart';
 
 import 'fictional_journal_library.dart';
+import 'fictional_external_import_section.dart';
+import 'fictional_activation_consent_panel.dart';
 import 'visuals.dart';
 
 const _diagnostic = MethodChannel('navin_journal/test_lifecycle_v1');
+const _fictionalArchivePicker =
+    MethodChannel('navin_journal/fictional_export_v1');
 
 void main() {
   if (const bool.fromEnvironment('dart.vm.product')) {
@@ -41,6 +48,8 @@ class _Apk02LibraryDiagnosticAppState
   String? _journalId;
   String _status = 'Unlocking fictional encrypted journal…';
   bool _failed = false;
+  bool _firstRun = false;
+  FictionalActivationState? _firstRunState;
 
   @override
   void initState() {
@@ -48,8 +57,12 @@ class _Apk02LibraryDiagnosticAppState
     unawaited(_open());
   }
 
-  Future<void> _open() async {
+  Future<void> _open({bool startNew = false}) async {
     JournalEditorWorker? opened;
+    if (mounted) setState(() {
+      _failed = false;
+      _status = 'Unlocking fictional encrypted journal…';
+    });
     try {
       final root = await _diagnostic.invokeMethod<String>('getPrivateRoot');
       if (root == null || root.trim().isEmpty) {
@@ -58,17 +71,53 @@ class _Apk02LibraryDiagnosticAppState
       // A separate test-only vault, not shared with other probe APKs.
       final folder = Directory(
         root + Platform.pathSeparator + 'nj_apk02_library_fixture');
-      final dbFile = File(
+      final legacyDb = File(
         folder.path + Platform.pathSeparator + 'journal.sqlite3');
+      final activeRecoveredDb = File(folder.path +
+          Platform.pathSeparator + 'vault' +
+          Platform.pathSeparator + 'journal.sqlite3');
       final envelope = File(
         folder.path + Platform.pathSeparator + 'envelope.json');
-      if (dbFile.existsSync() != envelope.existsSync()) {
-        // An interrupted first install or missing key must never silently
-        // regenerate the original vault. Requires explicit recovery later.
-        throw StateError('Incomplete vault: refuse automatic reset');
+      final rootDirectory = Directory(root);
+      final state = await FictionalRecoveryActivator.inspect(
+          trustedPrivateRoot: rootDirectory);
+      final legacy = legacyDb.existsSync();
+      final activated = activeRecoveredDb.existsSync();
+      if (legacy && activated) {
+        throw StateError('Conflicting encrypted library layouts');
       }
-      final create = !dbFile.existsSync();
-      if (create) folder.createSync(recursive: true);
+      if (!legacy && !activated) {
+        // Do not silently create a demo vault on a fresh installation:
+        // that would occupy the only safe destination before recovery.
+        if (state == FictionalActivationState.unsafeOrInterrupted ||
+            folder.existsSync() || envelope.existsSync()) {
+          throw StateError('Incomplete or interrupted vault: refuse reset');
+        }
+        if (!startNew) {
+          if (!mounted) return;
+          setState(() {
+            _privateRoot = rootDirectory;
+            _firstRunState = state;
+            _firstRun = true;
+          });
+          return;
+        }
+        // The new-journal action is a separate user choice; do not
+        // auto-activate or delete a retained candidate.
+        folder.createSync(recursive: false);
+      } else if (activated) {
+        if (state != FictionalActivationState.activeFictionalVault ||
+            !await FictionalRecoveryActivator.reopenActivated(
+              trustedPrivateRoot: rootDirectory,
+              deviceProtector: FlutterAndroidKeyProtector(),
+            ).then((report) => report.entries >= 0)) {
+          throw StateError('Activated journal not independently verified');
+        }
+      } else if (!envelope.existsSync()) {
+        throw StateError('Existing legacy journal lost key envelope');
+      }
+      final create = !legacy && !activated;
+      final dbFile = activated ? activeRecoveredDb : legacyDb;
       final protector = KeyEnvelopeCoordinator(
         envelopeFile: envelope,
         protector: FlutterAndroidKeyProtector(),
@@ -120,7 +169,8 @@ class _Apk02LibraryDiagnosticAppState
       setState(() {
         _worker = opened;
         _journalId = active;
-        _privateRoot = Directory(root);
+        _privateRoot = rootDirectory;
+        _firstRun = false;
       });
     } catch (_) {
       if (opened != null) {
@@ -133,6 +183,110 @@ class _Apk02LibraryDiagnosticAppState
       });
     }
   }
+
+  Future<Uint8List?> _chooseFictionalArchive() =>
+      _fictionalArchivePicker.invokeMethod<Uint8List>('openFictionalArchive');
+
+  Future<void> _hideFictionalInput() =>
+      _fictionalArchivePicker.invokeMethod<void>('hideImportRecoveryInput');
+
+  Future<FictionalArchiveImportReport> _inspectSelected(
+      Uint8List document, String key) {
+    final root = _privateRoot;
+    if (root == null) throw const FictionalArchiveImportRejected();
+    return FictionalArchiveImporter.inspect(
+      encryptedArchive: document,
+      manuallyEnteredRecoveryKey: key,
+      trustedPrivateRoot: root,
+    );
+  }
+
+  Future<FictionalRetainedRecoveryReport> _retainSelected(
+      Uint8List document, String key) {
+    final root = _privateRoot;
+    if (root == null) throw const FictionalRetainedRecoveryRejected();
+    return FictionalRetainedRecoveryCandidate.prepare(
+      encryptedArchive: document,
+      manuallyEnteredRecoveryKey: key,
+      trustedPrivateRoot: root,
+      deviceProtector: FlutterAndroidKeyProtector(),
+    );
+  }
+
+  Future<FictionalRetainedRecoveryReport> _reopenCandidate() {
+    final root = _privateRoot;
+    if (root == null) throw const FictionalRetainedRecoveryRejected();
+    return FictionalRetainedRecoveryCandidate.reopen(
+      trustedPrivateRoot: root,
+      deviceProtector: FlutterAndroidKeyProtector(),
+    );
+  }
+
+  Future<FictionalActivationState> _inspectActivation() {
+    final root = _privateRoot;
+    if (root == null) throw const FictionalActivationRejected();
+    return FictionalRecoveryActivator.inspect(trustedPrivateRoot: root);
+  }
+
+  Future<FictionalActivationReceipt> _activateApproved() {
+    final root = _privateRoot;
+    if (root == null) throw const FictionalActivationRejected();
+    return FictionalRecoveryActivator.approveAndActivate(
+      trustedPrivateRoot: root,
+      deviceProtector: FlutterAndroidKeyProtector(),
+      userExplicitlyApproved: true,
+    );
+  }
+
+  Widget _firstLaunchView(JournalColors colors) =>
+      Scaffold(body: SafeArea(child: SingleChildScrollView(
+        padding: const EdgeInsets.all(25),
+        child: Center(child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 18),
+              const FoldedPageMark(size: 56),
+              const SizedBox(height: 16),
+              Text('Your fictional journal', style: editorial(colors, 32)),
+              const SizedBox(height: 11),
+              Text('Choose a fresh demo or recover a separate fictional '
+                'encrypted archive before creating the active Library. '
+                'Nothing is restored or overwritten automatically.',
+                key: const ValueKey('first-run-choice'),
+                style: TextStyle(color: colors.secondary, height: 1.5)),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                key: const ValueKey('first-run-new-journal'),
+                onPressed: _firstRunState ==
+                    FictionalActivationState.unsafeOrInterrupted
+                    ? null : () => _open(startNew: true),
+                icon: const Icon(Icons.auto_stories_outlined),
+                label: const Text('Create a fresh fictional journal'),
+              ),
+              const SizedBox(height: 22),
+              const Divider(),
+              const SizedBox(height: 17),
+              FictionalExternalImportSection(
+                selectEncryptedDocument: _chooseFictionalArchive,
+                inspect: _inspectSelected,
+                retainCandidate: _retainSelected,
+                reopenCandidate: _reopenCandidate,
+                hideProtectedInput: _hideFictionalInput,
+              ),
+              const SizedBox(height: 25),
+              const Divider(),
+              const SizedBox(height: 17),
+              FictionalActivationConsentPanel(
+                inspect: _inspectActivation,
+                activateApproved: _activateApproved,
+                onActivated: () => _open(),
+              ),
+              const SizedBox(height: 25),
+            ],
+          ),
+        )),
+      )));
 
   @override
   void dispose() {
@@ -159,6 +313,8 @@ class _Apk02LibraryDiagnosticAppState
             journalId: _journalId!,
             recoveryPrivateRoot: _privateRoot,
           )
+        : _firstRun && _privateRoot != null && !_failed
+        ? _firstLaunchView(colors)
         : Scaffold(body: SafeArea(child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 490),
