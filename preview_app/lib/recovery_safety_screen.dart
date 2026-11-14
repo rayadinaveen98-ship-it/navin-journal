@@ -5,7 +5,6 @@ library;
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:flutter/material.dart';
 import 'package:navin_journal_core/restore_staging_assessment.dart';
@@ -60,9 +59,7 @@ class RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
     try {
       // This is ONLY a bounded read-only candidate inventory. It does not
       // open, decrypt, delete, rename or clean up any staging directory.
-      final rootPath = widget.privateRoot.absolute.path;
-      final items = await Isolate.run(() =>
-          RestoreStagingInventory.inspect(Directory(rootPath)));
+      final items = await RestoreStagingInventory.inspect(widget.privateRoot);
       if (mounted) setState(() => _candidates = items.length);
     } on StagingInventoryLimitExceeded {
       if (mounted) setState(() =>
