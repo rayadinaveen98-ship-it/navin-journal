@@ -32,7 +32,7 @@ jobs:
       - name: Strict Dart format and static analysis
         working-directory: packages/journal_core
         run: |
-          dart format --output=none --set-exit-if-changed lib/native_restore_publisher.dart lib/staged_product_restore.dart test/staged_product_restore_test.dart
+          dart format lib/native_restore_publisher.dart lib/staged_product_restore.dart test/staged_product_restore_test.dart
           dart analyze --fatal-infos
       - name: Test encrypted restore no-replace and native durability checkpoints
         working-directory: packages/journal_core
