@@ -6,22 +6,29 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
+import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'connected_writing_studio.dart';
+import 'recovery_safety_screen.dart';
 import 'visuals.dart';
 
-enum _Screen { library, reader, writer }
+enum _Screen { library, reader, writer, recovery }
 
 class FictionalJournalLibrary extends StatefulWidget {
   final JournalEditorWorker worker;
   final String journalId;
   final String journalName;
+  final Directory? recoveryPrivateRoot;
+  final Future<RestoreAssessment> Function()? authenticatedAssessment;
   const FictionalJournalLibrary({
     super.key,
     required this.worker,
     required this.journalId,
     this.journalName = 'Fictional Pages',
+    this.recoveryPrivateRoot,
+    this.authenticatedAssessment,
   });
 
   @override
@@ -187,7 +194,7 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
             constraints: const BoxConstraints(maxWidth: 740),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                if (_screen == _Screen.reader)
+                if (_screen == _Screen.reader || _screen == _Screen.recovery)
                   IconButton(
                     key: const ValueKey('reader-back'),
                     onPressed: _busy ? null : () => unawaited(_backToLibrary()),
@@ -209,6 +216,11 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
               ]),
               const SizedBox(height: 25),
               if (_screen == _Screen.reader) _readerView(c)
+              else if (_screen == _Screen.recovery && widget.recoveryPrivateRoot != null)
+                RecoverySafetyScreen(
+                  privateRoot: widget.recoveryPrivateRoot!,
+                  authenticatedAssessment: widget.authenticatedAssessment,
+                )
               else _libraryView(c),
             ]),
           )),
@@ -245,6 +257,21 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
         icon: const Icon(Icons.edit_note_outlined),
         label: const Text('Start a fictional page'),
       ),
+      if (widget.recoveryPrivateRoot != null) ...[
+        const SizedBox(height: 14),
+        OutlinedButton.icon(
+          key: const ValueKey('library-review-recovery'),
+          onPressed: _busy ? null : () => setState(() {
+            _screen = _Screen.recovery;
+            _error = null;
+          }),
+          icon: const Icon(Icons.shield_outlined),
+          label: const Text('Review restore safety'),
+        ),
+        const SizedBox(height: 5),
+        Text('Read-only scan. No restore or delete actions.',
+          style: TextStyle(color: c.secondary, fontSize: 12)),
+      ],
       const SizedBox(height: 27),
       Row(children: [
         Expanded(child: Text('Saved pages', style: editorial(c, 25))),
