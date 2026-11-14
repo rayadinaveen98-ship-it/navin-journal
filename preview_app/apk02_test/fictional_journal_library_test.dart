@@ -538,4 +538,155 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('fictional rename archive unarchive and Trash preserve encrypted history',
+      (tester) async {
+    await mount(tester);
+    await tapVisible(tester, 'library-create-journal');
+    final catalog = await workerCall(tester, worker.listJournals);
+    final secondId = catalog.firstWhere(
+      (j) => j['name'] == 'Imagined Notebook 2')['id'] as String;
+
+    // Scripted v1 and v2 are persisted in this second journal only.
+    await tapVisible(tester, 'library-create-fictional');
+    await tapVisible(tester, 'insert-fictional-sample');
+    await tapVisible(tester, 'connected-back');
+    final firstPage = (await workerCall(tester,
+      () => worker.listEntries(journalId: secondId))).single;
+    final pageId = firstPage['id'] as String;
+    await tapVisible(tester, 'library-open-' + pageId);
+    await tapVisible(tester, 'reader-edit');
+    await tapVisible(tester, 'insert-fictional-sample');
+    await tapVisible(tester, 'connected-back');
+    expect((await workerCall(tester,
+        () => worker.readEntry(pageId)))!['version'], 2);
+
+    await tapVisible(tester, 'library-journal-rename');
+    expect(find.text('Imagined Notebook 2 · revised'), findsWidgets);
+    expect((await workerCall(tester, worker.listJournals)).firstWhere(
+      (j) => j['id'] == secondId)['name'], 'Imagined Notebook 2 · revised');
+
+    await tapVisible(tester, 'library-journal-archive');
+    expect(find.byKey(const ValueKey('library-archived-readonly')),
+      findsOneWidget);
+    expect(tester.widget<FilledButton>(
+      find.byKey(const ValueKey('library-create-fictional'))).onPressed,
+      isNull);
+    await tapVisible(tester, 'library-open-' + pageId);
+    expect(tester.widget<FilledButton>(
+      find.byKey(const ValueKey('reader-edit'))).onPressed, isNull);
+    await tapVisible(tester, 'reader-back');
+
+    await tapVisible(tester, 'library-journal-archive');
+    expect(find.byKey(const ValueKey('library-archived-readonly')),
+      findsNothing);
+    expect(tester.widget<FilledButton>(
+      find.byKey(const ValueKey('library-create-fictional'))).onPressed,
+      isNotNull);
+
+    await tapVisible(tester, 'library-journal-trash');
+    expect(find.byKey(const ValueKey('journal-trash-confirm')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('journal-trash-cancel')));
+    await settleRealWorker(tester);
+    expect((await workerCall(tester, () => worker.listJournals(
+        includeTrash: true))).firstWhere(
+        (j) => j['id'] == secondId)['deletedAtMs'], isNull);
+
+    await tapVisible(tester, 'library-journal-trash');
+    await tester.tap(find.byKey(const ValueKey('journal-trash-confirm')));
+    await settleRealWorker(tester);
+    expect(find.byKey(ValueKey('library-trashed-' + secondId)), findsOneWidget);
+    expect(find.byKey(ValueKey('library-open-' + pageId)), findsNothing);
+    final trashed = await workerCall(tester,
+      () => worker.listJournals(includeTrash: true));
+    expect(trashed.firstWhere(
+        (j) => j['id'] == secondId)['deletedAtMs'], isNotNull);
+    expect((await workerCall(tester,
+        () => worker.listEntries(journalId: secondId,
+          includeTrash: true))).single['version'], 2);
+
+    await tapVisible(tester, 'library-restore-' + secondId);
+    final restored = await workerCall(tester, worker.listJournals);
+    expect(restored.firstWhere(
+        (j) => j['id'] == secondId)['deletedAtMs'], isNull);
+    expect((await workerCall(tester, () => worker.historyCount(pageId)), 1);
+    expect((await workerCall(tester,
+        () => worker.readEntry(pageId)))!['version'], 2);
+    expect(find.byKey(ValueKey('library-trashed-' + secondId)), findsNothing);
+    expect(await workerCall(tester, worker.integrityCheck), isTrue);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('last accessible journal cannot be trashed in UI or worker',
+      (tester) async {
+    await mount(tester);
+    expect(tester.widget<OutlinedButton>(
+      find.byKey(const ValueKey('library-journal-trash'))).onPressed, isNull);
+    final rejected = await workerCall(tester, () async {
+      try {
+        await worker.manageFictionalJournal(
+          journalId: journal, activeJournalId: journal,
+          operation: 'trash');
+        return false;
+      } on JournalEditorWorkerUnavailable {
+        return true;
+      }
+    });
+    expect(rejected, isTrue);
+    final journals = await workerCall(tester,
+      () => worker.listJournals(includeTrash: true));
+    expect(journals.length, 1);
+    expect(journals.single['deletedAtMs'], isNull);
+    expect(find.byKey(const ValueKey('library-empty')), findsOneWidget);
+    expect(await workerCall(tester, worker.integrityCheck), isTrue);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('restore preserves archived state and does not replace current journal',
+      (tester) async {
+    await workerVoid(tester, worker.close);
+    late String archivedId;
+    late String pageId;
+    final vault = JournalVault.open(path, key: key);
+    try {
+      archivedId = vault.createJournal('Imaginary Forgotten Journal');
+      pageId = vault.createEntry(
+        journalId: archivedId, title: 'Recovered imaginary page',
+        body: 'Fictional content only · తెలుగు',
+      );
+      vault.archiveJournal(archivedId, archived: true);
+      vault.trashJournal(archivedId);
+    } finally {
+      vault.close();
+    }
+    worker = await workerCall(tester,
+        () => JournalEditorWorker.open(path, key: key));
+    await mount(tester);
+    expect(find.byKey(ValueKey('library-trashed-' + archivedId)),
+      findsOneWidget);
+    await tapVisible(tester, 'library-restore-' + archivedId);
+    final catalog = await workerCall(tester, worker.listJournals);
+    final found = catalog.firstWhere((j) => j['id'] == archivedId);
+    expect(found['deletedAtMs'], isNull);
+    expect(found['archived'], isTrue);
+    expect(find.byKey(ValueKey('library-open-' + pageId)), findsNothing);
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('library-journal-switch')));
+    await tester.tap(find.byKey(const ValueKey('library-journal-switch')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Imaginary Forgotten Journal · archived').last);
+    await settleRealWorker(tester);
+    expect(find.byKey(ValueKey('library-open-' + pageId)), findsOneWidget);
+    expect(find.byKey(const ValueKey('library-archived-readonly')),
+      findsOneWidget);
+    expect(tester.widget<FilledButton>(
+      find.byKey(const ValueKey('library-create-fictional'))).onPressed,
+      isNull);
+    expect(await workerCall(tester, worker.integrityCheck), isTrue);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
 }
