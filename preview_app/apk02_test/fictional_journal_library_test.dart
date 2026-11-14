@@ -12,6 +12,7 @@ import 'package:navin_journal_core/restore_staging_inventory.dart';
 import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
 import 'package:navin_journal_editor/fictional_recovery_rehearsal.dart';
+import 'package:navin_journal_editor/fictional_archive_exporter.dart';
 import 'package:navin_journal_editor/portable_recovery_worker.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_recovery_archive_spike/product_encrypted_archive.dart';
@@ -85,6 +86,8 @@ void main() {
     Future<RestoreAssessment> Function()? assessment,
     Future<List<StagingObservation>> Function(Directory)? inventoryLoader,
     Future<FictionalRecoveryRehearsalReport> Function()? rehearsal,
+    Future<FictionalArchiveExportReceipt?> Function()? externalExport,
+    Future<void> Function()? hideExternalKey,
   }) async {
     await tester.pumpWidget(MaterialApp(home: FictionalJournalLibrary(
       worker: worker, journalId: journal,
@@ -92,6 +95,8 @@ void main() {
       authenticatedAssessment: assessment,
       inventoryLoader: inventoryLoader,
       testRehearsal: rehearsal,
+      testExternalExport: externalExport,
+      testHideRecoveryKey: hideExternalKey,
     )));
     await settleRealWorker(tester);
   }
@@ -384,6 +389,51 @@ void main() {
     expect(find.byKey(const ValueKey('rehearsal-not-backup')), findsNothing);
     expect(find.byKey(const ValueKey('rehearsal-no-backup-warning')),
       findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('fictional Library export is opt-in, key only after verified '
+      'response and original encrypted journal remains unchanged',
+      (tester) async {
+    final session = await workerCall(tester,
+        () => worker.startSession(journalId: journal));
+    session.controller.update(title: 'Invented diary',
+      body: 'No real private input · తెలుగు');
+    await workerVoid(tester, session.save);
+    final id = (await workerCall(tester, session.persistedEntryId))!;
+    expect(await workerCall(tester, session.closeSafely), isTrue);
+    final before = await workerCall(tester, () => worker.readEntry(id));
+    var exports = 0;
+    var hides = 0;
+    const keyText = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+    final observations = await workerCall(tester,
+        () => RestoreStagingInventory.inspect(temp));
+    await mount(tester, recoveryRoot: temp,
+      inventoryLoader: (_) async => observations,
+      externalExport: () async {
+        exports++;
+        return const FictionalArchiveExportReceipt(
+          manualRecoveryKey: keyText, encryptedArchiveBytes: 2048,
+          providerReadbackVerified: true);
+      },
+      hideExternalKey: () async { hides++; },
+    );
+    await tapVisible(tester, 'library-review-recovery');
+    expect(find.byKey(const ValueKey('external-export-warning')),
+      findsOneWidget);
+    expect(find.byKey(const ValueKey('external-recovery-key')), findsNothing);
+    expect(exports, 0);
+    await tapVisible(tester, 'external-export-start');
+    expect(exports, 1);
+    expect(find.text(keyText), findsOneWidget);
+    expect(find.textContaining('NOT A VERIFIED BACKUP'), findsOneWidget);
+    expect(await workerCall(tester, () => worker.readEntry(id)), before);
+    expect(await workerCall(tester, worker.integrityCheck), isTrue);
+    await tapVisible(tester, 'reader-back');
+    expect(find.text(keyText), findsNothing);
+    expect(hides, greaterThanOrEqualTo(1));
+    expect(find.byKey(ValueKey('library-open-' + id)), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
