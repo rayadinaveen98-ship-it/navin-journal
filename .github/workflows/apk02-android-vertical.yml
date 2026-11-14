@@ -83,6 +83,8 @@ jobs:
               f"    path: {root / 'spikes/flutter_bridge_probe'}\n"
               "  navin_journal_encrypted_spike:\n"
               f"    path: {root / 'spikes/encrypted_store'}\n"
+            "  navin_journal_recovery_archive_spike:\n"
+            f"    path: {root / 'spikes/recovery_archive'}\n"
               "  navin_journal_key_lifecycle_spike:\n"
               f"    path: {root / 'spikes/key_lifecycle'}\n"
           )
