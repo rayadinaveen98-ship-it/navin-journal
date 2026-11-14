@@ -28,6 +28,14 @@ class JournalEditorWorkerUnavailable implements Exception {
   String toString() => 'JournalEditorWorkerUnavailable';
 }
 
+/// A single-worker library read. Journals and selected pages are returned in
+/// one isolate response instead of relying on two Flutter fake-async turns.
+class EncryptedJournalShelf {
+  final List<Map<String, Object?>> journals;
+  final List<Map<String, Object?>> pages;
+  const EncryptedJournalShelf(this.journals, this.pages);
+}
+
 class JournalEditorWorker implements DraftCommitPort {
   final Isolate _worker;
   final ReceivePort _responses;
@@ -122,6 +130,22 @@ class JournalEditorWorker implements DraftCommitPort {
       for (final value in r['journals'] as List)
         Map<String, Object?>.from(value as Map),
     ];
+  }
+
+  /// Load the journal list and exactly one journal's pages together. All
+  /// decrypted metadata remains ephemeral on the caller's UI isolate.
+  Future<EncryptedJournalShelf> loadJournalShelf(String journalId) async {
+    final r = await _send('load_journal_shelf', {'journalId': journalId});
+    return EncryptedJournalShelf(
+      [
+        for (final value in r['journals'] as List)
+          Map<String, Object?>.from(value as Map),
+      ],
+      [
+        for (final value in r['entries'] as List)
+          Map<String, Object?>.from(value as Map),
+      ],
+    );
   }
 
   Future<List<Map<String, Object?>>> listEntries({
@@ -314,6 +338,22 @@ Future<void> _editorStorageWorker(List<Object> args) async {
             includeTrash: message['includeTrash'] == true,
           );
           reply.send({'id': id, 'ok': true, 'journals': journals});
+        case 'load_journal_shelf':
+          final journalId = message['journalId'] as String;
+          final journals = vault.listJournals();
+          if (!journals.any((j) =>
+              j['id'] == journalId && j['deletedAtMs'] == null)) {
+            throw const JournalUnavailable();
+          }
+          final pages = vault.listEntries(journalId: journalId);
+          if (pages.any((entry) =>
+              entry['journalId'] != journalId ||
+              entry['deletedAtMs'] != null)) {
+            throw const JournalUnavailable();
+          }
+          reply.send({
+            'id': id, 'ok': true, 'journals': journals, 'entries': pages,
+          });
         case 'list_entries':
           final entries = vault.listEntries(
             journalId: message['journalId'] as String?,
