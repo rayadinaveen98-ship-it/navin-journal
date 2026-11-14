@@ -107,6 +107,11 @@ jobs:
           flutter pub get
           dart format lib
           flutter analyze --no-pub
+      - name: Lint fictional Android picker driver before any emulator boot
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n "$GITHUB_WORKSPACE/preview_app/ci/apk02_android_saf_picker.sh"
       - name: Verify encrypted editor worker and portable archive contracts
         shell: bash
         run: |
