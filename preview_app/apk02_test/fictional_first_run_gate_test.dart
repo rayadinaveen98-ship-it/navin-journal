@@ -72,4 +72,53 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets('pending protected candidate blocks creating a new Library '
+      'before approval', (tester) async {
+    final key = GlobalKey<Apk02LibraryDiagnosticAppState>();
+    await tester.pumpWidget(Apk02LibraryDiagnosticApp(
+      key: key,
+      debugTestPrivateRoot: root,
+      debugTestActivationState:
+          FictionalActivationState.awaitingExplicitApproval,
+    ));
+    await tester.runAsync(() => key.currentState!.waitForFirstBoot());
+    await tester.pump();
+    final consent = find.byType(FictionalActivationConsentPanel);
+    await tester.runAsync(() => tester
+        .state<FictionalActivationConsentPanelState>(consent).waitForIdle());
+    await tester.pumpAndSettle();
+    final create = find.byKey(const ValueKey('first-run-new-journal'));
+    expect(tester.widget<FilledButton>(create).onPressed, isNull);
+    expect(find.byKey(const ValueKey('first-run-candidate-pending')),
+      findsOneWidget);
+    expect(Directory('${root.path}/nj_apk02_library_fixture')
+        .existsSync(), isFalse);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('uncertain retained state blocks creating a new Library '
+      'without attempting repair', (tester) async {
+    final key = GlobalKey<Apk02LibraryDiagnosticAppState>();
+    await tester.pumpWidget(Apk02LibraryDiagnosticApp(
+      key: key,
+      debugTestPrivateRoot: root,
+      debugTestActivationState:
+          FictionalActivationState.unsafeOrInterrupted,
+    ));
+    await tester.runAsync(() => key.currentState!.waitForFirstBoot());
+    await tester.pump();
+    await tester.pumpAndSettle();
+    // The existing safety gate blocks the entire setup screen for unknown or
+    // interrupted encrypted state. It is safer than a disabled create button.
+    expect(find.textContaining('No data has been reset'), findsOneWidget);
+    expect(find.byKey(const ValueKey('first-run-new-journal')),
+      findsNothing);
+    expect(find.byType(FictionalActivationConsentPanel), findsNothing);
+    expect(Directory('${root.path}/nj_apk02_library_fixture')
+      .existsSync(), isFalse);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }

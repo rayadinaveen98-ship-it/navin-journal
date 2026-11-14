@@ -23,6 +23,9 @@ class FictionalExternalImportSection extends StatefulWidget {
   final Future<FictionalRetainedRecoveryReport> Function(
       Uint8List archive, String key)? retainCandidate;
   final Future<FictionalRetainedRecoveryReport> Function()? reopenCandidate;
+  /// Presentation-only notification after a separately protected candidate
+  /// has actually been retained. Never grants consent or activates a vault.
+  final Future<void> Function()? onCandidateRetained;
   const FictionalExternalImportSection({
     super.key,
     required this.selectEncryptedDocument,
@@ -30,6 +33,7 @@ class FictionalExternalImportSection extends StatefulWidget {
     required this.hideProtectedInput,
     this.retainCandidate,
     this.reopenCandidate,
+    this.onCandidateRetained,
   });
 
   @override
@@ -150,6 +154,7 @@ class FictionalExternalImportSectionState
       _notice = null;
       _selectedDocument = null; // transfer ownership to isolated inspector
     });
+    var retainedSuccessfully = false;
     try {
       if (retain) {
         final action = widget.retainCandidate;
@@ -160,7 +165,10 @@ class FictionalExternalImportSectionState
             candidate.physicalDeviceRecoveryVerified) {
           throw const FictionalArchiveImportRejected();
         }
-        if (mounted) setState(() => _retainedReport = candidate);
+        if (mounted) {
+          setState(() => _retainedReport = candidate);
+          retainedSuccessfully = true;
+        }
       } else {
         final result = await widget.inspect(ciphertext, key);
         if (result.activeVaultReplaced ||
@@ -180,6 +188,15 @@ class FictionalExternalImportSectionState
       ciphertext.fillRange(0, ciphertext.length, 0);
       await _hideNativeInput();
       if (mounted) setState(() => _checking = false);
+    }
+    // A UI refresh failure must not misreport successful durable retention as
+    // a failed archive import. No activation or consent is implied here.
+    if (retainedSuccessfully) {
+      try {
+        await widget.onCandidateRetained?.call();
+      } catch (_) {
+        // The stored encrypted candidate remains protected and untouched.
+      }
     }
   }
 
