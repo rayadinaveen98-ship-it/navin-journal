@@ -298,7 +298,11 @@ void main() {
       trustedPrivateRoot: root, deviceProtector: fake,
     ), throwsA(isA<FictionalRetainedRecoveryRejected>()));
     expect(envelope.readAsStringSync(), raw);
-    expect(Directory('${root.path}/$candidateName/vault').existsSync()
+    expect(Directory('${root.path}/$candidateName/vault').existsSync(),
+      isTrue);
+    expect(await source.integrityCheck(), isTrue);
+  });
+
   Future<void> prepareCandidate() =>
       FictionalRetainedRecoveryCandidate.prepare(
         encryptedArchive: Uint8List.fromList(archive),
@@ -513,9 +517,5 @@ void main() {
     expect(envelope.readAsStringSync(), saved);
     expect(File('${active.path}/vault/journal.sqlite3').existsSync(), isTrue);
     expect(await source.readEntry(entryId), initialPage);
-  });
-,
-      isTrue);
-    expect(await source.integrityCheck(), isTrue);
   });
 }
