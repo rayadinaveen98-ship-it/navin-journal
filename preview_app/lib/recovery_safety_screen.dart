@@ -9,9 +9,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_core/restore_staging_inventory.dart';
+import 'package:navin_journal_editor/fictional_archive_exporter.dart';
 import 'package:navin_journal_editor/fictional_recovery_rehearsal.dart';
 
 import 'recovery_assessment_review.dart';
+import 'fictional_external_export_section.dart';
 import 'visuals.dart';
 
 class RecoverySafetyScreen extends StatefulWidget {
@@ -25,6 +27,9 @@ class RecoverySafetyScreen extends StatefulWidget {
   /// Debug-only: user requests an ephemeral encrypted export -> new-vault
   /// restore -> independent reopen. No archive or key is exported or kept.
   final Future<FictionalRecoveryRehearsalReport> Function()? rehearsal;
+  /// Native Android SAF provider export, or test callback; no user text.
+  final Future<FictionalArchiveExportReceipt?> Function()? externalExport;
+  final Future<void> Function()? hideExternalRecoveryKey;
 
   const RecoverySafetyScreen({
     super.key,
@@ -32,6 +37,8 @@ class RecoverySafetyScreen extends StatefulWidget {
     this.authenticatedAssessment,
     this.inventoryLoader,
     this.rehearsal,
+    this.externalExport,
+    this.hideExternalRecoveryKey,
   });
 
   @override
@@ -278,6 +285,16 @@ class RecoverySafetyScreenState extends State<RecoverySafetyScreen> {
               style: TextStyle(color: c.clay,
                 fontWeight: FontWeight.w600, fontSize: 12)),
           ],
+        ],
+        if (widget.externalExport != null &&
+            widget.hideExternalRecoveryKey != null) ...[
+          const SizedBox(height: 26),
+          Divider(color: c.stroke),
+          const SizedBox(height: 15),
+          FictionalExternalExportSection(
+            export: widget.externalExport!,
+            hideKey: widget.hideExternalRecoveryKey!,
+          ),
         ],
         const SizedBox(height: 20),
         Text('No private diary input or cleanup of unknown restore folders is permitted.',
