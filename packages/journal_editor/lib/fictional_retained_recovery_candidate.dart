@@ -63,6 +63,13 @@ class FictionalRetainedRecoveryCandidate {
       Directory(privateRoot.path + Platform.pathSeparator +
           candidateDirectoryName);
 
+  /// A sibling exclusive-create reservation serializes attempts even when
+  /// Directory.create() would silently accept an already existing directory.
+  /// It intentionally persists after success/failure; do not auto-delete an
+  /// uncertain candidate or release the reservation on crash recovery.
+  static File _reservation(Directory candidate) =>
+      File(candidate.path + '.reservation');
+
   static File _envelope(Directory root) =>
       File(root.path + Platform.pathSeparator + _envelopeName);
 
@@ -109,6 +116,8 @@ class FictionalRetainedRecoveryCandidate {
       // Refuse existing directories, files AND symlinks. Never recursively
       // delete, reuse, merge, rekey or 'fix up' an unknown candidate.
       if (await _type(candidate.path) != FileSystemEntityType.notFound ||
+          await _type(_reservation(candidate).path) !=
+              FileSystemEntityType.notFound ||
           encryptedArchive.isEmpty ||
           encryptedArchive.length > 32 * 1024 * 1024 ||
           encryptedArchive.length > ProductSnapshotCodec.maxPayloadBytes * 2) {
@@ -123,8 +132,13 @@ class FictionalRetainedRecoveryCandidate {
         archive: encryptedArchive, recoveryKey: recovery);
       injectFailure?.call('after_authentication_before_candidate');
 
-      // Creating a reserved fixed directory makes a crash visible to safe
-      // staging review and blocks subsequent automatic imports.
+      // File.create(exclusive:true) is the atomic inter-import reservation.
+      // A directory-absence check alone is racy on concurrent callers.
+      // The empty sibling marker reveals interrupted reservations and is
+      // never removed automatically, even if the import later fails.
+      await _reservation(candidate).create(exclusive: true);
+      injectFailure?.call('after_exclusive_reservation');
+      // Directory creation is now serialized by the permanent reservation.
       await candidate.create(recursive: false);
       injectFailure?.call('after_candidate_reserved');
 
