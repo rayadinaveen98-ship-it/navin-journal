@@ -8,6 +8,7 @@ import 'package:navin_journal_core/native_restore_publisher.dart';
 import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_core/staged_product_restore.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
+import 'package:navin_journal_editor/fictional_recovery_rehearsal.dart';
 import 'package:navin_journal_editor/portable_recovery_worker.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_recovery_archive_spike/product_encrypted_archive.dart';
@@ -62,6 +63,33 @@ void main() {
     offlineKey.destroy();
     archive.fillRange(0, archive.length, 0);
     if (root.existsSync()) root.deleteSync(recursive: true);
+  });
+
+  test('scripted backup rehearsal restores and independently reopens '
+      'encrypted snapshot without changing the active vault', () async {
+    final original = await worker.readEntry(entryId);
+    final before = await worker.listJournals(includeTrash: true);
+    final report = await FictionalRecoveryRehearsal.run(source: worker);
+    expect(report.journals, 1);
+    expect(report.entries, 1);
+    expect(report.revisions, 1);
+    expect(report.attachments, 0);
+    expect(report.isOffDeviceBackup, isFalse);
+    expect(report.replacedActiveJournal, isFalse);
+    expect(await worker.readEntry(entryId), original);
+    expect(await worker.listJournals(includeTrash: true), before);
+    expect(await worker.integrityCheck(), isTrue);
+    expect(Directory(root.path + '/new-install').existsSync(), isFalse);
+  });
+
+  test('recovery rehearsal fails closed if source worker is unavailable',
+      () async {
+    await worker.close();
+    await expectLater(
+      FictionalRecoveryRehearsal.run(source: worker),
+      throwsA(isA<RecoveryRehearsalUnavailable>()),
+    );
+    expect(recovered.existsSync(), isFalse);
   });
 
   test('authenticated export contains no recognizable fictional plaintext', () async {
