@@ -10,6 +10,7 @@
 /// native no-replace/fsync before any real user data can be restored.
 library;
 
+import 'dart:convert';
 import 'dart:isolate';
 import 'dart:io';
 import 'dart:typed_data';
@@ -36,6 +37,7 @@ class PortableRecoveryWorker {
         destination.path.trim().isEmpty) {
       throw const ProductRestoreRejected();
     }
+    final destinationPath = destination.path;
     final recoveryBytes = recoveryKey.snapshot();
     final dbHex = destinationKey.hex;
     final dbBytes = Uint8List.fromList(
@@ -55,14 +57,14 @@ class PortableRecoveryWorker {
         try {
           // No passphrase, diary bytes or key text should be logged.
           isolatedRecovery = RecoveryKey.parse(
-            _encodePortableKey(rawRecovery),
+            base64Url.encode(rawRecovery).replaceAll('=', ''),
           );
           isolatedDb = TestVaultKey.fromBytes(rawDatabase);
           return await StagedProductRestorer().restoreNew(
             encryptedArchive: archive,
             recoveryKey: isolatedRecovery,
             destinationKey: isolatedDb,
-            destination: Directory(destination.path),
+            destination: Directory(destinationPath),
           );
         } finally {
           isolatedRecovery?.destroy();
@@ -78,24 +80,4 @@ class PortableRecoveryWorker {
     }
   }
 
-  static String _encodePortableKey(Uint8List key) {
-    // RecoveryKey.parse has the canonical 43-character encoding contract.
-    const alphabet =
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
-    if (key.length != 32) throw const ProductRestoreRejected();
-    final out = StringBuffer();
-    var bits = 0;
-    var pending = 0;
-    for (final byte in key) {
-      pending = (pending << 8) | byte;
-      bits += 8;
-      while (bits >= 6) {
-        bits -= 6;
-        out.write(alphabet[(pending >> bits) & 63]);
-      }
-      pending &= (1 << bits) - 1;
-    }
-    if (bits > 0) out.write(alphabet[(pending << (6 - bits)) & 63]);
-    return out.toString();
-  }
 }
