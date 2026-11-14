@@ -52,6 +52,7 @@ jobs:
           cp "$GITHUB_WORKSPACE/preview_app/lib/apk02_keyboard_lab_main.dart" "$TARGET/lib/"
           rm "$TARGET/test/widget_test.dart"
           cp "$GITHUB_WORKSPACE/preview_app/apk02_test/fictional_keyboard_lab_test.dart" "$TARGET/test/"
+          sed -i 's#package:navin_journal_preview/#package:navin_journal_keyboard_lab/#g' "$TARGET/test/"*.dart
           echo "KEYBOARD_LAB_ROOT=$TARGET" >> "$GITHUB_ENV"
       - name: Format and strictly analyze app and tests
         shell: bash
