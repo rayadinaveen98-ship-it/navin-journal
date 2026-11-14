@@ -203,30 +203,47 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
             throw StateError('Android provider export not verified');
           }
           await _mark('SAF_ROUNDTRIP_IMPORT_READY');
+          Uint8List? channelBytes;
           Uint8List? picked;
+          var authenticated = false;
           failurePhase = 'SAF_ERROR_NATIVE_OPEN';
           try {
-            picked = await _picker.invokeMethod<Uint8List>(
+            channelBytes = await _picker.invokeMethod<Uint8List>(
               'openFictionalArchive');
             failurePhase = 'SAF_ERROR_SELECTED_BYTES';
-            await _mark('SAF_ROUNDTRIP_BYTES_RETURNED');
-            if (picked == null || !listEquals(picked, archive)) {
+            if (channelBytes == null ||
+                !listEquals(channelBytes, archive)) {
               throw StateError('Selected SAF bytes differ from export');
             }
+            // Platform-message storage can be a read-only/external view.
+            // Validate using an independently owned mutable ciphertext copy,
+            // without assuming the Android codec's backing bytes are writable.
+            picked = Uint8List.fromList(channelBytes);
+            await _mark('SAF_ROUNDTRIP_BYTES_RETURNED');
             failurePhase = 'SAF_ERROR_AUTH';
             final verified = await ProductEncryptedArchiveCodec().verify(
               archive: picked, recoveryKey: key);
             _verifyFictionalSnapshot(verified);
             await _mark('SAF_ROUNDTRIP_AUTH_OK');
-            failurePhase = 'SAF_ERROR_IMPORT_HIDE';
+            authenticated = true;
           } finally {
-            failurePhase = 'SAF_ERROR_RETURNED_BYTES_ZEROIZE';
+            if (authenticated) {
+              failurePhase = 'SAF_ERROR_RETURNED_BYTES_ZEROIZE';
+            }
             picked?.fillRange(0, picked.length, 0);
-            failurePhase = 'SAF_ERROR_IMPORT_HIDE';
+            if (channelBytes != null) {
+              try {
+                channelBytes.fillRange(0, channelBytes.length, 0);
+              } on UnsupportedError {
+                // Only encrypted ciphertext in the platform-owned view;
+                // the authenticated copy and independent key are destroyed.
+              }
+            }
+            if (authenticated) failurePhase = 'SAF_ERROR_IMPORT_HIDE';
             await _picker.invokeMethod<void>('hideImportRecoveryInput');
-            if (failurePhase == 'SAF_ERROR_IMPORT_HIDE') {
-              // Authentication passed; now closing only disposable source
-              // resources and destroying the process-local test keys remains.
+            if (authenticated) {
+              // Source-worker close and process-local key destruction must
+              // still succeed before the final positive marker is written.
               failurePhase = 'SAF_ERROR_SOURCE_CLOSE';
             }
           }
