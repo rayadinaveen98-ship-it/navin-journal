@@ -145,6 +145,7 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
         throw StateError('Disposable Android test context unavailable');
       }
       if (phase == 'saf_import_cancel') {
+        await _mark('SAF_IMPORT_READY');
         try {
           final cancelled =
               await _picker.invokeMethod<Uint8List>('openFictionalArchive');
@@ -158,6 +159,7 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
         await _mark('SAF_IMPORT_CANCELLED');
       } else if (phase == 'saf_export_cancel') {
         await _withFictionalArchive(Directory(rootPath), (archive, _) async {
+          await _mark('SAF_EXPORT_READY');
           try {
             final result = await _picker.invokeMethod<bool>(
               'saveFictionalArchive', {'archive': archive});
@@ -171,6 +173,7 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
         await _mark('SAF_EXPORT_CANCELLED');
       } else if (phase == 'saf_roundtrip') {
         await _withFictionalArchive(Directory(rootPath), (archive, key) async {
+          await _mark('SAF_ROUNDTRIP_EXPORT_READY');
           bool saved;
           try {
             saved = await _picker.invokeMethod<bool>(
@@ -181,6 +184,7 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
           if (!saved) {
             throw StateError('Android provider export not verified');
           }
+          await _mark('SAF_ROUNDTRIP_IMPORT_READY');
           Uint8List? picked;
           try {
             picked = await _picker.invokeMethod<Uint8List>(
