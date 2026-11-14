@@ -11,6 +11,7 @@ import 'package:navin_journal_core/native_restore_publisher.dart';
 import 'package:navin_journal_core/restore_staging_inventory.dart';
 import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
+import 'package:navin_journal_editor/fictional_recovery_rehearsal.dart';
 import 'package:navin_journal_editor/portable_recovery_worker.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_recovery_archive_spike/product_encrypted_archive.dart';
@@ -83,12 +84,14 @@ void main() {
     Directory? recoveryRoot,
     Future<RestoreAssessment> Function()? assessment,
     Future<List<StagingObservation>> Function(Directory)? inventoryLoader,
+    Future<FictionalRecoveryRehearsalReport> Function()? rehearsal,
   }) async {
     await tester.pumpWidget(MaterialApp(home: FictionalJournalLibrary(
       worker: worker, journalId: journal,
       recoveryPrivateRoot: recoveryRoot,
       authenticatedAssessment: assessment,
       inventoryLoader: inventoryLoader,
+      testRehearsal: rehearsal,
     )));
     await settleRealWorker(tester);
   }
@@ -329,10 +332,18 @@ void main() {
     final originalFile = File(orphan.path + '/journal.sqlite3')
       ..writeAsBytesSync(existingBytes);
     final originals = await workerCall(tester, () => worker.readEntry(pageId));
+    // Real archive/export/new encrypted vault/independent reopen happens
+    // outside the Flutter fake-time widget zone. This follows the existing
+    // authenticated stage-assessment testing boundary.
+    final verified = await workerCall(tester,
+        () => FictionalRecoveryRehearsal.run(source: worker));
+    expect(verified.isOffDeviceBackup, isFalse);
+    expect(verified.replacedActiveJournal, isFalse);
     final items = await workerCall(tester,
         () => RestoreStagingInventory.inspect(temp));
     await mount(tester, recoveryRoot: temp,
-      inventoryLoader: (_) async => items);
+      inventoryLoader: (_) async => items,
+      rehearsal: () async => verified);
     await tapVisible(tester, 'library-review-recovery');
     expect(find.byKey(const ValueKey('rehearsal-no-backup-warning')),
       findsOneWidget);
@@ -362,9 +373,10 @@ void main() {
     final items = await workerCall(tester,
         () => RestoreStagingInventory.inspect(temp));
     await mount(tester, recoveryRoot: temp,
-      inventoryLoader: (_) async => items);
+      inventoryLoader: (_) async => items,
+      rehearsal: () async =>
+          throw const RecoveryRehearsalUnavailable());
     await tapVisible(tester, 'library-review-recovery');
-    await workerVoid(tester, worker.close);
     await tapVisible(tester, 'recovery-run-rehearsal');
     expect(find.byKey(const ValueKey('rehearsal-error')), findsOneWidget);
     expect(find.byKey(const ValueKey('rehearsal-success')), findsNothing);
