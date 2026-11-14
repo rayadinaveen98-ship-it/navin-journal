@@ -12,6 +12,9 @@
 ///   retain_candidate    - real AndroidKeystore wraps distinct retained vault
 ///   reopen_candidate    - independent process opens retained vault + history
 ///   retire_candidate_alias - key loss fails closed without deleting bytes
+///   activate_candidate   - explicit safe promotion to ABSENT APK02 active slot
+///   reopen_activated     - force-stop reopen of promoted encrypted directory
+///   retire_active_alias  - key loss preserves promoted active and other vault
 ///
 /// The host test retrieves archive + separate secret outside the app sandbox,
 /// uninstalls this entire diagnostic package, reinstalls, and only then
@@ -30,6 +33,7 @@ import 'package:navin_journal_core/staged_product_restore.dart';
 import 'package:navin_journal_bridge_probe/android_key_bridge.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
 import 'package:navin_journal_editor/fictional_retained_recovery_candidate.dart';
+import 'package:navin_journal_editor/fictional_recovery_activator.dart';
 import 'package:navin_journal_editor/portable_recovery_worker.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_key_lifecycle_spike/key_envelope_coordinator.dart';
@@ -109,6 +113,15 @@ class _PortableRecoveryDiagnosticAppState
         case 'retire_candidate_alias':
           await _retireCandidateAlias(Directory(root));
           await _marker('CANDIDATE_KEY_LOSS_SAFE');
+        case 'activate_candidate':
+          await _activateCandidate(Directory(root));
+          await _marker('ACTIVE_ACTIVATED');
+        case 'reopen_activated':
+          await _reopenActivated(Directory(root));
+          await _marker('ACTIVE_REOPEN_OK');
+        case 'retire_active_alias':
+          await _retireActiveAlias(Directory(root));
+          await _marker('ACTIVE_KEY_LOSS_SAFE');
         default:
           throw StateError('Unknown test phase');
       }
@@ -588,6 +601,92 @@ class _PortableRecoveryDiagnosticAppState
       throw StateError('Lost wrapping key unexpectedly changed vault');
     }
     // The separate portable-restored fixture should remain unlockable.
+    await _reopenFixture(root);
+  }
+
+  /// ADB sets an explicit test-intent phase representing a deliberate
+  /// approval gesture. The real first-run UI separately requires a checkbox
+  /// and exact typed confirmation before calling the same service.
+  Future<void> _activateCandidate(Directory root) async {
+    if (await FictionalRecoveryActivator.inspect(
+          trustedPrivateRoot: root) !=
+        FictionalActivationState.awaitingExplicitApproval) {
+      throw StateError('Active destination not empty or candidate invalid');
+    }
+    final receipt = await FictionalRecoveryActivator.approveAndActivate(
+      trustedPrivateRoot: root,
+      deviceProtector: FlutterAndroidKeyProtector(),
+      userExplicitlyApproved: true,
+    );
+    if (receipt.journals != 1 || receipt.entries != 1 ||
+        receipt.revisions != 1 || receipt.attachments != 0 ||
+        receipt.existingVaultReplaced || receipt.privateWritingApproved ||
+        receipt.deviceRecoveryCertified) {
+      throw StateError('Fictional approval result not accepted');
+    }
+    if (Directory(root.path + '/' +
+        FictionalRetainedRecoveryCandidate.candidateDirectoryName)
+        .existsSync()) {
+      throw StateError('Candidate source still present after atomic move');
+    }
+    await _reopenActivated(root);
+  }
+
+  Future<void> _reopenActivated(Directory root) async {
+    final receipt = await FictionalRecoveryActivator.reopenActivated(
+      trustedPrivateRoot: root,
+      deviceProtector: FlutterAndroidKeyProtector(),
+    );
+    if (receipt.journals != 1 || receipt.entries != 1 ||
+        receipt.revisions != 1 || receipt.attachments != 0) {
+      throw StateError('Activated encrypted counts changed after restart');
+    }
+    final activated = Directory(root.path + '/' +
+        FictionalRecoveryActivator.activeDirectoryName);
+    final path = activated.path + '/vault/journal.sqlite3';
+    final key = await _unlockDeviceKey(
+      _envelope(File(activated.path + '/envelope.json')), path);
+    try {
+      await _verifyRestored(path, key);
+      await _reopenFixture(root); // Separate journal remains untouched.
+    } finally {
+      key.destroy();
+    }
+  }
+
+  Future<void> _retireActiveAlias(Directory root) async {
+    final activated = Directory(root.path + '/' +
+        FictionalRecoveryActivator.activeDirectoryName);
+    final envelope = File(activated.path + '/envelope.json');
+    final db = File(activated.path + '/vault/journal.sqlite3');
+    final marker = File(activated.path + '/' +
+        NativeRestorePublisher.fictionalActivationMarker);
+    final lock = File(root.path + '/' +
+        FictionalRecoveryActivator.activationReservationName);
+    if (!await envelope.exists() || !await db.exists() ||
+        !await marker.exists() || !await lock.exists()) {
+      throw StateError('Promoted encrypted fixture missing');
+    }
+    final envelopeBefore = await envelope.readAsString();
+    final dbBefore = await db.length();
+    final keyProvider = FlutterAndroidKeyProtector();
+    final doc = await KeyEnvelopeCoordinator(
+      envelopeFile: envelope, protector: keyProvider).readEnvelope();
+    await keyProvider.retire(doc.activeAlias);
+    var refused = false;
+    try {
+      await FictionalRecoveryActivator.reopenActivated(
+        trustedPrivateRoot: root, deviceProtector: keyProvider);
+    } on FictionalActivationRejected {
+      refused = true;
+    }
+    if (!refused ||
+        !await db.exists() || !await envelope.exists() ||
+        !await marker.exists() || !await lock.exists() ||
+        await envelope.readAsString() != envelopeBefore ||
+        await db.length() != dbBefore) {
+      throw StateError('Key loss damaged activated encrypted bytes');
+    }
     await _reopenFixture(root);
   }
 
