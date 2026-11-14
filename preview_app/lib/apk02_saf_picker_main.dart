@@ -137,6 +137,9 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
   }
 
   Future<void> _run() async {
+    // Only these fixed, nonsecret classifications are allowed in CI. Never
+    // log exception messages, ciphertext, recovery keys or provider URIs.
+    var failurePhase = 'SAF_ERROR_SETUP';
     try {
       final phase = await _diagnostic.invokeMethod<String>('getStartPhase');
       final rootPath =
@@ -173,6 +176,7 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
         await _mark('SAF_EXPORT_CANCELLED');
       } else if (phase == 'saf_roundtrip') {
         await _withFictionalArchive(Directory(rootPath), (archive, key) async {
+          failurePhase = 'SAF_ERROR_EXPORT';
           await _mark('SAF_ROUNDTRIP_EXPORT_READY');
           bool saved;
           try {
@@ -186,17 +190,21 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
           }
           await _mark('SAF_ROUNDTRIP_IMPORT_READY');
           Uint8List? picked;
+          failurePhase = 'SAF_ERROR_NATIVE_OPEN';
           try {
             picked = await _picker.invokeMethod<Uint8List>(
               'openFictionalArchive');
+            failurePhase = 'SAF_ERROR_SELECTED_BYTES';
             await _mark('SAF_ROUNDTRIP_BYTES_RETURNED');
             if (picked == null || !listEquals(picked, archive)) {
               throw StateError('Selected SAF bytes differ from export');
             }
+            failurePhase = 'SAF_ERROR_AUTH';
             final verified = await ProductEncryptedArchiveCodec().verify(
               archive: picked, recoveryKey: key);
             _verifyFictionalSnapshot(verified);
             await _mark('SAF_ROUNDTRIP_AUTH_OK');
+            failurePhase = 'SAF_ERROR_CLEANUP';
           } finally {
             picked?.fillRange(0, picked.length, 0);
             await _picker.invokeMethod<void>('hideImportRecoveryInput');
@@ -211,7 +219,7 @@ class _SafPickerProbeState extends State<_SafPickerProbe> {
       }
     } catch (_) {
       try {
-        await _mark('FAILED');
+        await _mark(failurePhase);
       } catch (_) {
         // Missing native marker will be detected by the bounded ADB timeout.
       }

@@ -323,6 +323,10 @@ class MainActivity : FlutterActivity() {
                             "SAF_ROUNDTRIP_IMPORT_READY",
                             "SAF_ROUNDTRIP_BYTES_RETURNED",
                             "SAF_ROUNDTRIP_AUTH_OK",
+                            "SAF_ERROR_SETUP", "SAF_ERROR_EXPORT",
+                            "SAF_ERROR_NATIVE_OPEN",
+                            "SAF_ERROR_SELECTED_BYTES",
+                            "SAF_ERROR_AUTH", "SAF_ERROR_CLEANUP",
                             "IME_PREEDIT_READY", "IME_BACKGROUND_ACK_V1",
                             "IME_FINAL_ACK_V2", "IME_REOPENED_V2",
                         )

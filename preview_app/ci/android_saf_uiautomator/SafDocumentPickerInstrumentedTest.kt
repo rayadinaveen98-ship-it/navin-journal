@@ -33,7 +33,9 @@ class SafDocumentPickerInstrumentedTest {
         while (SystemClock.uptimeMillis() < deadline) {
             val current = marker()
             if (current == expected) return true
-            if (current == "FAILED") fail("Disposable probe rejected $expected")
+            if (current == "FAILED" || current.startsWith("SAF_ERROR_")) {
+                fail("Disposable probe rejected $expected at $current")
+            }
             SystemClock.sleep(450L)
         }
         return false
