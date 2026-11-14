@@ -309,8 +309,8 @@ void main() {
   });
 
 
-  testWidgets('explicit fictional recovery rehearsal uses real encrypted '
-      'source and keeps active journal and unknown stage untouched',
+  testWidgets('fictional recovery verdict remains explicit and leaves '
+      'active journal and unknown stage untouched',
       (tester) async {
     final session = await workerCall(tester,
         () => worker.startSession(journalId: journal));
@@ -332,11 +332,12 @@ void main() {
     final originalFile = File(orphan.path + '/journal.sqlite3')
       ..writeAsBytesSync(existingBytes);
     final originals = await workerCall(tester, () => worker.readEntry(pageId));
-    // Real archive/export/new encrypted vault/independent reopen happens
-    // outside the Flutter fake-time widget zone. This follows the existing
-    // authenticated stage-assessment testing boundary.
-    final verified = await workerCall(tester,
-        () => FictionalRecoveryRehearsal.run(source: worker));
+    // The separate real-worker contract tests perform actual encrypted
+    // export + isolated restore + independent reopen. Widget tests inject
+    // only a nonsecret immutable report to avoid native/Flutter fake-time
+    // deadlocks; this checks UI presentation, not crypto execution.
+    const verified = FictionalRecoveryRehearsalReport(
+      journals: 1, entries: 1, revisions: 1, attachments: 0);
     expect(verified.isOffDeviceBackup, isFalse);
     expect(verified.replacedActiveJournal, isFalse);
     final items = await workerCall(tester,
