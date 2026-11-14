@@ -3,10 +3,14 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:navin_journal_autosave_spike/draft_autosave.dart';
+import 'package:navin_journal_core/journal_vault.dart';
+import 'package:navin_journal_core/native_restore_publisher.dart';
+import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_core/staged_product_restore.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
 import 'package:navin_journal_editor/portable_recovery_worker.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
+import 'package:navin_journal_recovery_archive_spike/product_encrypted_archive.dart';
 import 'package:navin_journal_recovery_archive_spike/recovery_archive.dart';
 import 'package:test/test.dart';
 
@@ -233,6 +237,72 @@ void main() {
       throwsA(isA<ProductRestoreRejected>()),
     );
     expect(recovered.existsSync(), isFalse);
+  });
+
+  test('background worker can assess an abandoned encrypted stage without promotion',
+      () async {
+    final parent = Directory(root.path + '/quarantine');
+    parent.createSync();
+    final candidate = NativeRestorePublisher.stagePrefix + 'workerABC123';
+    final stage = Directory(parent.path + '/' + candidate);
+    stage.createSync();
+    final db = JournalVault.open(stage.path + '/journal.sqlite3',
+        key: newKey, create: true);
+    try {
+      await db.importIntoEmpty(await ProductEncryptedArchiveCodec().verify(
+        recoveryKey: offlineKey, archive: archive));
+    } finally {
+      db.close();
+    }
+    final before = File(stage.path + '/journal.sqlite3').readAsBytesSync();
+    final report = await PortableRecoveryWorker.assessQuarantinedStage(
+      privateParent: parent, candidateBasename: candidate,
+      encryptedArchive: archive, recoveryKey: offlineKey,
+      stagedDatabaseKey: newKey,
+    );
+    expect(report.status, RestoreAssessmentStatus.verifiedQuarantined);
+    expect(report.isAuthenticatedMatch, isTrue);
+    expect(report.publicationMarkerObserved, isFalse);
+    expect(report.journalCount, 1);
+    expect(report.entryCount, 1);
+    expect(report.revisionCount, 1);
+    expect(stage.existsSync(), isTrue);
+    expect(File(stage.path + '/journal.sqlite3').readAsBytesSync(), before);
+    expect(await worker.integrityCheck(), isTrue);
+  });
+
+  test('background worker assessment rejects wrong archive key without data loss',
+      () async {
+    final parent = Directory(root.path + '/quarantine');
+    parent.createSync();
+    final candidate = NativeRestorePublisher.stagePrefix + 'workerABC123';
+    final stage = Directory(parent.path + '/' + candidate)..createSync();
+    File(stage.path + '/journal.sqlite3').writeAsBytesSync([1, 2, 3]);
+    final wrong = RecoveryKey.random();
+    try {
+      final report = await PortableRecoveryWorker.assessQuarantinedStage(
+        privateParent: parent, candidateBasename: candidate,
+        encryptedArchive: archive, recoveryKey: wrong,
+        stagedDatabaseKey: newKey,
+      );
+      expect(report.status, RestoreAssessmentStatus.untrustedArchive);
+      expect(File(stage.path + '/journal.sqlite3').readAsBytesSync(),
+          [1, 2, 3]);
+    } finally {
+      wrong.destroy();
+    }
+  });
+
+  test('background worker assessment blocks path traversal and unsafe names',
+      () async {
+    final report = await PortableRecoveryWorker.assessQuarantinedStage(
+      privateParent: root,
+      candidateBasename: '../../do-not-read',
+      encryptedArchive: archive, recoveryKey: offlineKey,
+      stagedDatabaseKey: newKey,
+    );
+    expect(report.status, RestoreAssessmentStatus.blocked);
+    expect(await worker.integrityCheck(), isTrue);
   });
 
 }
