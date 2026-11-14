@@ -87,14 +87,20 @@ class SafDocumentPickerInstrumentedTest {
         assertTrue("Real DocumentsUI unavailable", pickerVisible)
     }
 
-    private fun click(node: UiObject2) {
+    private fun clickableAncestor(node: UiObject2): UiObject2? {
         var target: UiObject2? = node
         repeat(5) {
-            if (target == null || target!!.isClickable) return@repeat
+            if (target == null) return null
+            if (target!!.isClickable) return target
             target = target!!.parent
         }
+        return null
+    }
+
+    private fun click(node: UiObject2) {
+        val target = clickableAncestor(node)
         assertTrue("Clickable Android accessibility node unavailable",
-            target != null && target!!.isClickable)
+            target != null)
         target!!.click()
     }
 
@@ -102,7 +108,14 @@ class SafDocumentPickerInstrumentedTest {
         picker()
         val downloads = device.findObject(By.text("Downloads"))
         if (downloads != null) {
-            click(downloads)
+            val navigationItem = clickableAncestor(downloads)
+            if (navigationItem != null) {
+                navigationItem.click()
+            } else {
+                // Android's current-root breadcrumb is a non-clickable label.
+                // It is not a missing action or an invitation to tap blindly.
+                println("DOCUMENTSUI_DOWNLOADS_CURRENT_ROOT")
+            }
             return
         }
         val drawer = listOf(
