@@ -9,6 +9,9 @@
 ///   fault_pre_publish   - simulated ENOSPC leaves no published vault
 ///   fault_post_publish  - simulated ENOSPC after native rename preserves vault
 ///   reopen_faulted      - Keystore unlock after force-stop of ambiguous restore
+///   retain_candidate    - real AndroidKeystore wraps distinct retained vault
+///   reopen_candidate    - independent process opens retained vault + history
+///   retire_candidate_alias - key loss fails closed without deleting bytes
 ///
 /// The host test retrieves archive + separate secret outside the app sandbox,
 /// uninstalls this entire diagnostic package, reinstalls, and only then
@@ -17,6 +20,7 @@ library;
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -26,6 +30,7 @@ import 'package:navin_journal_core/restore_staging_inventory.dart';
 import 'package:navin_journal_core/staged_product_restore.dart';
 import 'package:navin_journal_bridge_probe/android_key_bridge.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
+import 'package:navin_journal_editor/fictional_retained_recovery_candidate.dart';
 import 'package:navin_journal_editor/portable_recovery_worker.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_key_lifecycle_spike/key_envelope_coordinator.dart';
@@ -96,6 +101,15 @@ class _PortableRecoveryDiagnosticAppState
         case 'reopen_fixture':
           await _reopenFixture(Directory(root));
           await _marker('PORTABLE_REOPEN_OK');
+        case 'retain_candidate':
+          await _retainCandidate(Directory(root));
+          await _marker('CANDIDATE_RETAINED');
+        case 'reopen_candidate':
+          await _reopenCandidate(Directory(root));
+          await _marker('CANDIDATE_REOPEN_OK');
+        case 'retire_candidate_alias':
+          await _retireCandidateAlias(Directory(root));
+          await _marker('CANDIDATE_KEY_LOSS_SAFE');
         default:
           throw StateError('Unknown test phase');
       }
@@ -432,6 +446,140 @@ class _PortableRecoveryDiagnosticAppState
     } finally {
       await worker.close();
     }
+  }
+
+  // This is the real AndroidKeystore bridge, NOT the Linux fake protector
+  // used by unit tests. The original Android installation was uninstalled
+  // and its Keystore alias destroyed before this phase runs.
+  Future<void> _retainCandidate(Directory root) async {
+    final archiveFile = File(root.path + '/portable_import.njr');
+    final keyFile = File(root.path + '/portable_import.key');
+    final target = Directory(root.path + '/' +
+        FictionalRetainedRecoveryCandidate.candidateDirectoryName);
+    final reservation = File(target.path + '.reservation');
+    if (!archiveFile.existsSync() || !keyFile.existsSync() ||
+        target.existsSync() || reservation.existsSync()) {
+      throw StateError('Invalid retained candidate fixture');
+    }
+    final secret = (await keyFile.readAsString()).trim();
+    // The disposable runner retains the key on the external CI host; it
+    // must not persist in this Android sandbox after it is consumed.
+    await keyFile.delete();
+    final payload = await archiveFile.readAsBytes();
+    try {
+      final receipt = await FictionalRetainedRecoveryCandidate.prepare(
+        encryptedArchive: Uint8List.fromList(payload),
+        manuallyEnteredRecoveryKey: secret,
+        trustedPrivateRoot: root,
+        deviceProtector: FlutterAndroidKeyProtector(),
+      );
+      if (receipt.journals != 1 || receipt.entries != 1 ||
+          receipt.revisions != 1 || receipt.attachments != 0 ||
+          receipt.activeJournalReplaced ||
+          receipt.activatedForPersonalWriting ||
+          receipt.physicalDeviceRecoveryVerified ||
+          !target.existsSync() || !reservation.existsSync() ||
+          !await NativeRestorePublisher.isReady(Directory(
+              target.path + '/vault'))) {
+        throw StateError('Android retained recovery verification failed');
+      }
+
+      // A second attempted promotion into the same candidate MUST refuse
+      // replacement. Neither ciphertext nor envelope may be changed.
+      final envelope = File(target.path + '/envelope.json');
+      final originalEnvelope = await envelope.readAsString();
+      final db = File(target.path + '/vault/journal.sqlite3');
+      final originalLength = await db.length();
+      var refused = false;
+      try {
+        await FictionalRetainedRecoveryCandidate.prepare(
+          encryptedArchive: Uint8List.fromList(payload),
+          manuallyEnteredRecoveryKey: secret,
+          trustedPrivateRoot: root,
+          deviceProtector: FlutterAndroidKeyProtector(),
+        );
+      } on FictionalRetainedRecoveryRejected {
+        refused = true;
+      }
+      if (!refused || !reservation.existsSync() ||
+          await envelope.readAsString() != originalEnvelope ||
+          await db.length() != originalLength) {
+        throw StateError('Occupied protected candidate was replaced');
+      }
+      // Verify an independent existing fixture stayed decryptable. Its
+      // wrapping key is separate and cannot be retired by this import.
+      await _reopenFixture(root);
+    } finally {
+      payload.fillRange(0, payload.length, 0);
+    }
+  }
+
+  Future<void> _reopenCandidate(Directory root) async {
+    // Called only from a new Android app process AFTER adb force-stop.
+    // The recovery archive, manual key and transient destination DEK are
+    // not passed to this call, nor read from the filesystem.
+    final report = await FictionalRetainedRecoveryCandidate.reopen(
+      trustedPrivateRoot: root,
+      deviceProtector: FlutterAndroidKeyProtector(),
+    );
+    if (report.journals != 1 || report.entries != 1 ||
+        report.revisions != 1 || report.attachments != 0 ||
+        report.activeJournalReplaced || report.activatedForPersonalWriting) {
+      throw StateError('Retained candidate records differ after restart');
+    }
+    final folder = Directory(root.path + '/' +
+        FictionalRetainedRecoveryCandidate.candidateDirectoryName);
+    final dbPath = folder.path + '/vault/journal.sqlite3';
+    // In addition to opaque counts, assert the recovered fictional title,
+    // Telugu/emoji body and historical revision with the true Android key.
+    final local = _envelope(File(folder.path + '/envelope.json'));
+    final key = await _unlockDeviceKey(local, dbPath);
+    try {
+      await _verifyRestored(dbPath, key);
+      await _reopenFixture(root); // Existing active fixture still works.
+    } finally {
+      key.destroy();
+    }
+  }
+
+  Future<void> _retireCandidateAlias(Directory root) async {
+    final folder = Directory(root.path + '/' +
+        FictionalRetainedRecoveryCandidate.candidateDirectoryName);
+    final envelopeFile = File(folder.path + '/envelope.json');
+    final db = File(folder.path + '/vault/journal.sqlite3');
+    final reservation = File(folder.path + '.reservation');
+    if (!await envelopeFile.exists() || !await db.exists() ||
+        !await reservation.exists()) {
+      throw StateError('Protected candidate is missing');
+    }
+    final oldEnvelope = await envelopeFile.readAsString();
+    final oldSize = await db.length();
+    final keystore = FlutterAndroidKeyProtector();
+    final coordinator = KeyEnvelopeCoordinator(
+      envelopeFile: envelopeFile, protector: keystore);
+    final doc = await coordinator.readEnvelope();
+    // Explicit destructive action against the disposable candidate's
+    // wrapping alias ONLY. The original independent vault stays intact.
+    await keystore.retire(doc.activeAlias);
+    var refused = false;
+    try {
+      await FictionalRetainedRecoveryCandidate.reopen(
+        trustedPrivateRoot: root,
+        deviceProtector: keystore,
+      );
+    } on FictionalRetainedRecoveryRejected {
+      refused = true;
+    }
+    if (!refused ||
+        !await envelopeFile.exists() ||
+        !await db.exists() ||
+        !await reservation.exists() ||
+        await envelopeFile.readAsString() != oldEnvelope ||
+        await db.length() != oldSize) {
+      throw StateError('Lost wrapping key unexpectedly changed vault');
+    }
+    // The separate portable-restored fixture should remain unlockable.
+    await _reopenFixture(root);
   }
 
   @override
