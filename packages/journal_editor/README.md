@@ -2,7 +2,7 @@
 
 **Stage:** developer-only fictional fixture. **Not** a private journaling application.
 
-**Latest verified CI:** [APK 02 editor integration run 43450962740](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43450962740) — **22/22 tests passed**, strict analyzer clean, Linux.
+**Latest verified CI:** [Editor and portable recovery tests 43556363294](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43556363294) — **29/29 tests passed**, strict analyzer clean on Linux. [Android clean-uninstall/reinstall proof 43558301280](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43558301280) — **4/4 fictional recovery markers passed** with a new Android Keystore key, plus 29 editor/recovery and 13 Flutter tests.
 
 ## What this adds
 
@@ -16,7 +16,10 @@
 - [journal_editor_session_test.dart](test/journal_editor_session_test.dart): 13 integration tests of encrypted autosave state, retries, IME composition and conflicts.
 - [journal_editor_isolate_test.dart](test/journal_editor_isolate_test.dart): 9 integration tests of serialized worker ownership, complete persisted journal entries, revisions, shutdown and reopen, wrong keys and concurrent editor sessions.
 
-**22/22 tests passed on Linux CI; no Android or physical-device guarantee is implied by these tests.**
+- [portable_recovery_worker.dart](lib/portable_recovery_worker.dart): decrypts/authenticates independently keyed `NJR-RECOVERY-2` archives, stages a full journal into a *previously absent* destination with a new SQLite3MC database key on a background isolate, and rejects wrong keys/tampering/collisions. [portable_recovery_worker_test.dart](test/portable_recovery_worker_test.dart) adds six test cases.
+- `JournalEditorWorker.exportRecoveryArchive` produces the portable authenticated archive from a consistent encrypted vault snapshot without storing a plaintext draft/export.
+
+**29/29 Linux worker/editor/recovery tests passed. An API-34 Android fictional-data clean uninstall/reinstall test also passed (independent backup key, original app deleted, wrong key rejected, new Keystore key, historical revision recovered, force-stop reopen).** These are engineering proofs only, not physical-device private diary approval.
 
 ## Next integration boundary
 
