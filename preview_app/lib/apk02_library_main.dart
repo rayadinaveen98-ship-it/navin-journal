@@ -38,10 +38,10 @@ class Apk02LibraryDiagnosticApp extends StatefulWidget {
 
   @override
   State<Apk02LibraryDiagnosticApp> createState() =>
-      _Apk02LibraryDiagnosticAppState();
+      Apk02LibraryDiagnosticAppState();
 }
 
-class _Apk02LibraryDiagnosticAppState
+class Apk02LibraryDiagnosticAppState
     extends State<Apk02LibraryDiagnosticApp> {
   JournalEditorWorker? _worker;
   Directory? _privateRoot;
@@ -50,11 +50,20 @@ class _Apk02LibraryDiagnosticAppState
   bool _failed = false;
   bool _firstRun = false;
   FictionalActivationState? _firstRunState;
+  Future<void>? _firstBoot;
+
+  /// Waits for the real file/MethodChannel bootstrap in Flutter tests;
+  /// no time-based polling and no generic pumpAndSettle spinner timeout.
+  @visibleForTesting
+  Future<void> waitForFirstBoot() async {
+    final pending = _firstBoot;
+    if (pending != null) await pending;
+  }
 
   @override
   void initState() {
     super.initState();
-    unawaited(_open());
+    _firstBoot = _open();
   }
 
   Future<void> _open({bool startNew = false}) async {
