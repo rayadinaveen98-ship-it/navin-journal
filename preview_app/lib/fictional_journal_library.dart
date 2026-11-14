@@ -46,6 +46,7 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
   late String _activeJournalId;
   List<Map<String, Object?>> _journals = [];
   List<Map<String, Object?>> _pages = [];
+  List<Map<String, Object?>> _trashedPages = [];
   Map<String, Object?>? get _selectedJournal {
     for (final item in _journals) {
       if (item['id'] == _activeJournalId) return item;
@@ -112,11 +113,13 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
       if (mounted && _activeJournalId == requestedId) setState(() {
         _journals = shelf.journals;
         _pages = shelf.pages;
+        _trashedPages = shelf.trashedPages;
         _loaded = true;
       });
     } catch (_) {
       if (mounted && _activeJournalId == requestedId) setState(() {
         _pages = [];
+        _trashedPages = [];
         _journals = [];
         _loaded = false;
         _error = 'Unable to verify this encrypted journal.';
@@ -138,6 +141,7 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
     setState(() {
       _activeJournalId = journalId;
       _pages = [];
+      _trashedPages = [];
       _loaded = false;
       _filter = FictionalPageFilter.all;
       _order = FictionalPageOrder.newest;
@@ -164,6 +168,7 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
         _activeJournalId = shelf.journalId;
         _journals = shelf.journals;
         _pages = shelf.pages;
+        _trashedPages = shelf.trashedPages;
         _loaded = true;
         _filter = FictionalPageFilter.all;
         _order = FictionalPageOrder.newest;
@@ -238,6 +243,7 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
         _activeJournalId = shelf.journalId;
         _journals = shelf.journals;
         _pages = shelf.pages;
+        _trashedPages = shelf.trashedPages;
         _loaded = true;
         _filter = FictionalPageFilter.all;
         _order = FictionalPageOrder.newest;
@@ -245,6 +251,119 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
     } catch (_) {
       if (mounted) setState(() =>
           _error = 'Could not complete this encrypted journal change.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Keep existing page and revisions encrypted. This is reversible Trash,
+  /// never an erase, and is allowed only from the Reader.
+  Future<void> _trashPage() async {
+    final reading = _reading;
+    if (_busy || !_loaded || !_canWrite ||
+        _screen != _Screen.reader || reading == null ||
+        reading['journalId'] != _activeJournalId ||
+        reading['deletedAtMs'] != null) return;
+    final id = reading['id'] as String;
+    final version = reading['version'] as int;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Move fictional page to Trash?'),
+        content: const Text('Its encrypted contents and earlier versions '
+          'will be preserved. You can restore it in this notebook. '
+          'Nothing is permanently deleted.'),
+        actions: [
+          TextButton(
+            key: const ValueKey('page-trash-cancel'),
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Keep page'),
+          ),
+          FilledButton(
+            key: const ValueKey('page-trash-confirm'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Move to Trash'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true || _busy ||
+        _screen != _Screen.reader ||
+        _reading?['id'] != id ||
+        _activeJournalId != reading['journalId']) return;
+    setState(() { _busy = true; _error = null; });
+    try {
+      final shelf = await widget.worker.manageFictionalEntry(
+        journalId: _activeJournalId,
+        entryId: id,
+        expectedVersion: version,
+        operation: 'trash',
+      );
+      if (shelf.journalId != _activeJournalId ||
+          shelf.pages.any((e) =>
+              e['journalId'] != _activeJournalId ||
+              e['deletedAtMs'] != null) ||
+          shelf.trashedPages.any((e) =>
+              e['journalId'] != _activeJournalId ||
+              e['deletedAtMs'] == null)) {
+        throw StateError('Encrypted page Trash scope mismatch');
+      }
+      if (!mounted) return;
+      setState(() {
+        _journals = shelf.journals;
+        _pages = shelf.pages;
+        _trashedPages = shelf.trashedPages;
+        _reading = null;
+        _revisions = [];
+        _historyLoaded = false;
+        _historyError = null;
+        _screen = _Screen.library;
+      });
+    } catch (_) {
+      if (mounted) setState(() =>
+          _error = 'Page was not moved. Review its version and retry.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Restore only to its original, currently writable journal.
+  Future<void> _restorePage(String entryId) async {
+    if (_busy || !_loaded || !_canWrite ||
+        _screen != _Screen.library) return;
+    final matches = _trashedPages.where((e) =>
+        e['id'] == entryId &&
+        e['journalId'] == _activeJournalId &&
+        e['deletedAtMs'] != null).toList();
+    if (matches.length != 1) return;
+    setState(() { _busy = true; _error = null; });
+    try {
+      final shelf = await widget.worker.manageFictionalEntry(
+        journalId: _activeJournalId,
+        entryId: entryId,
+        expectedVersion: matches.single['version'] as int,
+        operation: 'restore',
+      );
+      if (shelf.journalId != _activeJournalId ||
+          shelf.pages.any((e) =>
+              e['journalId'] != _activeJournalId ||
+              e['deletedAtMs'] != null) ||
+          shelf.trashedPages.any((e) =>
+              e['journalId'] != _activeJournalId ||
+              e['deletedAtMs'] == null)) {
+        throw StateError('Encrypted page restore scope mismatch');
+      }
+      if (!mounted) return;
+      setState(() {
+        _journals = shelf.journals;
+        _pages = shelf.pages;
+        _trashedPages = shelf.trashedPages;
+        _filter = FictionalPageFilter.all;
+        _order = FictionalPageOrder.newest;
+      });
+    } catch (_) {
+      if (mounted) setState(() =>
+          _error = 'Page could not be safely restored.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -715,6 +834,35 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
             ),
           ),
         ),
+      if (_loaded && _trashedPages.isNotEmpty) ...[
+        const SizedBox(height: 25),
+        Text('Page Trash', style: editorial(c, 23)),
+        const SizedBox(height: 6),
+        Text('Only this notebook · encrypted and restorable · no erase',
+          style: TextStyle(color: c.secondary, fontSize: 12)),
+        for (final row in _trashedPages)
+          Container(
+            key: ValueKey('library-trashed-page-' + (row['id'] as String)),
+            margin: const EdgeInsets.only(top: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: c.paper,
+              border: Border.all(color: c.stroke),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(children: [
+              Expanded(child: Text(row['title'] as String,
+                maxLines: 2, overflow: TextOverflow.ellipsis)),
+              TextButton(
+                key: ValueKey('library-restore-page-' +
+                    (row['id'] as String)),
+                onPressed: _busy || !_canWrite ? null : () =>
+                  unawaited(_restorePage(row['id'] as String)),
+                child: const Text('Restore'),
+              ),
+            ]),
+          ),
+      ],
     ],
   );
 
@@ -751,6 +899,21 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
         icon: const Icon(Icons.edit_outlined),
         label: const Text('Edit fictional page'),
       ),
+      const SizedBox(height: 12),
+      OutlinedButton.icon(
+        key: const ValueKey('reader-trash-page'),
+        onPressed: _busy || !_canWrite ? null :
+          () => unawaited(_trashPage()),
+        icon: const Icon(Icons.delete_outline),
+        label: const Text('Move page to Trash'),
+      ),
+      if (_error != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Text(_error!,
+            key: const ValueKey('reader-error'),
+            style: TextStyle(color: c.clay)),
+        ),
       const SizedBox(height: 20),
       OutlinedButton.icon(
         key: const ValueKey('reader-history'),
