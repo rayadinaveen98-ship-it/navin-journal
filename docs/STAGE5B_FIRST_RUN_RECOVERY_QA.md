@@ -19,6 +19,19 @@ After a fictional encrypted archive is imported into a *separate* native Keystor
 - Updated test expectations reflect existing fail-closed behavior: uncertain state shows a no-reset error and **does not enter setup**, rather than showing a disabled setup button.
 - Latest produced fictional Library test artifact: GitHub Actions artifact ID **14114028203**, `navin-apk02-FICTIONAL-LIBRARY-NOT-PRIVATE-DIARY`, from run 43594995920. It is a debug build, **not** a safe diary or Play Store release.
 
+## Stage 5B native DocumentsUI evidence — independent blocker (14 Nov 2026)
+
+**NOT APPROVED / UNMERGED:** [Draft PR #14](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/14) carries a debug-only, scripted-fictional Android SAF picker test. It is separate from the merged Stage 5A/5B vault protections. On exact candidate head `c8fd8b8fc0f1d363769ed2410885fed4272f76e6`, three required workflows passed and the real-picker integration workflow failed:
+
+- [Encrypted Library worker/widget tests + APK 43606850988](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43606850988): **SUCCESS**.
+- [API34 Telugu HOME/force-stop 43606850996](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43606850996): **SUCCESS**.
+- [API34 separate-key clean-reinstall restore 43606851003](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43606851003): **SUCCESS**.
+- [API34 real Android DocumentsUI picker 43606850995](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43606850995): **FAILED**. The actual `ACTION_CREATE_DOCUMENT` and `ACTION_OPEN_DOCUMENT` cancellation paths passed. The encrypted file was exported and the native provider readback reached `SAF_ROUNDTRIP_IMPORT_READY`. However, actual picker selection did **not** return the encrypted bytes to Dart; `SAF_ROUNDTRIP_BYTES_RETURNED`, `SAF_ROUNDTRIP_AUTH_OK`, and `SAF_ROUNDTRIP_VERIFIED` were **never** reached.
+
+**Grounded diagnosis:** The picker displayed the fictional filename in an enabled, clickable grid `CardView`; the automation then successfully changed to list mode, exposing an enabled, clickable `LinearLayout`. Neither semantic-label nor ADB row-coordinate taps completed document selection. This run did **not** report a launcher ANR. The negative result cannot be equated with corrupted ciphertext, a passed recovery import, or a verified production app defect. This is an unresolved *Android DocumentsUI interaction/automation gate*.
+
+**Next controlled action:** Stop repeated coordinate retries. Either replace this specific picker-driving portion with semantic on-device UI Automator instrumentation, or manually run [the physical device acceptance protocol](APK02_PHYSICAL_DEVICE_ACCEPTANCE.md) on a disposable fictional-only install and capture redacted **PASS/FAIL/BLOCKED** evidence. Do not inject a forged picker `ActivityResult`, direct content URI, bypass consent, or relax the authenticated round-trip requirement merely to achieve a green workflow. Keep PR #14 draft until independently verified.
+
 ## Device acceptance matrix (manual; NOT YET EXECUTED)
 
 | ID | Test scenario | Acceptance criterion | Result |
