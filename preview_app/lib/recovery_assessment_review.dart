@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use, prefer_interpolation_to_compose_strings
 /// APK02 read-only recovery assessment display. FICTIONAL FIXTURES ONLY.
 ///
 /// This component has NO recover/delete/retry buttons. The verdict is supplied
