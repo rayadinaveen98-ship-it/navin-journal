@@ -17,6 +17,8 @@
 
 **Pre-device feature boundary (source-reviewed):** the executable APK02 Library and first-launch entrypoint currently construct `JournalColors(false)` and therefore display the *light* diagnostic theme only. The approved Midnight Archive dark theme and complete Settings experience are part of Stage 5D, **not available for Stage 5C physical sign-off**. Stage 5C must evaluate the actual light-theme diagnostic; do not claim dark-mode or Settings verification from simulated or physical tests of this APK.
 
+**Post-build test-only QA improvement:** [PR #18](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/18) merged two first-launch simulated 200% text-scale tests (360×780 phone and 800×1130 tablet); [Library widget/build run 43625752604](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43625752604) and [API34 Telugu lifecycle run 43625752646](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43625752646) both **SUCCESS**. This merged PR modified **test code only**. **Keep using the Stage 5C fictional Library APK from artifact 14125212901** for actual device testing; no replacement APK installation or local data reset is needed for this test-only change. Flutter-simulated viewports do not count as physical results.
+
 **Physical-device outcomes remain NOT RUN.** No real diary, personal recovery key, production backend, phone/tablet sign-off or public release is approved. Use only fictional samples; never upload/share manual recovery keys.
 
 ## Quick phone + tablet acceptance (fictional only)
