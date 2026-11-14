@@ -117,21 +117,36 @@ class FictionalExternalImportSectionState
       _retainedReport = null;
     });
     try {
-      final ciphertext = await widget.selectEncryptedDocument();
-      if (ciphertext == null) {
+      final channelBytes = await widget.selectEncryptedDocument();
+      if (channelBytes == null) {
         if (mounted) setState(() =>
             _notice = 'File selection cancelled. No recovery was performed.');
         await _hideNativeInput();
         return;
       }
-      if (ciphertext.isEmpty || ciphertext.length > 32 * 1024 * 1024) {
-        ciphertext.fillRange(0, ciphertext.length, 0);
-        throw const FictionalArchiveImportRejected();
+      Uint8List ownedBytes;
+      try {
+        if (channelBytes.isEmpty ||
+            channelBytes.length > 32 * 1024 * 1024) {
+          throw const FictionalArchiveImportRejected();
+        }
+        // Android StandardMessageCodec can hand Dart a read-only view.
+        // Always take ownership of a writable copy so cancellation and
+        // post-verification zeroization cannot throw and leave FLAG_SECURE on.
+        ownedBytes = Uint8List.fromList(channelBytes);
+      } finally {
+        // Best-effort scrub of the platform-owned ciphertext view only.
+        // The imported, independently owned bytes are always scrubbed later.
+        try {
+          channelBytes.fillRange(0, channelBytes.length, 0);
+        } on UnsupportedError {
+          // The platform buffer is read-only, not a secure writable store.
+        }
       }
       if (mounted) {
-        setState(() => _selectedDocument = ciphertext);
+        setState(() => _selectedDocument = ownedBytes);
       } else {
-        ciphertext.fillRange(0, ciphertext.length, 0);
+        ownedBytes.fillRange(0, ownedBytes.length, 0);
         await _hideNativeInput();
       }
     } catch (_) {

@@ -64,6 +64,65 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('read-only Android channel ciphertext uses an owned mutable '
+      'copy for authenticated review and cleanup', (tester) async {
+    final channelBytes = Uint8List.fromList([9, 8, 7]).asUnmodifiableView();
+    Uint8List? inspected;
+    var hidden = 0;
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body:
+      SingleChildScrollView(child: FictionalExternalImportSection(
+        selectEncryptedDocument: () async => channelBytes,
+        inspect: (bytes, key) async {
+          expect(key, demoKey);
+          expect(bytes, [9, 8, 7]);
+          expect(identical(bytes, channelBytes), isFalse);
+          inspected = bytes;
+          return const FictionalArchiveImportReport(
+            journals: 1, entries: 2, revisions: 1, attachments: 0);
+        },
+        hideProtectedInput: () async { hidden++; },
+      )),
+    )));
+    await tapVisible(tester, 'import-select-document');
+    await tester.enterText(
+      find.byKey(const ValueKey('import-recovery-key')), demoKey);
+    await tester.pumpAndSettle();
+    await tapVisible(tester, 'import-verify');
+    expect(find.byKey(const ValueKey('import-verified')), findsOneWidget);
+    expect(inspected, isNotNull);
+    expect(inspected!.every((b) => b == 0), isTrue);
+    expect(channelBytes, [9, 8, 7]);
+    expect(hidden, greaterThanOrEqualTo(1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('read-only Android channel ciphertext can be cancelled after '
+      'selection with no uncaught exception', (tester) async {
+    final channelBytes = Uint8List.fromList([21, 22, 23])
+        .asUnmodifiableView();
+    var verified = 0;
+    var hidden = 0;
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body:
+      FictionalExternalImportSection(
+        selectEncryptedDocument: () async => channelBytes,
+        inspect: (_, _) async {
+          verified++;
+          throw const FictionalArchiveImportRejected();
+        },
+        hideProtectedInput: () async { hidden++; },
+      ),
+    )));
+    await tapVisible(tester, 'import-select-document');
+    expect(find.byKey(const ValueKey('import-recovery-key')),
+      findsOneWidget);
+    await tapVisible(tester, 'import-cancel');
+    expect(find.byKey(const ValueKey('import-recovery-key')), findsNothing);
+    expect(find.byKey(const ValueKey('import-verified')), findsNothing);
+    expect(verified, 0);
+    expect(hidden, greaterThanOrEqualTo(1));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('picker cancellation never exposes input or changes vault',
       (tester) async {
     var calls = 0;
