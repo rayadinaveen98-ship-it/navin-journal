@@ -48,7 +48,8 @@ class PortableRecoveryWorker {
       final archiveTransfer = TransferableTypedData.fromList([encryptedArchive]);
       final recoveryTransfer = TransferableTypedData.fromList([recoveryBytes]);
       final dbTransfer = TransferableTypedData.fromList([dbBytes]);
-      return await Isolate.run(() async {
+      try {
+        return await Isolate.run(() async {
         final archive = archiveTransfer.materialize().asUint8List();
         final rawRecovery = recoveryTransfer.materialize().asUint8List();
         final rawDatabase = dbTransfer.materialize().asUint8List();
@@ -73,7 +74,12 @@ class PortableRecoveryWorker {
           rawDatabase.fillRange(0, rawDatabase.length, 0);
           archive.fillRange(0, archive.length, 0);
         }
-      });
+        });
+      } on ArchiveRejected {
+        // No user data/key details cross the UI boundary on bad credentials,
+        // tampered archives or malformed recovery input.
+        throw const ProductRestoreRejected();
+      }
     } finally {
       recoveryBytes.fillRange(0, recoveryBytes.length, 0);
       dbBytes.fillRange(0, dbBytes.length, 0);
