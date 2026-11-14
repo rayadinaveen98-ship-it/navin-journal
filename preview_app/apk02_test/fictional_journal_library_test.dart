@@ -608,7 +608,7 @@ void main() {
     final restored = await workerCall(tester, worker.listJournals);
     expect(restored.firstWhere(
         (j) => j['id'] == secondId)['deletedAtMs'], isNull);
-    expect((await workerCall(tester, () => worker.historyCount(pageId)), 1);
+    expect(await workerCall(tester, () => worker.historyCount(pageId)), 1);
     expect((await workerCall(tester,
         () => worker.readEntry(pageId)))!['version'], 2);
     expect(find.byKey(ValueKey('library-trashed-' + secondId)), findsNothing);
