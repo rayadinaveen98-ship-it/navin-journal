@@ -31,7 +31,20 @@ class PortableRecoveryWorker {
     required RecoveryKey recoveryKey,
     required TestVaultKey destinationKey,
     required Directory destination,
+    /// TEST ONLY: inject a simulated storage failure at a verified checkpoint.
+    /// Rejected in release builds. Never use for private data.
+    String? faultCheckpointForDiagnostics,
   }) async {
+    if (faultCheckpointForDiagnostics != null) {
+      if (const bool.fromEnvironment('dart.vm.product') ||
+          !const {
+            'after_ready_marker_write',
+            'before_staged_file_fsync',
+            'before_parent_post_rename_fsync',
+          }.contains(faultCheckpointForDiagnostics)) {
+        throw const ProductRestoreRejected();
+      }
+    }
     if (encryptedArchive.isEmpty ||
         encryptedArchive.length > ProductSnapshotCodec.maxPayloadBytes * 2 ||
         destination.path.trim().isEmpty) {
@@ -61,7 +74,17 @@ class PortableRecoveryWorker {
             base64Url.encode(rawRecovery).replaceAll('=', ''),
           );
           isolatedDb = TestVaultKey.fromBytes(rawDatabase);
-          return await StagedProductRestorer().restoreNew(
+          return await StagedProductRestorer(
+            injectFailure: faultCheckpointForDiagnostics == null ? null : (point) {
+              if (point == faultCheckpointForDiagnostics) {
+                throw FileSystemException(
+                  'Fictional ENOSPC injected by diagnostic harness',
+                  destinationPath,
+                  const OSError('No space left on device', 28),
+                );
+              }
+            },
+          ).restoreNew(
             encryptedArchive: archive,
             recoveryKey: isolatedRecovery,
             destinationKey: isolatedDb,
