@@ -1,6 +1,6 @@
 # Stage 5B — first-launch recovery UX and physical-device acceptance
 
-**Status:** FIRST-RUN UX GUARD IMPLEMENTED + CI VERIFIED (PR #13, merge `9230d4137082bca52019764d552c4d00b0a0bdbc`); PHYSICAL DEVICE ACCEPTANCE NOT STARTED / FICTIONAL DIAGNOSTIC ONLY. This document is a testing contract, **not** evidence that a phone/tablet or actual SAF provider has been tested. No personal journal content or actual private recovery key is authorized.
+**Status:** FIRST-RUN UX GUARD CI VERIFIED (PR #13); REAL ANDROID API34 DOCUMENTSUI FICTIONAL EXPORT/IMPORT EMULATOR GATE VERIFIED + MERGED (PR #14, `6aff5fe0`); **PHYSICAL DEVICE ACCEPTANCE NOT STARTED / PRIVATE-DATA BETA BLOCKED**. This document preserves the Android emulator test evidence and remaining physical-device contract. The real Android system provider was exercised on the emulator, **not** on a user's phone or tablet. No personal journal content or private recovery key is authorized.
 
 ## Purpose
 
@@ -42,16 +42,31 @@ Subsequent **test-only** revisions separate secure import-window reset, disposab
 
 **Remaining blockers:** a fully successful and cleanly disposed authenticated picker round trip, reproducibility under emulator system UI instability, physical phone/tablet SAF + key-entry testing, OEM/accessibility conditions, and independent production security review. Preserve strict failure handling, native no-clobber and explicit consent. No private writing is approved.
 
-## Later Stage 5B diagnostic continuation — 14 November 2026
+## Historical Stage 5B diagnostic continuation — 14 November 2026, before final merge
 
-**Still BLOCKED; no real-data beta or PR merge.** Follow-up tests for draft [PR #14](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/14) progressed beyond the original picker-selection failure but did not produce a fully passing real-provider gate.
+**At that point blocked; no real-data beta or PR merge yet.** Follow-up tests for draft [PR #14](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/14) progressed beyond the original picker-selection failure but did not produce a fully passing real-provider gate.
 
 - [Android SAF run 43616167710](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43616167710): encrypted export, real picker re-selection and authentication reached the fixture's cleanup phase; the test failed at nonsecret `SAF_ERROR_CLEANUP`.
 - [Android SAF run 43617272040](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43617272040), unchanged retry: the completed selection/authentication path failed at `SAF_ERROR_IMPORT_HIDE`; another attempt intermittently could not detect Android DocumentsUI.
 - [Android SAF run 43618781780](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43618781780): `Real DocumentsUI unavailable`, so the new fine-grained byte-buffer/secure-window cleanup diagnostic was not reached. Three separate regressions at the same candidate head passed: [Library APK 43618781758](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43618781758), [Telugu HOME/force-stop 43618781877](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43618781877), and [portable clean reinstall 43618781863](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43618781863).
-- Draft head `8b450395` adds fail-fast detection and redacted foreground/phase diagnostics to independent AndroidX UI Automator. [Android SAF run 43619567766](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43619567766) was still running when this note was written. **Do not count in-progress CI as green.**
+- Draft head `8b450395` added fail-fast detection and redacted foreground/phase diagnostics to independent AndroidX UI Automator. [Android SAF run 43619567766](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43619567766) ultimately **FAILED** because the emulator foreground window was not recognized as DocumentsUI while the probe stayed alive at `SAF_ROUNDTRIP_EXPORT_READY`.
 
-This sequence narrows the intermittent failure, but **does not** establish a complete export→import→authenticated content→cleanup success. Retain the no-overwrite/recovery-key safeguards; require a complete, real Android picker success and the separate device acceptance matrix below. No synthetic ActivityResult/URI injection, no silent cleanup failure, and no private diary permission.
+This historical failure sequence did **not** establish a complete export→import→authenticated content→cleanup success. The later exact-head run below did. Retain the no-overwrite/recovery-key safeguards and separate device acceptance matrix below. No synthetic ActivityResult/URI injection, no silent cleanup failure, and no private diary permission.
+
+## Final API34 semantic DocumentsUI acceptance — VERIFIED and merged
+
+[PR #14](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/14) merged on 14 November 2026 as `6aff5fe0b9c281b6ea26b12c333e9663e93f420b` after all required checks at candidate head `9acc9438e574423f43cd2f118518658b888a342e`:
+
+| Exact-head workflow | Run | Final verdict |
+| --- | --- | --- |
+| Strict analysis, encrypted Library worker/widget regressions, Android debug APK | [43620412516](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43620412516) | SUCCESS |
+| Android API34 Telugu HOME/force-stop | [43620412493](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43620412493) | SUCCESS |
+| Android API34 separate-key portable clean reinstall | [43620412555](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43620412555) | SUCCESS |
+| Independent AndroidX UI Automator REAL DocumentsUI encrypted fictional archive | [43620412491](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43620412491) | SUCCESS — `OK (1 test)` |
+
+The AndroidX instrumentation drove actual `ACTION_CREATE_DOCUMENT`/`ACTION_OPEN_DOCUMENT` and cancellation screens, wrote/read back a fictional encrypted file via the Android provider, re-selected it, checked returned encrypted bytes and AES-256-GCM authenticated current plus historical Telugu/emoji versions, and completed cleanup. The diagnostic uses an owned writable ciphertext copy, does not publish recovery keys, refuses forged results, and cannot run as a release-app fixture.
+
+**Scope boundary:** One successful API34 Google emulator provider is not physical OEM/phone/tablet acceptance, on-device manual recovery-key transcription, TalkBack/large-font usability, power- or storage-loss durability, independent security audit, or approval for private writing. Earlier intermittent DocumentsUI visibility failures remain historical evidence and motivate cross-device verification. Keep UX-01 through UX-12 below PENDING PHYSICAL.
 
 ## Device acceptance matrix (manual; NOT YET EXECUTED)
 
