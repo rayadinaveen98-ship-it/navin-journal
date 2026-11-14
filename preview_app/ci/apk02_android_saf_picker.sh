@@ -68,38 +68,36 @@ capture_ui() {
   [[ -s "$WORK/hierarchy.xml" ]]
 }
 wait_picker() {
-  for i in $(seq 1 45); do
-    if capture_ui && grep -Eiq \
-      'documentsui|documents.ui' "$WORK/hierarchy.xml"; then
+  local current activity focused
+  # A tight loop of uiautomator accessibility dumps can overload a freshly
+  # booted API34 Pixel launcher. Detect resumed activity through lightweight
+  # window/activity manager state first; only dump XML when picker is ready.
+  for i in $(seq 1 90); do
+    activity="$(adb -s "$SERIAL" shell dumpsys activity activities \
+      2>/dev/null | grep -E 'topResumedActivity|mResumedActivity' | head -n 3 || true)"
+    focused="$(adb -s "$SERIAL" shell dumpsys window \
+      2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp' | head -n 3 || true)"
+    current="$activity $focused"
+    if echo "$current" | grep -Eiq 'documentsui|documents.ui'; then
       return 0
+    fi
+    if echo "$focused" | grep -Eiq 'Application Not Responding'; then
+      echo "::error::Android emulator launcher/system ANR blocked picker"
+      echo "::error::Last nonsecret app phase: $(marker)"
+      return 1
     fi
     if [[ "$(marker)" == FAILED ]]; then
       echo "::error::Probe reported error before document picker"; return 1
     fi
     sleep 1
   done
-  echo "::error::Actual Android DocumentsUI did not appear"
+  echo "::error::Actual Android DocumentsUI did not become foreground"
   echo "::error::Last nonsecret app phase: $(marker)"
   adb -s "$SERIAL" shell dumpsys window 2>/dev/null |
     grep -E 'mCurrentFocus|mFocusedApp' | head -n 3 || true
-  # Only report distinct package names; never dump full UI text, file paths,
-  # keys or ciphertext into GitHub CI logs.
-  if capture_ui; then
-    python3 - "$WORK/hierarchy.xml" <<'PY'
-import sys, xml.etree.ElementTree as ET
-try:
-    root = ET.parse(sys.argv[1]).getroot()
-    packages = sorted(set(node.attrib.get("package", "")
-                          for node in root.iter("node")))
-    print("UI package summary:", ", ".join(p for p in packages if p)[:320])
-except Exception:
-    print("UI accessibility hierarchy unavailable")
-PY
-  else
-    echo "::warning::UI accessibility hierarchy dump unavailable"
-  fi
   return 1
 }
+
 # Inspect the actual Android accessibility hierarchy, not a screenshot, OCR,
 # hardcoded pixel position, synthetic ActivityResult, or ADB-injected file URI.
 node_center() {
