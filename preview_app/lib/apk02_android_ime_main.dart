@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, curly_braces_in_flow_control_structures
 /// API-34 Android *synthetic* Telugu preedit / real HOME + force-stop harness.
 ///
 /// This fixture keeps both TextFields read-only. It injects fixed imaginary
@@ -102,7 +102,7 @@ class _Apk02AndroidImeDiagnosticState extends State<Apk02AndroidImeDiagnostic>
       throw StateError('Missing app-private root');
     }
     final dir = Directory(
-        '${root}${Platform.pathSeparator}nj_ime_background_fixture');
+        '$root${Platform.pathSeparator}nj_ime_background_fixture');
     final db = File('${dir.path}${Platform.pathSeparator}journal.sqlite3');
     final envelope = File('${dir.path}${Platform.pathSeparator}envelope.json');
     final create = phase == 'ime_prepare';
