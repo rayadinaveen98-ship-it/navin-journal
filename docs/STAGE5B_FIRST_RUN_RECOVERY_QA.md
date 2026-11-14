@@ -42,6 +42,17 @@ Subsequent **test-only** revisions separate secure import-window reset, disposab
 
 **Remaining blockers:** a fully successful and cleanly disposed authenticated picker round trip, reproducibility under emulator system UI instability, physical phone/tablet SAF + key-entry testing, OEM/accessibility conditions, and independent production security review. Preserve strict failure handling, native no-clobber and explicit consent. No private writing is approved.
 
+## Later Stage 5B diagnostic continuation — 14 November 2026
+
+**Still BLOCKED; no real-data beta or PR merge.** Follow-up tests for draft [PR #14](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/14) progressed beyond the original picker-selection failure but did not produce a fully passing real-provider gate.
+
+- [Android SAF run 43616167710](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43616167710): encrypted export, real picker re-selection and authentication reached the fixture's cleanup phase; the test failed at nonsecret `SAF_ERROR_CLEANUP`.
+- [Android SAF run 43617272040](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43617272040), unchanged retry: the completed selection/authentication path failed at `SAF_ERROR_IMPORT_HIDE`; another attempt intermittently could not detect Android DocumentsUI.
+- [Android SAF run 43618781780](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43618781780): `Real DocumentsUI unavailable`, so the new fine-grained byte-buffer/secure-window cleanup diagnostic was not reached. Three separate regressions at the same candidate head passed: [Library APK 43618781758](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43618781758), [Telugu HOME/force-stop 43618781877](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43618781877), and [portable clean reinstall 43618781863](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43618781863).
+- Draft head `8b450395` adds fail-fast detection and redacted foreground/phase diagnostics to independent AndroidX UI Automator. [Android SAF run 43619567766](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43619567766) was still running when this note was written. **Do not count in-progress CI as green.**
+
+This sequence narrows the intermittent failure, but **does not** establish a complete export→import→authenticated content→cleanup success. Retain the no-overwrite/recovery-key safeguards; require a complete, real Android picker success and the separate device acceptance matrix below. No synthetic ActivityResult/URI injection, no silent cleanup failure, and no private diary permission.
+
 ## Device acceptance matrix (manual; NOT YET EXECUTED)
 
 | ID | Test scenario | Acceptance criterion | Result |
