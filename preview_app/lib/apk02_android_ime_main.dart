@@ -102,9 +102,9 @@ class _Apk02AndroidImeDiagnosticState extends State<Apk02AndroidImeDiagnostic>
       throw StateError('Missing app-private root');
     }
     final dir = Directory(
-        root + Platform.pathSeparator + 'nj_ime_background_fixture');
-    final db = File(dir.path + Platform.pathSeparator + 'journal.sqlite3');
-    final envelope = File(dir.path + Platform.pathSeparator + 'envelope.json');
+        '${root}${Platform.pathSeparator}nj_ime_background_fixture');
+    final db = File('${dir.path}${Platform.pathSeparator}journal.sqlite3');
+    final envelope = File('${dir.path}${Platform.pathSeparator}envelope.json');
     final create = phase == 'ime_prepare';
     if (create) {
       // Do not reset an already initialized vault, even in this test.
@@ -205,7 +205,9 @@ class _Apk02AndroidImeDiagnosticState extends State<Apk02AndroidImeDiagnostic>
       }
       setState(() => _fixture = f);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) unawaited(_runPhase(f));
+        if (mounted) {
+          unawaited(_runPhase(f));
+        }
       });
     } catch (_) {
       await _fail();
@@ -230,8 +232,10 @@ class _Apk02AndroidImeDiagnosticState extends State<Apk02AndroidImeDiagnostic>
         await _verifyEncrypted(f, version: 2);
         await _mark('IME_REOPENED_V2');
         _reported = true;
-        if (mounted) setState(() => _message =
-            'Encrypted fictional Telugu final version recovered');
+        if (mounted) {
+          setState(() => _message =
+              'Encrypted fictional Telugu final version recovered');
+        }
         return;
       }
       final screen = _editorKey.currentState;
