@@ -1,5 +1,7 @@
 # Stage 5A — retained recovery candidate on real Android Keystore (API 34)
 
+> **Update 14 November 2026:** This page is the historical **PR #11 retained-candidate proof**. The subsequently implemented, explicitly approved **no-clobber activation** passed all PR #12 Android CI gates and was merged. For the current Stage 5A acceptance and remaining physical release blockers, see [Stage 5A safe activation](STAGE5A_SAFE_ACTIVATION_2026-11-14.md). Statements below saying activation is still unimplemented describe the earlier PR #11 checkpoint.
+
 **Date:** 14 November 2026  
 **Decision:** **ENGINEERING / ANDROID EMULATOR VERIFIED** for FICTIONAL SCRIPTED DATA ONLY. **NOT** physical-device certification, durable user-approved activation, an independently confirmed user backup, or an approved private diary beta.
 
