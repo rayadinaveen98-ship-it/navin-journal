@@ -3,34 +3,30 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:navin_journal_editor/fictional_recovery_activator.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:navin_journal_preview/apk02_library_main.dart';
 import 'package:navin_journal_preview/fictional_activation_consent_panel.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  const lifecycle = MethodChannel('navin_journal/test_lifecycle_v1');
   late Directory root;
 
   setUp(() async {
     root = Directory.systemTemp.createTempSync('nj-new-install-widget-');
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(lifecycle, (call) async {
-        if (call.method == 'getPrivateRoot') return root.path;
-        throw PlatformException(code: 'UNEXPECTED_DIAGNOSTIC_CALL');
-      });
   });
   tearDown(() async {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(lifecycle, null);
     if (root.existsSync()) root.deleteSync(recursive: true);
   });
 
   testWidgets('new installation offers explicit create or recover without '
       'silently creating an active encrypted journal', (tester) async {
     final key = GlobalKey<Apk02LibraryDiagnosticAppState>();
-    await tester.pumpWidget(Apk02LibraryDiagnosticApp(key: key));
+    await tester.pumpWidget(Apk02LibraryDiagnosticApp(
+      key: key,
+      debugTestPrivateRoot: root,
+      debugTestActivationState: FictionalActivationState.notPrepared,
+    ));
     await tester.runAsync(() => key.currentState!.waitForFirstBoot());
     await tester.pump();
     final consent = find.byType(FictionalActivationConsentPanel);
@@ -61,7 +57,11 @@ void main() {
     final marker = File('${occupied.path}/unknown-stage')
       ..writeAsStringSync('UNKNOWN CURRENT USER STATE');
     final key = GlobalKey<Apk02LibraryDiagnosticAppState>();
-    await tester.pumpWidget(Apk02LibraryDiagnosticApp(key: key));
+    await tester.pumpWidget(Apk02LibraryDiagnosticApp(
+      key: key,
+      debugTestPrivateRoot: root,
+      debugTestActivationState: FictionalActivationState.notPrepared,
+    ));
     await tester.runAsync(() => key.currentState!.waitForFirstBoot());
     await tester.pump();
     await tester.pumpAndSettle();
