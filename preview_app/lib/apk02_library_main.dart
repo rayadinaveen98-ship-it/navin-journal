@@ -60,6 +60,8 @@ class Apk02LibraryDiagnosticAppState
   bool _firstRun = false;
   FictionalActivationState? _firstRunState;
   Future<void>? _firstBoot;
+  final _activationPanelKey =
+      GlobalKey<FictionalActivationConsentPanelState>();
 
   /// Waits for the real file/MethodChannel bootstrap in Flutter tests;
   /// no time-based polling and no generic pumpAndSettle spinner timeout.
@@ -122,8 +124,12 @@ class Apk02LibraryDiagnosticAppState
           });
           return;
         }
-        // The new-journal action is a separate user choice; do not
-        // auto-activate or delete a retained candidate.
+        // Even if the screen was displayed before a candidate was retained,
+        // recheck at action time: never occupy a recovery destination while
+        // an encrypted candidate or unknown reservation exists.
+        if (state != FictionalActivationState.notPrepared) {
+          throw StateError('Recovery candidate pending or unsafe');
+        }
         folder.createSync(recursive: false);
       } else if (activated) {
         if (state != FictionalActivationState.activeFictionalVault ||
@@ -248,6 +254,20 @@ class Apk02LibraryDiagnosticAppState
     return FictionalRecoveryActivator.inspect(trustedPrivateRoot: root);
   }
 
+  // First-run-only presentation refresh after an independently retained
+  // candidate. This does not call activate, reset or create any vault.
+  Future<void> _candidateRetained() async {
+    FictionalActivationState state;
+    try {
+      state = await _inspectActivation();
+    } catch (_) {
+      state = FictionalActivationState.unsafeOrInterrupted;
+    }
+    if (!mounted || !_firstRun) return;
+    setState(() => _firstRunState = state);
+    await _activationPanelKey.currentState?.refresh();
+  }
+
   Future<FictionalActivationReceipt> _activateApproved() {
     final root = _privateRoot;
     if (root == null) throw const FictionalActivationRejected();
@@ -279,11 +299,26 @@ class Apk02LibraryDiagnosticAppState
               FilledButton.icon(
                 key: const ValueKey('first-run-new-journal'),
                 onPressed: _firstRunState ==
-                    FictionalActivationState.unsafeOrInterrupted
-                    ? null : () => _open(startNew: true),
+                    FictionalActivationState.notPrepared
+                    ? () => _open(startNew: true) : null,
                 icon: const Icon(Icons.auto_stories_outlined),
                 label: const Text('Create a fresh fictional journal'),
               ),
+              if (_firstRunState ==
+                  FictionalActivationState.awaitingExplicitApproval) ...[
+                const SizedBox(height: 10),
+                Text('A protected recovery candidate is waiting. Creating '
+                  'a new Library is disabled until recovery is reviewed.',
+                  key: const ValueKey('first-run-candidate-pending'),
+                  style: TextStyle(color: colors.clay, height: 1.4)),
+              ] else if (_firstRunState !=
+                  FictionalActivationState.notPrepared) ...[
+                const SizedBox(height: 10),
+                Text('An existing or uncertain encrypted state blocks '
+                  'new-Library creation. Nothing has been reset.',
+                  key: const ValueKey('first-run-candidate-unsafe'),
+                  style: TextStyle(color: colors.clay, height: 1.4)),
+              ],
               const SizedBox(height: 22),
               const Divider(),
               const SizedBox(height: 17),
@@ -293,11 +328,13 @@ class Apk02LibraryDiagnosticAppState
                 retainCandidate: _retainSelected,
                 reopenCandidate: _reopenCandidate,
                 hideProtectedInput: _hideFictionalInput,
+                onCandidateRetained: _candidateRetained,
               ),
               const SizedBox(height: 25),
               const Divider(),
               const SizedBox(height: 17),
               FictionalActivationConsentPanel(
+                key: _activationPanelKey,
                 inspect: widget.debugTestActivationState == null
                     ? _inspectActivation
                     : () async => widget.debugTestActivationState!,
