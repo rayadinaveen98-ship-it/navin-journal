@@ -8,16 +8,21 @@ library;
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
 import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_core/restore_staging_inventory.dart';
 import 'package:navin_journal_editor/fictional_recovery_rehearsal.dart';
+import 'package:navin_journal_editor/fictional_archive_exporter.dart';
 import 'connected_writing_studio.dart';
 import 'fictional_library_index.dart';
 import 'recovery_safety_screen.dart';
 import 'visuals.dart';
 
 enum _Screen { library, reader, writer, recovery }
+
+const _fictionalDocumentChannel =
+    MethodChannel('navin_journal/fictional_export_v1');
 
 class FictionalJournalLibrary extends StatefulWidget {
   final JournalEditorWorker worker;
@@ -30,6 +35,9 @@ class FictionalJournalLibrary extends StatefulWidget {
   /// outside Flutter's fake-time widget runner, as with stage assessment.
   /// Normal Android always calls the real recovery rehearsal service.
   final Future<FictionalRecoveryRehearsalReport> Function()? testRehearsal;
+  /// Widget test injection. Real Android always uses system picker + readback.
+  final Future<FictionalArchiveExportReceipt?> Function()? testExternalExport;
+  final Future<void> Function()? testHideRecoveryKey;
   const FictionalJournalLibrary({
     super.key,
     required this.worker,
@@ -39,6 +47,8 @@ class FictionalJournalLibrary extends StatefulWidget {
     this.authenticatedAssessment,
     this.inventoryLoader,
     this.testRehearsal,
+    this.testExternalExport,
+    this.testHideRecoveryKey,
   });
 
   @override
@@ -47,6 +57,18 @@ class FictionalJournalLibrary extends StatefulWidget {
 
 class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
   _Screen _screen = _Screen.library;
+
+  Future<FictionalArchiveExportReceipt?> _exportFictionalDocument() =>
+      FictionalArchiveExporter.export(
+        source: widget.worker,
+        writeEncryptedArchive: (encrypted) async =>
+          await _fictionalDocumentChannel.invokeMethod<bool>(
+            'saveFictionalArchive', {'archive': encrypted}) ?? false,
+      );
+
+  Future<void> _hideFictionalRecoveryKey() async {
+    await _fictionalDocumentChannel.invokeMethod<void>('hideRecoveryKey');
+  }
   // Journal metadata and page content stay only in live widget memory.
   // No journal selection, title or snippet is written to preferences/cache.
   late String _activeJournalId;
@@ -570,6 +592,10 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
                     () => FictionalRecoveryRehearsal.run(
                       source: widget.worker,
                     ),
+                  externalExport: widget.testExternalExport ??
+                      _exportFictionalDocument,
+                  hideExternalRecoveryKey: widget.testHideRecoveryKey ??
+                      _hideFictionalRecoveryKey,
                 )
               else _libraryView(c),
             ]),
