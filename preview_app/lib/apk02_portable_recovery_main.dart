@@ -506,9 +506,19 @@ class _PortableRecoveryDiagnosticAppState
           await db.length() != originalLength) {
         throw StateError('Occupied protected candidate was replaced');
       }
-      // Verify an independent existing fixture stayed decryptable. Its
-      // wrapping key is separate and cannot be retired by this import.
+      // Verify the candidate has a *different* non-exportable Android alias
+      // from the older independent fixture, before the alias-loss drill.
+      final candidateDocument = await _envelope(envelope).readEnvelope();
+      final existingDocument = await _envelope(File(
+          root.path + '/portable-restored-envelope.json')).readEnvelope();
+      if (candidateDocument.activeAlias == existingDocument.activeAlias) {
+        throw StateError('Independent recovered vault reused device alias');
+      }
+      // Existing fixture is decryptable before the candidate is sealed.
       await _reopenFixture(root);
+      // Remove the imported file too: the later process has no archive,
+      // manually entered recovery secret or database DEK to read.
+      await archiveFile.delete();
     } finally {
       payload.fillRange(0, payload.length, 0);
     }
