@@ -40,16 +40,23 @@ class SafDocumentPickerInstrumentedTest {
     }
 
     private fun requirePhase(expected: String, timeoutMs: Long = 75_000L) {
-        assertTrue(
-            "Missing native fictional phase " + expected + "; last=" + marker(),
-            seen(expected, timeoutMs)
-        )
+        val confirmed = seen(expected, timeoutMs)
+        if (!confirmed) {
+            // Only booleans and nonsecret markers: never dump UI, file names,
+            // keys, document URIs or journal text.
+            println("PROBE_STATE expected=" + expected +
+                " alive=" + shell("pidof $probe").isNotEmpty() +
+                " runAsReady=" + shell("run-as $probe id").contains("uid=") +
+                " marker=" + marker())
+        }
+        assertTrue("Missing native fictional phase " + expected, confirmed)
     }
 
     private fun phase(phase: String) {
         shell("am force-stop $probe")
         assertTrue("Failed clearing disposable app",
             shell("pm clear $probe").contains("Success"))
+        SystemClock.sleep(550L)
         val result = shell("am start -n $probe/.MainActivity --es nj_test_phase $phase")
         assertTrue("Failed starting disposable probe", !result.contains("Error"))
     }
@@ -101,16 +108,6 @@ class SafDocumentPickerInstrumentedTest {
 
     @Test
     fun actualFictionalAndroidPickerRoundTrip() {
-        phase("saf_export_cancel")
-        requirePhase("SAF_EXPORT_READY")
-        cancelPicker()
-        requirePhase("SAF_EXPORT_CANCELLED")
-
-        phase("saf_import_cancel")
-        requirePhase("SAF_IMPORT_READY")
-        cancelPicker()
-        requirePhase("SAF_IMPORT_CANCELLED")
-
         phase("saf_roundtrip")
         requirePhase("SAF_ROUNDTRIP_EXPORT_READY")
         picker()
@@ -135,5 +132,19 @@ class SafDocumentPickerInstrumentedTest {
         // No synthetic report can satisfy this: native onActivityResult must
         // return real ciphertext which the probe decrypts/authenticates.
         requirePhase("SAF_ROUNDTRIP_VERIFIED", 3_000L)
+
+        // Exercise cancellation only after the independent real-document
+        // authentication has proved the core picker flow. This avoids
+        // conflating repeated app resets with the primary import verdict.
+        phase("saf_export_cancel")
+        requirePhase("SAF_EXPORT_READY")
+        cancelPicker()
+        requirePhase("SAF_EXPORT_CANCELLED")
+
+        phase("saf_import_cancel")
+        requirePhase("SAF_IMPORT_READY")
+        cancelPicker()
+        requirePhase("SAF_IMPORT_CANCELLED")
+
     }
 }
