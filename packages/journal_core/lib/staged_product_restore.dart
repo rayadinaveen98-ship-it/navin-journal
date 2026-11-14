@@ -93,7 +93,7 @@ class StagedProductRestorer {
         if (!verifier.integrityCheck()) throw const ProductRestoreRejected();
         final reopened = verifier.snapshot();
         await ProductSnapshotCodec().validate(reopened);
-        if (!_equivalentSnapshots(source, reopened)) {
+        if (!equivalentSnapshots(source, reopened)) {
           throw const ProductRestoreRejected();
         }
       } finally {
@@ -133,7 +133,9 @@ class StagedProductRestorer {
       await File(destination.path).exists() ||
       await Link(destination.path).exists();
 
-  static bool _equivalentSnapshots(
+  /// Compare only journal records, not the regenerated export timestamp.
+  /// Both inputs must have been independently schema-validated before use.
+  static bool equivalentSnapshots(
     Map<String, dynamic> expected,
     Map<String, dynamic> actual,
   ) {
