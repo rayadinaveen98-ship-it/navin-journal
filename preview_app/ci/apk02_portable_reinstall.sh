@@ -157,10 +157,52 @@ stop_app
 phase reopen_fixture PORTABLE_REOPEN_OK
 stop_app
 
+# STAGE 5A native Keystore retained candidate. Independently re-inject only
+# the test recovery key from the CI host. The app deletes its copy before
+# preparing the candidate. The existing encrypted portable-restored vault
+# MUST remain independent and usable throughout all following phases.
+adb -s "$SERIAL" shell -T run-as "$PACKAGE" \
+  tee files/portable_import.key < "$KEY" > /dev/null
+adb -s "$SERIAL" shell run-as "$PACKAGE" chmod 600 files/portable_import.key
+phase retain_candidate CANDIDATE_RETAINED
+if app_path_exists files/portable_import.key; then
+  echo "::error::One-time candidate key remained in Android sandbox"; exit 1
+fi
+if ! app_path_exists files/nj-fictional-retained-candidate-v1 ||
+   ! app_path_exists files/nj-fictional-retained-candidate-v1.reservation ||
+   ! app_path_exists files/nj-fictional-retained-candidate-v1/envelope.json ||
+   ! app_path_exists files/nj-fictional-retained-candidate-v1/vault/journal.sqlite3; then
+  echo "::error::Retained encrypted vault/envelope/exclusive reservation absent"
+  exit 1
+fi
+stop_app
+
+# Android process has been killed; neither the archive nor its manually
+# entered key is passed as argument. Reopen from the *persisted* Android
+# Keystore-wrapped envelope. Verify fictional Telugu/current/history.
+phase reopen_candidate CANDIDATE_REOPEN_OK
+stop_app
+
+# Invalidate ONLY the isolated candidate's own alias. Reopen must now fail
+# closed without deleting candidate bytes; the older independent restored
+# vault must remain independently unlockable.
+phase retire_candidate_alias CANDIDATE_KEY_LOSS_SAFE
+if ! app_path_exists files/nj-fictional-retained-candidate-v1/vault/journal.sqlite3 ||
+   ! app_path_exists files/nj-fictional-retained-candidate-v1/envelope.json ||
+   ! app_path_exists files/nj-fictional-retained-candidate-v1.reservation; then
+  echo "::error::Key-loss erroneously erased retained encrypted candidate"
+  exit 1
+fi
+stop_app
+
 adb -s "$SERIAL" uninstall "$PACKAGE" | grep -q Success
 echo "VERIFIED: fictional v2 archive off device, original Android install deleted,"
 echo "wrong recovery key rejected without staging, fresh device key restore,"
 echo "historical revision recovered and reopened after Android force-stop."
 echo "Android synthetic ENOSPC before publication failed closed; after rename"
 echo "the encrypted journal was preserved and reopened under its own device key."
-echo "NOT verified for actual personal data, media streaming, or production restore."
+echo "Native Android Stage 5A: isolated candidate wrapped by its own Keystore alias,"
+echo "exclusive no-replace reservation, independent force-stop reopen,"
+echo "fictional Telugu revision verification, and missing-alias fail-closed."
+echo "NOT verified for actual personal data, manual SAF UX, physical power"
+echo "loss, retained-vault activation, or production private-data recovery."
