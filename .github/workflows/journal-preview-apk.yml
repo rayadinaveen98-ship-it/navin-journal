@@ -48,7 +48,9 @@ jobs:
           cp "$GITHUB_WORKSPACE/preview_app/lib/main.dart" "$TARGET/lib/"
           cp "$GITHUB_WORKSPACE/preview_app/lib/visuals.dart" "$TARGET/lib/"
           rm -f "$TARGET/test/widget_test.dart"
-          cp "$GITHUB_WORKSPACE/preview_app/test/"*.dart "$TARGET/test/"
+          # APK01 deliberately runs only visual-preview tests; APK02 tests
+          # require encrypted-core dependencies and a separate guarded app.
+          cp "$GITHUB_WORKSPACE/preview_app/test/preview_widget_test.dart" "$TARGET/test/"
 
           RES="$TARGET/android/app/src/main/res"
           mkdir -p "$RES/drawable" "$RES/mipmap-anydpi-v26"
