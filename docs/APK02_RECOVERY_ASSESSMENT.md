@@ -1,6 +1,6 @@
 # APK 02 — Read-only authenticated recovery assessment
 
-**Status:** encrypted-core assessment verified on Linux (41/41); background worker and Flutter review gate being validated. **FICTIONAL TEST DATA ONLY.** Never use the diagnostic APK to store a personal journal.
+**Status:** encrypted-core assessment verified on Linux (41/41), encrypted background-worker assessment verified (35/35), and read-only review Flutter widget tests passed. **FICTIONAL TEST DATA ONLY.** Native APK 02 compilation is a separate CI gate. Never use the diagnostic APK to store a personal journal.
 
 ## Problem and safety boundary
 
@@ -25,8 +25,8 @@ The [RecoveryAssessmentReview](../preview_app/lib/recovery_assessment_review.dar
 ## Evidence
 
 - [Linux encrypted-core run 43564506990](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43564506990): **41/41 tests passed**, strict static analysis clean. The eleven new core test cases validate intact encrypted stages with/without markers, byte-for-byte unchanged original files, wrong recovery/database keys, divergent data, forged markers, corrupt SQLite, untrusted paths/symlinks, missing files and size limits.
-- The background-isolate bridge has additional tests for authenticated stage assessment, wrong-key refusal and path isolation. **Its current CI result must be verified independently before signoff.**
-- The Flutter review panel has phone/tablet and light/dark safety-copy tests. **Do not count them as passed until the APK 02 library workflow confirms them.**
+- [Encrypted editor/assessment worker run 43564673309](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43564673309): **35/35 tests passed**, strict analysis clean. Three new tests verify authenticated stage assessment over the background isolate, wrong archive-key rejection and refusing traversal names.
+- The new Flutter review panel's **five phone/tablet, light/dark and no-destructive-action tests passed** in the [APK02 Library pipeline 43565045914](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43565045914). A passed widget step is not itself a signed or hardware-tested APK.
 
 ## Important limitations and next decision
 
