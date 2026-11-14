@@ -37,6 +37,7 @@ class Apk02LibraryDiagnosticApp extends StatefulWidget {
 class _Apk02LibraryDiagnosticAppState
     extends State<Apk02LibraryDiagnosticApp> {
   JournalEditorWorker? _worker;
+  Directory? _privateRoot;
   String? _journalId;
   String _status = 'Unlocking fictional encrypted journal…';
   bool _failed = false;
@@ -108,7 +109,11 @@ class _Apk02LibraryDiagnosticAppState
         await opened.close();
         return;
       }
-      setState(() { _worker = opened; _journalId = active; });
+      setState(() {
+        _worker = opened;
+        _journalId = active;
+        _privateRoot = Directory(root);
+      });
     } catch (_) {
       if (opened != null) {
         try { await opened.close(); } catch (_) {}
@@ -144,6 +149,7 @@ class _Apk02LibraryDiagnosticAppState
         ? FictionalJournalLibrary(
             worker: _worker!,
             journalId: _journalId!,
+            recoveryPrivateRoot: _privateRoot,
           )
         : Scaffold(body: SafeArea(child: Center(
             child: ConstrainedBox(
