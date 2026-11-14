@@ -62,8 +62,29 @@ class SafDocumentPickerInstrumentedTest {
     }
 
     private fun picker() {
-        assertTrue("Real DocumentsUI unavailable",
-            device.wait(Until.hasObject(By.pkg(documentsUi)), 35_000L))
+        val googlePicker = device.wait(
+            Until.hasObject(By.pkg(documentsUi)), 22_000L)
+        val platformPicker = if (!googlePicker) device.wait(
+            Until.hasObject(By.pkg("com.android.documentsui")), 12_000L
+        ) else false
+        val pickerVisible = googlePicker || platformPicker
+        if (!pickerVisible) {
+            // Report ONLY known package/system window categories, never a full
+            // accessibility dump or private text, URI, key or archive bytes.
+            val window = shell(
+                "dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' | head -n 2"
+            )
+            val category = when {
+                window.contains("documentsui") -> "documentsui_not_accessible"
+                window.contains("Not Responding") -> "system_anr"
+                window.contains(probe) -> "probe_foreground"
+                else -> "other_system_window"
+            }
+            println("PICKER_VISIBILITY category=" + category +
+                " probeAlive=" + shell("pidof $probe").isNotEmpty() +
+                " probePhase=" + marker())
+        }
+        assertTrue("Real DocumentsUI unavailable", pickerVisible)
     }
 
     private fun click(node: UiObject2) {
