@@ -1,6 +1,6 @@
 # APK 02 — Read-only Restore Safety navigation
 
-**Status:** implemented in the fictional APK 02 Library and **seven real-worker Flutter navigation tests passed** in [run 43566554486](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43566554486). A standalone Android debug APK compilation is a separate gate. No personal data entry, backup restore action, or deletion is enabled.
+**Status:** implemented in the fictional APK 02 Library, **7/7 real-worker Flutter navigation tests passed** in [run 43566554486](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43566554486), and the standalone Android Library debug APK **built and uploaded successfully** in [run 43566554446](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43566554446), artifact **14102247656**. No personal data entry, restore, merge, or deletion action is enabled.
 
 ## User flow
 
