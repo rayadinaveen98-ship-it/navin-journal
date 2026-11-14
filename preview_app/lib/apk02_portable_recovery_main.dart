@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, curly_braces_in_flow_control_structures, prefer_interpolation_to_compose_strings
 /// APK02 PORTABLE clean-install recovery diagnostic. FICTIONAL DATA ONLY.
 ///
 /// Three Android launch phases selected by ADB test intent:
@@ -19,7 +19,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:navin_journal_autosave_spike/draft_autosave.dart';
 import 'package:navin_journal_bridge_probe/android_key_bridge.dart';
-import 'package:navin_journal_core/staged_product_restore.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
 import 'package:navin_journal_editor/portable_recovery_worker.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
