@@ -1,6 +1,6 @@
 # Stage 5B — first-launch recovery UX and physical-device acceptance
 
-**Status:** PRE-DEVICE VALIDATION / FICTIONAL DIAGNOSTIC ONLY. This document is a testing contract, **not** evidence that a phone/tablet or actual SAF provider has been tested. No personal journal content or actual private recovery key is authorized.
+**Status:** FIRST-RUN UX GUARD IMPLEMENTED + CI VERIFIED (PR #13, merge `9230d4137082bca52019764d552c4d00b0a0bdbc`); PHYSICAL DEVICE ACCEPTANCE NOT STARTED / FICTIONAL DIAGNOSTIC ONLY. This document is a testing contract, **not** evidence that a phone/tablet or actual SAF provider has been tested. No personal journal content or actual private recovery key is authorized.
 
 ## Purpose
 
@@ -12,6 +12,12 @@ After a fictional encrypted archive is imported into a *separate* native Keystor
 - First-run Android Library re-inspects retained recovery state and refreshes the separate approval panel after that signal. The **Create a fresh fictional journal** action is disabled for pending recovery and uncertain/occupied state; the creation handler also rechecks the recovery state before creating any directory, protecting against a stale screen.
 - Approval still requires the independent checkbox + typed phrase, and the native no-overwrite directory rename, permanent reservation, independently authenticated reopen and Keystore alias rules remain untouched.
 - Regression tests cover success-only status refresh, failure does not signal refresh, pending candidate blocks fresh creation, incomplete state blocks creation, plus existing no-consent/no-overwrite/force-stop checks.
+
+## Verification of the code change
+
+- [PR #13](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/13) merged after exact-head CI checks completed successfully: [Library worker/import/first-launch widgets + Android debug APK build 43594995920](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43594995920), [API-34 Telugu HOME/force-stop 43594995940](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43594995940).
+- Updated test expectations reflect existing fail-closed behavior: uncertain state shows a no-reset error and **does not enter setup**, rather than showing a disabled setup button.
+- Latest produced fictional Library test artifact: GitHub Actions artifact ID **14114028203**, `navin-apk02-FICTIONAL-LIBRARY-NOT-PRIVATE-DIARY`, from run 43594995920. It is a debug build, **not** a safe diary or Play Store release.
 
 ## Device acceptance matrix (manual; NOT YET EXECUTED)
 
