@@ -5,8 +5,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:navin_journal_core/journal_vault.dart';
+import 'package:navin_journal_core/native_restore_publisher.dart';
+import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
+import 'package:navin_journal_editor/portable_recovery_worker.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
+import 'package:navin_journal_recovery_archive_spike/product_encrypted_archive.dart';
+import 'package:navin_journal_recovery_archive_spike/recovery_archive.dart';
 import 'package:navin_journal_preview/fictional_journal_library.dart';
 
 void main() {
@@ -61,9 +67,14 @@ void main() {
     }
   }
 
-  Future<void> mount(WidgetTester tester) async {
+  Future<void> mount(WidgetTester tester, {
+    Directory? recoveryRoot,
+    Future<RestoreAssessment> Function()? assessment,
+  }) async {
     await tester.pumpWidget(MaterialApp(home: FictionalJournalLibrary(
       worker: worker, journalId: journal,
+      recoveryPrivateRoot: recoveryRoot,
+      authenticatedAssessment: assessment,
     )));
     await settleRealWorker(tester);
   }
@@ -165,4 +176,107 @@ void main() {
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();
   });
+
+  testWidgets('Library recovery safety route scans and returns without mutation',
+      (tester) async {
+    await mount(tester, recoveryRoot: temp);
+    await tapVisible(tester, 'library-review-recovery');
+    expect(find.byKey(const ValueKey('recovery-safety-screen')), findsOneWidget);
+    expect(find.text('No interrupted restore folders detected.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('recovery-assess-test-fixture')), findsNothing);
+    expect(find.byKey(const ValueKey('recovery-read-only-disclaimer')),
+        findsOneWidget);
+    await tapVisible(tester, 'recovery-rescan');
+    expect(find.text('No interrupted restore folders detected.'), findsOneWidget);
+    await tapVisible(tester, 'reader-back');
+    expect(find.byKey(const ValueKey('library-create-fictional')), findsOneWidget);
+    expect(await workerCall(tester, () => worker.integrityCheck()), isTrue);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('unknown abandoned stage has no usable assessment or delete',
+      (tester) async {
+    final orphan = Directory(temp.path + '/' +
+        NativeRestorePublisher.stagePrefix + 'unknownABC123')..createSync();
+    File(orphan.path + '/journal.sqlite3').writeAsBytesSync([1, 2, 3]);
+    await mount(tester, recoveryRoot: temp);
+    await tapVisible(tester, 'library-review-recovery');
+    expect(find.text('Interrupted restore candidates detected: 1'), findsOneWidget);
+    expect(find.byKey(const ValueKey('recovery-assessment-locked')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('recovery-assess-test-fixture')),
+        findsNothing);
+    expect(find.textContaining('No restore or delete actions'),
+        findsNothing); // The safe disclaimer has different, explicit copy.
+    expect(orphan.existsSync(), isTrue);
+    await tapVisible(tester, 'reader-back');
+    expect(File(orphan.path + '/journal.sqlite3').readAsBytesSync(),
+        [1, 2, 3]);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('real encrypted assessment is reachable but never promotes stage',
+      (tester) async {
+    final session = await workerCall(tester, () =>
+        worker.startSession(journalId: journal));
+    session.controller.update(
+      title: 'An imaginary page',
+      body: 'Only fictional content · తెలుగు',
+    );
+    await workerVoid(tester, session.save);
+    expect(await workerCall(tester, session.closeSafely), isTrue);
+
+    final recoveryKey = RecoveryKey.random();
+    final stageKey = TestVaultKey.random();
+    try {
+      final encryptedArchive = await workerCall(tester,
+          () => worker.exportRecoveryArchive(recoveryKey));
+      final stageName = NativeRestorePublisher.stagePrefix + 'fixtureABC123';
+      final stage = Directory(temp.path + '/' + stageName)..createSync();
+      final expected = await workerCall(tester, () =>
+          ProductEncryptedArchiveCodec().verify(
+            recoveryKey: recoveryKey, archive: encryptedArchive));
+      await workerVoid(tester, () async {
+        final vault = JournalVault.open(
+          stage.path + '/journal.sqlite3', key: stageKey, create: true,
+        );
+        try {
+          await vault.importIntoEmpty(expected);
+        } finally {
+          vault.close();
+        }
+      });
+      await mount(tester, recoveryRoot: temp,
+        assessment: () => PortableRecoveryWorker.assessQuarantinedStage(
+          privateParent: temp,
+          candidateBasename: stageName,
+          encryptedArchive: encryptedArchive,
+          recoveryKey: recoveryKey,
+          stagedDatabaseKey: stageKey,
+        ),
+      );
+      await tapVisible(tester, 'library-review-recovery');
+      expect(find.text('Interrupted restore candidates detected: 1'),
+          findsOneWidget);
+      await tapVisible(tester, 'recovery-assess-test-fixture');
+      expect(find.text('Encrypted records match'), findsOneWidget);
+      expect(find.textContaining('still quarantined'), findsOneWidget);
+      expect(find.byKey(const ValueKey('recovery-no-destructive-action')),
+          findsOneWidget);
+      expect(stage.existsSync(), isTrue);
+      expect(Directory(temp.path + '/restored').existsSync(), isFalse);
+      await tapVisible(tester, 'reader-back');
+      expect(find.byKey(const ValueKey('library-create-fictional')),
+          findsOneWidget);
+      expect(await workerCall(tester, () => worker.integrityCheck()), isTrue);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    } finally {
+      recoveryKey.destroy();
+      stageKey.destroy();
+    }
+  });
+
 }
