@@ -165,8 +165,10 @@ adb -s "$SERIAL" shell -T run-as "$PACKAGE" \
   tee files/portable_import.key < "$KEY" > /dev/null
 adb -s "$SERIAL" shell run-as "$PACKAGE" chmod 600 files/portable_import.key
 phase retain_candidate CANDIDATE_RETAINED
-if app_path_exists files/portable_import.key; then
-  echo "::error::One-time candidate key remained in Android sandbox"; exit 1
+if app_path_exists files/portable_import.key ||
+   app_path_exists files/portable_import.njr; then
+  echo "::error::One-time candidate archive/key remained in Android sandbox"
+  exit 1
 fi
 if ! app_path_exists files/nj-fictional-retained-candidate-v1 ||
    ! app_path_exists files/nj-fictional-retained-candidate-v1.reservation ||
