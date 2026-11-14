@@ -11,6 +11,7 @@ import 'package:navin_journal_core/native_restore_publisher.dart';
 import 'package:navin_journal_core/restore_staging_inventory.dart';
 import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
+import 'package:navin_journal_editor/fictional_recovery_rehearsal.dart';
 import 'package:navin_journal_editor/portable_recovery_worker.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_recovery_archive_spike/product_encrypted_archive.dart';
@@ -83,12 +84,14 @@ void main() {
     Directory? recoveryRoot,
     Future<RestoreAssessment> Function()? assessment,
     Future<List<StagingObservation>> Function(Directory)? inventoryLoader,
+    Future<FictionalRecoveryRehearsalReport> Function()? rehearsal,
   }) async {
     await tester.pumpWidget(MaterialApp(home: FictionalJournalLibrary(
       worker: worker, journalId: journal,
       recoveryPrivateRoot: recoveryRoot,
       authenticatedAssessment: assessment,
       inventoryLoader: inventoryLoader,
+      testRehearsal: rehearsal,
     )));
     await settleRealWorker(tester);
   }
@@ -305,6 +308,85 @@ void main() {
     }
   });
 
+
+  testWidgets('fictional recovery verdict remains explicit and leaves '
+      'active journal and unknown stage untouched',
+      (tester) async {
+    final session = await workerCall(tester,
+        () => worker.startSession(journalId: journal));
+    session.controller.update(
+      title: 'A made-up evening', body: 'తెలుగు imaginary memory 🌿',
+    );
+    await workerVoid(tester, session.save);
+    final pageId = (await workerCall(tester, session.persistedEntryId))!;
+    session.controller.update(
+      title: 'A made-up evening revisited', body: 'Fictional revision only',
+    );
+    await workerVoid(tester, session.save);
+    expect(await workerCall(tester, session.closeSafely), isTrue);
+
+    final orphan = Directory(temp.path + '/' +
+        NativeRestorePublisher.stagePrefix + 'untouchedXYZ123')
+      ..createSync();
+    final existingBytes = <int>[6, 7, 8, 9];
+    final originalFile = File(orphan.path + '/journal.sqlite3')
+      ..writeAsBytesSync(existingBytes);
+    final originals = await workerCall(tester, () => worker.readEntry(pageId));
+    // The separate real-worker contract tests perform actual encrypted
+    // export + isolated restore + independent reopen. Widget tests inject
+    // only a nonsecret immutable report to avoid native/Flutter fake-time
+    // deadlocks; this checks UI presentation, not crypto execution.
+    const verified = FictionalRecoveryRehearsalReport(
+      journals: 1, entries: 1, revisions: 1, attachments: 0);
+    expect(verified.isOffDeviceBackup, isFalse);
+    expect(verified.replacedActiveJournal, isFalse);
+    final items = await workerCall(tester,
+        () => RestoreStagingInventory.inspect(temp));
+    await mount(tester, recoveryRoot: temp,
+      inventoryLoader: (_) async => items,
+      rehearsal: () async => verified);
+    await tapVisible(tester, 'library-review-recovery');
+    expect(find.byKey(const ValueKey('rehearsal-no-backup-warning')),
+      findsOneWidget);
+    expect(find.byKey(const ValueKey('rehearsal-success')), findsNothing);
+    expect(find.textContaining('Interrupted restore candidates detected: 1'),
+      findsOneWidget);
+    await tapVisible(tester, 'recovery-run-rehearsal');
+    expect(find.byKey(const ValueKey('rehearsal-success')), findsOneWidget);
+    expect(find.textContaining('1 notebooks · 1 pages · 1 revisions'),
+      findsOneWidget);
+    expect(find.byKey(const ValueKey('rehearsal-not-backup')), findsOneWidget);
+    expect(find.textContaining('NOT BACKED UP'), findsOneWidget);
+    expect(find.byKey(const ValueKey('recovery-assess-test-fixture')),
+      findsNothing);
+    expect(originalFile.readAsBytesSync(), existingBytes);
+    expect(await workerCall(tester, () => worker.readEntry(pageId)),
+      originals);
+    expect(await workerCall(tester, worker.integrityCheck), isTrue);
+    await tapVisible(tester, 'reader-back');
+    expect(find.byKey(ValueKey('library-open-' + pageId)), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('failed rehearsal gives no verified or external-backup claim',
+      (tester) async {
+    final items = await workerCall(tester,
+        () => RestoreStagingInventory.inspect(temp));
+    await mount(tester, recoveryRoot: temp,
+      inventoryLoader: (_) async => items,
+      rehearsal: () async =>
+          throw const RecoveryRehearsalUnavailable());
+    await tapVisible(tester, 'library-review-recovery');
+    await tapVisible(tester, 'recovery-run-rehearsal');
+    expect(find.byKey(const ValueKey('rehearsal-error')), findsOneWidget);
+    expect(find.byKey(const ValueKey('rehearsal-success')), findsNothing);
+    expect(find.byKey(const ValueKey('rehearsal-not-backup')), findsNothing);
+    expect(find.byKey(const ValueKey('rehearsal-no-backup-warning')),
+      findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('encrypted Library presets filter actual Telugu/English saved pages',
       (tester) async {

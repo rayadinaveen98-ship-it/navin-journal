@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:navin_journal_editor/journal_editor_isolate.dart';
 import 'package:navin_journal_core/restore_staging_assessment.dart';
 import 'package:navin_journal_core/restore_staging_inventory.dart';
+import 'package:navin_journal_editor/fictional_recovery_rehearsal.dart';
 import 'connected_writing_studio.dart';
 import 'fictional_library_index.dart';
 import 'recovery_safety_screen.dart';
@@ -25,6 +26,10 @@ class FictionalJournalLibrary extends StatefulWidget {
   final Directory? recoveryPrivateRoot;
   final Future<RestoreAssessment> Function()? authenticatedAssessment;
   final Future<List<StagingObservation>> Function(Directory)? inventoryLoader;
+  /// Test-only: precomputed real encrypted recovery result can be injected
+  /// outside Flutter's fake-time widget runner, as with stage assessment.
+  /// Normal Android always calls the real recovery rehearsal service.
+  final Future<FictionalRecoveryRehearsalReport> Function()? testRehearsal;
   const FictionalJournalLibrary({
     super.key,
     required this.worker,
@@ -33,6 +38,7 @@ class FictionalJournalLibrary extends StatefulWidget {
     this.recoveryPrivateRoot,
     this.authenticatedAssessment,
     this.inventoryLoader,
+    this.testRehearsal,
   });
 
   @override
@@ -560,6 +566,10 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
                   privateRoot: widget.recoveryPrivateRoot!,
                   authenticatedAssessment: widget.authenticatedAssessment,
                   inventoryLoader: widget.inventoryLoader,
+                  rehearsal: widget.testRehearsal ??
+                    () => FictionalRecoveryRehearsal.run(
+                      source: widget.worker,
+                    ),
                 )
               else _libraryView(c),
             ]),
