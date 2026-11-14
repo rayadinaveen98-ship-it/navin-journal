@@ -176,6 +176,41 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('import-progress')), findsNothing);
   });
+  testWidgets('successful candidate retention announces a separate status refresh '
+      'once without any activation', (tester) async {
+    var refreshed = 0;
+    var retentionCalls = 0;
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body:
+      SingleChildScrollView(child: FictionalExternalImportSection(
+        selectEncryptedDocument: () async => Uint8List.fromList([5, 6, 7]),
+        inspect: (_, _) async =>
+            throw const FictionalArchiveImportRejected(),
+        retainCandidate: (bytes, key) async {
+          retentionCalls++;
+          expect(key, demoKey);
+          return const FictionalRetainedRecoveryReport(
+            journals: 1, entries: 2, revisions: 1, attachments: 0);
+        },
+        onCandidateRetained: () async { refreshed++; },
+        hideProtectedInput: () async {},
+      )),
+    )));
+    await tapVisible(tester, 'import-select-document');
+    expect(refreshed, 0);
+    await tester.enterText(
+      find.byKey(const ValueKey('import-recovery-key')), demoKey);
+    await tester.pumpAndSettle();
+    expect(refreshed, 0);
+    await tapVisible(tester, 'import-retain-candidate');
+    expect(retentionCalls, 1);
+    expect(refreshed, 1);
+    expect(find.byKey(const ValueKey('import-retained-verified')),
+      findsOneWidget);
+    expect(find.textContaining('QUARANTINED CANDIDATE ONLY'),
+      findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('explicit fictional candidate retention and later independent '
       'reopen never claim activation', (tester) async {
     var retained = 0;
@@ -234,6 +269,7 @@ void main() {
   testWidgets('occupied candidate keeps failure neutral and leaves no '
       'success or activated-journal UI', (tester) async {
     var tries = 0;
+    var refreshed = 0;
     await tester.pumpWidget(MaterialApp(home: Scaffold(body:
       SingleChildScrollView(child: FictionalExternalImportSection(
         selectEncryptedDocument: () async => Uint8List.fromList([8, 9]),
@@ -246,6 +282,7 @@ void main() {
         reopenCandidate: () async =>
             throw const FictionalRetainedRecoveryRejected(),
         hideProtectedInput: () async {},
+        onCandidateRetained: () async { refreshed++; },
       )),
     )));
     await tapVisible(tester, 'import-select-document');
@@ -254,6 +291,7 @@ void main() {
     await tester.pumpAndSettle();
     await tapVisible(tester, 'import-retain-candidate');
     expect(tries, 1);
+    expect(refreshed, 0);
     expect(find.textContaining('A reserved candidate'), findsOneWidget);
     expect(find.byKey(const ValueKey('import-retained-verified')),
       findsNothing);
