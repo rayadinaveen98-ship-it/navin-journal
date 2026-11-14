@@ -147,17 +147,21 @@ class _FictionalJournalLibraryState extends State<FictionalJournalLibrary> {
     setState(() { _busy = true; _error = null; });
     try {
       final number = _journals.length + 1;
-      final newId = await widget.worker.createJournal(
+      final shelf = await widget.worker.createFictionalJournalShelf(
           'Imagined Notebook ' + number.toString());
       if (!mounted) return;
+      if (!shelf.journals.any((j) => j['id'] == shelf.journalId) ||
+          shelf.pages.any((p) => p['journalId'] != shelf.journalId)) {
+        throw StateError('New journal scope mismatch');
+      }
       setState(() {
-        _activeJournalId = newId;
-        _pages = [];
-        _loaded = false;
+        _activeJournalId = shelf.journalId;
+        _journals = shelf.journals;
+        _pages = shelf.pages;
+        _loaded = true;
         _filter = FictionalPageFilter.all;
         _order = FictionalPageOrder.newest;
       });
-      await _refresh();
     } catch (_) {
       if (mounted) setState(() =>
           _error = 'Unable to create a fictional journal.');
