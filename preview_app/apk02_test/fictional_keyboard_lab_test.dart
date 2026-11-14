@@ -4,6 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:navin_journal_preview/fictional_keyboard_lab.dart';
 
+Future<void> tapVisible(WidgetTester tester, String key) async {
+  final target = find.byKey(ValueKey(key));
+  await tester.ensureVisible(target);
+  // ensureVisible schedules a viewport update; wait for paint and animations
+  // before calculating the real hit-test position.
+  await tester.pumpAndSettle();
+  await tester.tap(target);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('lab starts empty, private-writing warning remains visible',
       (tester) async {
@@ -36,9 +46,7 @@ void main() {
     expect(state.bodyInput.text, fictionalKeyboardBody);
     expect(state.sanitizedChecklist, isNot(contains(fictionalKeyboardTitle)));
     expect(state.sanitizedChecklist, isNot(contains(fictionalKeyboardBody)));
-    await tester.ensureVisible(find.byKey(const ValueKey('lab-reset')));
-    await tester.tap(find.byKey(const ValueKey('lab-reset')));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, 'lab-reset');
     expect(state.titleInput.text, isEmpty);
     expect(state.bodyInput.text, isEmpty);
     expect(tester.takeException(), isNull);
@@ -78,11 +86,7 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('lab-body')),
       'NEVER_COPY_PERSONAL_CONTENT_QA_ONLY');
     await tester.pumpAndSettle();
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('lab-check-teluguComposition')));
-    await tester.tap(
-      find.byKey(const ValueKey('lab-check-teluguComposition')));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, 'lab-check-teluguComposition');
     expect(state.sanitizedChecklist, contains(
       'Telugu Gboard composition and conjuncts: USER CHECKED'));
     expect(state.sanitizedChecklist,
@@ -98,9 +102,7 @@ void main() {
     await tester.pumpWidget(const FictionalKeyboardLabApp());
     final state = tester.state<FictionalKeyboardLabState>(
       find.byType(FictionalKeyboardLab));
-    await tester.ensureVisible(find.byKey(const ValueKey('lab-insert-sample')));
-    await tester.tap(find.byKey(const ValueKey('lab-insert-sample')));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, 'lab-insert-sample');
     expect(state.bodyInput.text, fictionalKeyboardBody);
     expect(find.text('Inserted by the app: NOT a real keyboard test.'),
       findsOneWidget);
