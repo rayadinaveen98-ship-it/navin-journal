@@ -1,6 +1,11 @@
 package com.navinjournal.navin_journal_bridge_probe
 
+import android.app.Activity
+import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.os.Handler
+import android.view.WindowManager
+import java.security.MessageDigest
 import android.os.Looper
 import com.navinjournal.security.spike.AndroidKeystoreKeyProtector
 import io.flutter.embedding.android.FlutterActivity
@@ -23,6 +28,9 @@ class MainActivity : FlutterActivity() {
     companion object {
         const val CHANNEL = "navin_journal/security_key_wrap_v1"
         const val TEST_LIFECYCLE_CHANNEL = "navin_journal/test_lifecycle_v1"
+        const val FICTIONAL_EXPORT_CHANNEL = "navin_journal/fictional_export_v1"
+        private const val CREATE_FICTIONAL_ARCHIVE = 7481
+        private const val MAX_FICTIONAL_ARCHIVE_BYTES = 32 * 1024 * 1024
         private const val TEST_MARKER_FILE = "nj_crash_phase.txt"
     }
 
@@ -31,6 +39,89 @@ class MainActivity : FlutterActivity() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var methodChannel: MethodChannel? = null
     private var diagnosticChannel: MethodChannel? = null
+    private var fictionalExportChannel: MethodChannel? = null
+    private data class PendingFictionalExport(
+        val bytes: ByteArray,
+        val reply: MethodChannel.Result,
+    )
+    private var pendingFictionalExport: PendingFictionalExport? = null
+
+    private fun isDebugHarness(): Boolean =
+        (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
+    private fun verifySelectedDocument(uri: android.net.Uri, source: ByteArray): Boolean {
+        // No filenames, paths, ciphertext, or destination URI are ever logged.
+        // A provider returning a write ACK alone is not a successful export.
+        val expected = MessageDigest.getInstance("SHA-256").digest(source)
+        contentResolver.openOutputStream(uri, "wt")?.use { output ->
+            output.write(source)
+            output.flush()
+        } ?: return false
+        val digest = MessageDigest.getInstance("SHA-256")
+        var seen = 0L
+        contentResolver.openInputStream(uri)?.use { input ->
+            val buffer = ByteArray(32 * 1024)
+            try {
+                while (true) {
+                    val n = input.read(buffer)
+                    if (n < 0) break
+                    if (n == 0) continue
+                    seen += n
+                    if (seen > MAX_FICTIONAL_ARCHIVE_BYTES) return false
+                    digest.update(buffer, 0, n)
+                }
+            } finally {
+                buffer.fill(0)
+            }
+        } ?: return false
+        return seen == source.size.toLong() &&
+            MessageDigest.isEqual(expected, digest.digest())
+    }
+
+    override fun onActivityResult(
+        requestCode: Int, resultCode: Int, data: Intent?
+    ) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != CREATE_FICTIONAL_ARCHIVE) return
+        val pending = pendingFictionalExport ?: return
+        pendingFictionalExport = null
+        val uri = if (resultCode == Activity.RESULT_OK) data?.data else null
+        if (uri == null) {
+            pending.bytes.fill(0)
+            pending.reply.success(false)
+            return
+        }
+        try {
+            executor.execute {
+                var verified = false
+                try {
+                    verified = verifySelectedDocument(uri, pending.bytes)
+                } catch (_: Exception) {
+                    // A failed provider can leave a partial ciphertext file.
+                    // Never delete/rewrite unknown provider documents.
+                } finally {
+                    pending.bytes.fill(0)
+                }
+                mainHandler.post {
+                    if (verified && !isFinishing && !isDestroyed) {
+                        // Establish screenshot protection BEFORE Dart receives
+                        // the result containing the manually transcribed key.
+                        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                        pending.reply.success(true)
+                    } else {
+                        pending.reply.error(
+                            "EXPORT_UNVERIFIED",
+                            "The chosen document could not be read back and verified",
+                            null,
+                        )
+                    }
+                }
+            }
+        } catch (_: RejectedExecutionException) {
+            pending.bytes.fill(0)
+            pending.reply.error("EXPORT_UNAVAILABLE", "File handoff unavailable", null)
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -43,6 +134,54 @@ class MainActivity : FlutterActivity() {
             TEST_LIFECYCLE_CHANNEL,
         )
         diagnosticChannel = diagnostic
+        val exportChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            FICTIONAL_EXPORT_CHANNEL,
+        )
+        fictionalExportChannel = exportChannel
+        exportChannel.setMethodCallHandler { call, result ->
+            if (!isDebugHarness()) {
+                result.error("DISABLED", "Fictional diagnostics unavailable", null)
+                return@setMethodCallHandler
+            }
+            when (call.method) {
+                "saveFictionalArchive" -> {
+                    val raw = call.argument<ByteArray>("archive")
+                    if (raw == null || raw.isEmpty() ||
+                        raw.size > MAX_FICTIONAL_ARCHIVE_BYTES ||
+                        pendingFictionalExport != null) {
+                        result.error("INVALID_ARGUMENT", "Export unavailable", null)
+                    } else {
+                        // Native copies this encrypted payload. No raw DEK or
+                        // offline recovery key is transmitted through this bridge.
+                        val copy = raw.copyOf()
+                        pendingFictionalExport =
+                            PendingFictionalExport(copy, result)
+                        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "application/octet-stream"
+                            putExtra(Intent.EXTRA_TITLE,
+                                "navin-journal-FICTIONAL-only.njr")
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                        }
+                        try {
+                            startActivityForResult(intent, CREATE_FICTIONAL_ARCHIVE)
+                        } catch (_: Exception) {
+                            pendingFictionalExport = null
+                            copy.fill(0)
+                            result.error("PICKER_UNAVAILABLE",
+                                "Document picker unavailable", null)
+                        }
+                    }
+                }
+                "hideRecoveryKey" -> {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
         diagnostic.setMethodCallHandler { call, result ->
             when (call.method) {
                 "getPrivateRoot" -> result.success(filesDir.absolutePath)
@@ -171,6 +310,13 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        pendingFictionalExport?.let {
+            it.bytes.fill(0)
+            it.reply.error("EXPORT_CANCELLED", "The app closed during export", null)
+        }
+        pendingFictionalExport = null
+        fictionalExportChannel?.setMethodCallHandler(null)
+        fictionalExportChannel = null
         diagnosticChannel?.setMethodCallHandler(null)
         diagnosticChannel = null
         methodChannel?.setMethodCallHandler(null)
