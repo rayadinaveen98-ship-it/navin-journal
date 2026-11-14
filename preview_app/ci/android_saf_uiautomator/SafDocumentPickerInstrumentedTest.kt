@@ -146,7 +146,18 @@ class SafDocumentPickerInstrumentedTest {
         requirePhase("SAF_ROUNDTRIP_EXPORT_READY")
         picker()
         downloads()
-        val save = device.wait(Until.findObject(By.text("Save")), 10_000L)
+        val save = device.wait(Until.findObject(By.text("Save")), 5_000L)
+            ?: listOf(
+                By.text("SAVE"),
+                By.desc("Save"),
+                By.desc("SAVE"),
+                By.res("com.google.android.documentsui:id/action_menu_save"),
+                By.res("com.android.documentsui:id/action_menu_save")
+            ).firstNotNullOfOrNull { device.findObject(it) }
+        if (save == null) {
+            // Only nonsecret UI element availability and native phase state.
+            println("SAF_SAVE_ACTION_ABSENT probePhase=" + marker())
+        }
         assertTrue("Real Android Save action unavailable", save != null)
         click(save!!)
         // Only posted once native provider ciphertext readback succeeds.
