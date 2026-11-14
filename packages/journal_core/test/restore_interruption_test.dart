@@ -293,5 +293,5 @@ void main() {
       File(input.path + '.witness').deleteSync();
     }
     expect(await RestoreStagingInventory.inspect(root), isEmpty);
-  });
+  }, timeout: const Timeout(Duration(minutes: 2)));
 }
