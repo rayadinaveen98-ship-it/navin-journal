@@ -22,6 +22,21 @@ Before PR #20, the Writing Studio used `SaveIndicator.mayLeaveSafely` and `SaveP
 - [Fictional Library strict analysis / worker and widget suites / debug Android build 43671492084](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43671492084) — **SUCCESS**.
 - [Synthetic Telugu Android API34 HOME + force-stop regression 43671492085](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43671492085) — **SUCCESS**.
 
+## Second safety slice — latched version conflicts (15 November 2026)
+
+[PR #21](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/21) **MERGED**, commit `148907512d601877be5a8766b7342394e387ab0f`.
+
+**Discovered risk:** after an encrypted worker rejected a stale `expectedVersion`, the controller only set a transient `SavePhase.conflict`. Further typing could restore `dirty` and schedule new writes; reverting to an earlier acknowledged snapshot could even show `saved` without confirming that the competing persisted revision was resolved. This was a correctness risk in future free-form use, not proof of previously observed private-data loss.
+
+**Implemented (fictional-only integration remains unchanged):**
+- The controller now latches a session-level `hasUnresolvedConflict` flag after `DraftConflict`, preserves subsequent fictional edits in memory, prevents further automatic/manual storage writes, and refuses dismiss/retry until a future explicit reconciliation flow is available.
+- Returning to previously acknowledged text and ending keyboard composition cannot clear this latch. Queued debounce is cancelled on conflict. The existing encrypted version-checking storage engine remains unchanged.
+- The Writing Studio's conflict dialog explains that automatic saves are paused, leaves the editor open and hides the unsafe **Retry saving** action. Other transient save failures may still retry normally.
+- **Three controller regressions:** edit after conflict with store later becoming writable, revert to formerly acknowledged snapshot, in-flight conflict with pending debounce and Telugu composing. **One Flutter widget regression:** subsequent free-form fictional edits cannot resume writes, call `onAcknowledged`, dismiss the unsaved editor or surface unsafe retry.
+- [Exact-head Library widget/worker/recovery and Android debug APK CI 43674401102](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43674401102) **SUCCESS** and [API34 synthetic Telugu HOME/force-stop emulator CI 43674401157](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43674401157) **SUCCESS**, both at PR head `b1796dd8848c19ad3bf35996261690718bff6773`.
+
+**Product limitation:** a latched conflict intentionally blocks safe exit and cannot be resolved within the current fictional editor. It is a *fail-closed safety stop*, not a complete user-friendly recovery solution. Before any real private writing, design and implement an **explicit, non-destructive conflict review/copy-as-new process**, with verified encrypted preservation of both competing revisions, no clipboard dependency, and hardware/restore tests. Do not claim that such conflict resolution has already been implemented.
+
 ## What is NOT complete
 
 - **No unrestricted typed personal writing is enabled** in the APK02 Library. It still instantiates `ConnectedWritingStudio(scriptOnly: true)` and uses scripted fictional samples. The separate unprotected-widget test is not a private-data release.
