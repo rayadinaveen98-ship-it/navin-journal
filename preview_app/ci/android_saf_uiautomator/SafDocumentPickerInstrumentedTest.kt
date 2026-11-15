@@ -28,10 +28,23 @@ class SafDocumentPickerInstrumentedTest {
     private fun shell(cmd: String) = device.executeShellCommand(cmd).trim()
     private fun marker() = shell("run-as $probe cat files/nj_crash_phase.txt").trim()
 
+    // The Android native bridge accepts only a fixed set of nonsecret phase
+    // markers. Reject all other data including ADB/run-as errors containing
+    // app-private paths; never print a raw file read or UI hierarchy.
+    private fun safeMarker(): String {
+        val raw = marker()
+        return if (raw == "FAILED" ||
+            Regex("^SAF_[A-Z0-9_]{1,56}$").matches(raw)) {
+            raw
+        } else {
+            "NONE_OR_UNREADABLE"
+        }
+    }
+
     private fun seen(expected: String, timeoutMs: Long): Boolean {
         val deadline = SystemClock.uptimeMillis() + timeoutMs
         while (SystemClock.uptimeMillis() < deadline) {
-            val current = marker()
+            val current = safeMarker()
             if (current == expected) return true
             if (current == "FAILED" || current.startsWith("SAF_ERROR_")) {
                 fail("Disposable probe rejected $expected at $current")
@@ -44,14 +57,17 @@ class SafDocumentPickerInstrumentedTest {
     private fun requirePhase(expected: String, timeoutMs: Long = 75_000L) {
         val confirmed = seen(expected, timeoutMs)
         if (!confirmed) {
-            // Only booleans and nonsecret markers: never dump UI, file names,
-            // keys, document URIs or journal text.
-            println("PROBE_STATE expected=" + expected +
-                " alive=" + shell("pidof $probe").isNotEmpty() +
-                " runAsReady=" + shell("run-as $probe id").contains("uid=") +
-                " marker=" + marker())
+            // Assertion details reliably survive CI JUnit reporting, whereas
+            // println output was dropped by the runner in previous failures.
+            // Only fixed markers and booleans; no private paths, UI or keys.
+            val last = safeMarker()
+            val alive = shell("pidof $probe").isNotEmpty()
+            val accessible = device.hasObject(By.pkg(probe))
+            fail("Missing native fictional phase " + expected +
+                "; lastPhase=" + last +
+                " probeAlive=" + alive +
+                " probeAccessibilityVisible=" + accessible)
         }
-        assertTrue("Missing native fictional phase " + expected, confirmed)
     }
 
     private fun phase(phase: String) {
