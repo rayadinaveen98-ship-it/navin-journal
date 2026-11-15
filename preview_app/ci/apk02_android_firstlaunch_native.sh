@@ -82,9 +82,17 @@ launch() {
   adb -s "$SERIAL" shell am start -n "$ACTIVITY" >/dev/null
 }
 shot() {
-  local name="$1"
+  local name="$1" bytes
   adb -s "$SERIAL" exec-out screencap -p > "$CAPTURE/$name.png"
   test -s "$CAPTURE/$name.png"
+  bytes="$(stat -c %s "$CAPTURE/$name.png")"
+  # API34 Pixel4 fixture: a composited first-launch screen is >40KiB.
+  # A previous capture was a ~20KiB blank emulator transition frame even
+  # though UI Automator could read the semantics hierarchy. Fail closed.
+  if [[ "$bytes" -lt 40960 ]]; then
+    echo "::error::Captured Android screenshot looks blank/incomplete"
+    return 1
+  fi
 }
 tap_label() {
   local coords
@@ -127,7 +135,8 @@ adb -s "$SERIAL" shell am force-stop "$PACKAGE"
 launch
 wait_label "Your fictional journal"
 assert_no_vault
-shot first-launch-200-percent
+# Do not screenshot immediately after Android settings/relaunch: Flutter
+# semantics can become visible before SurfaceView's compositor first frame.
 seen_import=0
 seen_recovery=0
 for _ in $(seq 1 12); do
@@ -151,6 +160,20 @@ PY
 done
 [[ "$seen_import" == 1 && "$seen_recovery" == 1 ]] ||
   { echo "::error::First-launch large-text Import/Recovery actions not reachable"; exit 1; }
+assert_no_vault
+# Real 200% Recovery controls are now in the viewport; let the actual native
+# compositor settle, then capture both the bottom controls and original top.
+sleep 2
+shot first-launch-200-percent-recovery
+for _ in $(seq 1 12); do
+  if capture_ui && has_label "Your fictional journal"; then break; fi
+  adb -s "$SERIAL" shell input swipe "$((w/2))" "$((h*25/100))" \
+    "$((w/2))" "$((h*75/100))" 280
+  sleep 1
+done
+wait_label "Your fictional journal"
+sleep 2
+shot first-launch-200-percent
 assert_no_vault
 echo "PASSED NATIVE_200_PERCENT_RECOVERY_SCROLL"
 
