@@ -111,6 +111,126 @@ void main() {
     b.controller.abandonFictionalTestDraft();
   });
 
+  test('conflicted fictional draft copies to a NEW encrypted entry without '
+      'overwriting original or its revision history', () async {
+    final journal = await worker.createJournal('Fictional conflict rehearsal');
+    final created = await worker.startSession(
+      journalId: journal, debounce: const Duration(days: 1));
+    created.controller.update(title: originalTitle, body: originalBody);
+    await created.save();
+    final originalId = (await created.persistedEntryId())!;
+    final winning = await worker.startSession(
+      journalId: journal, existingEntryId: originalId,
+      debounce: const Duration(days: 1));
+    final losing = await worker.startSession(
+      journalId: journal, existingEntryId: originalId,
+      debounce: const Duration(days: 1));
+    winning.controller.update(title: 'Winning imaginary edit',
+      body: 'A different encrypted fictional page 🌿');
+    await winning.save();
+    losing.controller.update(title: 'Losing imaginary draft',
+      body: 'తెలుగు రచన — separate fictional copy');
+    await losing.save();
+    expect(losing.controller.hasUnresolvedConflict, isTrue);
+    // Editing after conflict must not allow overwrite or erase the draft.
+    losing.controller.update(title: 'Losing imaginary draft',
+      body: 'తెలుగు రచన — revised fictional copy');
+    final preserved = await losing.preserveConflictCopyAsNew();
+    expect(preserved.matchesCurrentDraft, isTrue);
+    expect(preserved.entryId, isNot(originalId));
+    final original = (await worker.readEntry(originalId))!;
+    final copy = (await worker.readEntry(preserved.entryId))!;
+    expect(original['version'], 2);
+    expect(original['body'], 'A different encrypted fictional page 🌿');
+    expect(copy['version'], 1);
+    expect(copy['title'], 'Losing imaginary draft');
+    expect(copy['body'], 'తెలుగు రచన — revised fictional copy');
+    expect(copy['journalId'], journal);
+    expect(await worker.historyCount(originalId), 1);
+    expect((await worker.readRevisions(originalId)).single['body'],
+      originalBody);
+    expect(await worker.historyCount(preserved.entryId), 0);
+    expect((await worker.listEntries(journalId: journal)).length, 2);
+    expect(losing.controller.indicator.phase, SavePhase.conflict);
+    expect(await losing.closeSafely(), isFalse);
+    expect(await worker.integrityCheck(), isTrue);
+
+    await worker.close();
+    worker = await JournalEditorWorker.open(dbPath, key: key);
+    expect((await worker.readEntry(originalId))!['body'],
+      'A different encrypted fictional page 🌿');
+    expect((await worker.readEntry(preserved.entryId))!['body'],
+      'తెలుగు రచన — revised fictional copy');
+    expect(await worker.historyCount(originalId), 1);
+    expect((await worker.listEntries(journalId: journal)).length, 2);
+    expect(await worker.integrityCheck(), isTrue);
+  });
+
+  test('lost same-session conflict-copy reply is idempotent; changed content '
+      'cannot become a second silent copy', () async {
+    final journal = await worker.createJournal('One fictional copy only');
+    final created = await worker.startSession(journalId: journal);
+    created.controller.update(title: originalTitle, body: originalBody);
+    await created.save();
+    final originalId = (await created.persistedEntryId())!;
+    final a = await worker.startSession(
+      journalId: journal, existingEntryId: originalId);
+    final b = await worker.startSession(
+      journalId: journal, existingEntryId: originalId);
+    a.controller.update(title: 'Another', body: 'First valid editor revision');
+    await a.save();
+    b.controller.update(title: 'Fictional conflict copy',
+      body: 'No overwrite please');
+    await b.save();
+    expect(b.controller.hasUnresolvedConflict, isTrue);
+    final first = await b.preserveConflictCopyAsNew();
+    final repeated = await worker.preserveFictionalConflictCopy(
+      sessionId: b.sessionId,
+      expectedOriginalVersion: b.indicator.databaseVersion,
+      snapshot: b.draft);
+    expect(repeated, first.entryId);
+    await expectLater(worker.preserveFictionalConflictCopy(
+      sessionId: b.sessionId,
+      expectedOriginalVersion: b.indicator.databaseVersion,
+      snapshot: const DraftContent(
+        title: 'Changed after copy',
+        body: 'Would be a second draft')),
+      throwsA(isA<DraftConflict>()));
+    expect((await worker.listEntries(journalId: journal)).length, 2);
+    expect((await worker.readEntry(originalId))!['version'], 2);
+  });
+
+  test('worker rejects copy when no genuine conflict exists or original '
+      'journal is archived', () async {
+    final journal = await worker.createJournal('Read-only fictional notebook');
+    final created = await worker.startSession(journalId: journal);
+    created.controller.update(title: originalTitle, body: originalBody);
+    await created.save();
+    final originalId = (await created.persistedEntryId())!;
+    final only = await worker.startSession(
+      journalId: journal, existingEntryId: originalId);
+    await expectLater(only.preserveConflictCopyAsNew(),
+      throwsA(isA<DraftConflict>()));
+    await expectLater(worker.preserveFictionalConflictCopy(
+      sessionId: only.sessionId,
+      expectedOriginalVersion: 1,
+      snapshot: const DraftContent(title: 'Unsupported', body: 'Not a conflict')),
+      throwsA(isA<DraftConflict>()));
+    final winning = await worker.startSession(
+      journalId: journal, existingEntryId: originalId);
+    only.controller.update(title: 'Losing', body: 'Before archival');
+    winning.controller.update(title: 'Winner', body: 'Winner edit');
+    await winning.save();
+    await only.save();
+    expect(only.controller.hasUnresolvedConflict, isTrue);
+    await worker.manageFictionalJournal(
+      journalId: journal, activeJournalId: journal, operation: 'archive');
+    await expectLater(only.preserveConflictCopyAsNew(),
+      throwsA(isA<DraftConflict>()));
+    expect((await worker.listEntries(journalId: journal)).length, 1);
+    expect((await worker.readEntry(originalId))!['body'], 'Winner edit');
+  });
+
   test('blank draft never creates a record', () async {
     final journal = await worker.createJournal('Pages');
     final editor = await worker.startSession(journalId: journal);
