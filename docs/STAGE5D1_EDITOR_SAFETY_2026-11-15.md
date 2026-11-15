@@ -37,6 +37,20 @@ Before PR #20, the Writing Studio used `SaveIndicator.mayLeaveSafely` and `SaveP
 
 **Product limitation:** a latched conflict intentionally blocks safe exit and cannot be resolved within the current fictional editor. It is a *fail-closed safety stop*, not a complete user-friendly recovery solution. Before any real private writing, design and implement an **explicit, non-destructive conflict review/copy-as-new process**, with verified encrypted preservation of both competing revisions, no clipboard dependency, and hardware/restore tests. Do not claim that such conflict resolution has already been implemented.
 
+## Third engineering slice — encrypted conflict copy-as-new foundation [DRAFT; BLOCKED, NOT MERGED]
+
+[PR #22](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/22) at `0086d8bfd0fde3d99693178089a2b21d17f19c60` implements a **fictional-only worker command**, not a consumer UI. It requires a genuine session-level stored-version conflict, an active same-journal original with a strictly newer competing encrypted revision, nonblank completed content, and writes the losing draft to a *new* encrypted page using the existing transactional `JournalVault.createEntry`. It immediately reads back the new encrypted page before acknowledging. The original entry and revision history are never edited. One in-memory conflict session receives only one idempotent copy for identical content; a changed snapshot is rejected rather than silently copied again. A receipt distinguishes whether the verified snapshot still equals the live draft.
+
+**New tests** (3 encrypted worker integration cases) cover separate source/copy and unchanged historical revisions after worker shutdown/reopen, exact-snapshot same-session duplicate handling, no-conflict rejection and archived-journal rejection.
+
+**Exact PR head CI status as of 15 Nov 2026:**
+- [Encrypted Library widget/worker and Android debug APK workflow 43675728678](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43675728678): **SUCCESS**.
+- [API34 synthetic Telugu lifecycle 43675728662](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43675728662): **SUCCESS**.
+- [Android portable archive separate-key clean reinstall 43675728730](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43675728730): **SUCCESS**.
+- [Actual AndroidX DocumentsUI picker workflow 43675728708](https://github.com/rayadinaveen98-ship-it/navin-journal/actions/runs/43675728708): **FAILURE twice**, first at `Missing native fictional phase SAF_IMPORT_READY` (emulator ColorBuffer/render warnings) and next at `Real DocumentsUI unavailable; category=other_system_window probePhase=SAF_ROUNDTRIP_EXPORT_READY probeAlive=true`. Both failed runs compiled and passed editor contract tests. **Root cause is not established.** The PR changed only encrypted editor worker and worker integration tests, not the native picker or its driver. Record and investigate under [QA issue #23](https://github.com/rayadinaveen98-ship-it/navin-journal/issues/23), without skipping or weakening actual picker authentication.
+
+**Disposition:** PR #22 remains **DRAFT, UNMERGED**; the new worker API is not in `main`, not in the installed Stage5C APK, not a delivered user-facing **Preserve as new page** action, and not a completed 5D.1 milestone. Do not infer hardware QA, crash/unknown-ack copy idempotence across restarts, copy provenance/metadata, or private-writing approval. Next work is to reproduce/resolve native DocumentsUI startup failure in a narrow test-infrastructure change, rerun all relevant gates, then separately design and validate the explicit conflict-review UI.
+
 ## What is NOT complete
 
 - **No unrestricted typed personal writing is enabled** in the APK02 Library. It still instantiates `ConnectedWritingStudio(scriptOnly: true)` and uses scripted fictional samples. The separate unprotected-widget test is not a private-data release.
