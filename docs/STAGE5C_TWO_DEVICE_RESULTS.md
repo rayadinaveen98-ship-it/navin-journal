@@ -5,6 +5,10 @@
 
 **Role:** This is an evidence ledger, not a test claim. Update only from actual user-supplied device observations and non-sensitive screenshots. Cite actual reproducible bugs and re-test the same app revision after changes. Detailed procedure: [APK 02 physical acceptance](APK02_PHYSICAL_DEVICE_ACCEPTANCE.md).
 
+## Founder feedback (15 November 2026)
+
+Founder reported: **“test completed all good”**. This is a positive high-level test acknowledgement, **not yet tied to a specific phone/tablet model, exact APK checksum, or any individual 5C-01–5C-13 scenario**. It may refer to the preceding native Android emulator checks. Accordingly, **no physical test case has been marked PASS** and no hardware release gate is closed. Next report should establish whether the fictional APK was tested on both physical devices and which checks were performed, without disclosing private data or recovery keys.
+
 ## Test devices (pending)
 
 | Field | Phone | Tablet |
