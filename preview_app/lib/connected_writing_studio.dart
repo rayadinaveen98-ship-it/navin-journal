@@ -200,25 +200,32 @@ class ConnectedWritingStudioState extends State<ConnectedWritingStudio>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Your changes are not safely saved'),
-        content: Text(widget.controller.isComposing
+        content: Text(widget.controller.hasUnresolvedConflict
+          ? 'Another saved revision conflicts with this draft. '
+            'Automatic saves are paused, even if you keep typing. '
+            'Your current unsaved text stays open in this editor. '
+            'Do not close or restart until a safe conflict-resolution '
+            'or copy-as-new workflow is available.'
+          : widget.controller.isComposing
           ? 'Finish the current keyboard composition before leaving. '
             'The live draft stays open; a background save may contain '
             'only a partial preedit.'
           : 'This page is still open. Check the save status and retry. '
-            'A conflict must be reviewed; the editor never silently overwrites it.'),
+            'A save is not complete until the encrypted write is verified.'),
 
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Keep editing'),
           ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              unawaited(_saveNow());
-            },
-            child: const Text('Retry saving'),
-          ),
+          if (!widget.controller.hasUnresolvedConflict)
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                unawaited(_saveNow());
+              },
+              child: const Text('Retry saving'),
+            ),
         ],
       ),
     );

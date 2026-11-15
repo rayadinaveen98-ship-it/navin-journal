@@ -191,6 +191,79 @@ void main() {
     expect(port.records, isEmpty);
   });
 
+  test('version conflict remains latched after later edits and manual flush',
+      () async {
+    port.forceConflict = true;
+    controller.update(title: 'Imagined', body: 'Original fictional edit');
+    await controller.flush();
+    expect(controller.indicator.phase, SavePhase.conflict);
+    expect(controller.hasUnresolvedConflict, isTrue);
+    expect(port.calls, 1);
+
+    // Simulate stale version seeming writable again. Existing sessions must
+    // NEVER silently resume writes without explicit reconciliation.
+    port.forceConflict = false;
+    controller.update(title: 'Imagined', body: 'Newer fictional paragraph');
+    expect(controller.indicator.phase, SavePhase.conflict);
+    expect(controller.draft.body, 'Newer fictional paragraph');
+    await Future<void>.delayed(_pause);
+    await controller.flush();
+    expect(port.calls, 1);
+    expect(port.records, isEmpty);
+    expect(controller.indicator.mayLeaveSafely, isFalse);
+    expect(await controller.closeSafely(), isFalse);
+    expect(() => controller.retry(), throwsA(isA<DraftConflict>()));
+    expect(indicators.last.accessibleLabel,
+      'Edit conflict. Review before saving');
+  });
+
+  test('returning to last acknowledged content cannot falsely clear conflict',
+      () async {
+    controller.abandonFictionalTestDraft();
+    const stored = DraftContent(title: 'Fiction', body: 'Earlier version');
+    port.records['fictional-e1'] = FakeRecord(
+      const DraftContent(title: 'Different', body: 'External revision'), 8);
+    controller = make(initial: stored, version: 7);
+    controller.update(title: 'Fiction', body: 'Local edit');
+    await controller.flush();
+    expect(controller.indicator.phase, SavePhase.conflict);
+    expect(controller.hasUnresolvedConflict, isTrue);
+    final attempts = port.calls;
+    controller.update(title: stored.title, body: stored.body);
+    expect(controller.indicator.phase, SavePhase.conflict);
+    expect(controller.indicator.mayLeaveSafely, isFalse);
+    await controller.flush();
+    expect(port.calls, attempts);
+    expect(port.records['fictional-e1']?.version, 8);
+    expect(port.records['fictional-e1']?.content.body, 'External revision');
+    expect(await controller.closeSafely(), isFalse);
+  });
+
+  test('a pending debounce cannot restart writes after an in-flight conflict',
+      () async {
+    port.gate = Completer<void>();
+    port.forceConflict = true;
+    controller.update(title: 'First', body: 'Before competing save');
+    final pending = controller.flush();
+    controller.update(title: 'Second', body: 'Uncommitted newer edit');
+    expect(controller.indicator.phase, SavePhase.dirty);
+    port.gate!.complete();
+    await pending;
+    expect(controller.indicator.phase, SavePhase.conflict);
+    expect(controller.hasUnresolvedConflict, isTrue);
+    port.forceConflict = false;
+    await Future<void>.delayed(_pause);
+    expect(port.calls, 1);
+    expect(port.records, isEmpty);
+    controller.startComposition();
+    controller.update(title: 'Telugu', body: 'తెలుగు ఊహించిన జ్ఞాపకం');
+    controller.endComposition();
+    await Future<void>.delayed(_pause);
+    expect(port.calls, 1);
+    expect(controller.indicator.phase, SavePhase.conflict);
+    expect(controller.draft.body, 'తెలుగు ఊహించిన జ్ఞాపకం');
+  });
+
   test('composition defers debounce until IME composition ends', () async {
     controller.startComposition();
     controller.update(title: '', body: 'తె');

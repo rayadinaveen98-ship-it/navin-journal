@@ -105,6 +105,10 @@ class DraftAutosaveController {
   SavePhase _phase;
   bool _composing = false;
   bool _closed = false;
+  // Once a competing persisted revision is observed, keep the editor in
+  // conflict until a separate, explicit reconciliation process is provided.
+  // Merely typing (or retrying a flush) must never revive automatic writes.
+  bool _conflictLatched = false;
   Timer? _timer;
   Future<void>? _activeFlush;
 
@@ -143,6 +147,11 @@ class DraftAutosaveController {
 
   bool get isComposing => _composing;
 
+  /// Conflict cannot be cleared by another keystroke, a failed retry, or
+  /// returning to previously acknowledged content. Reconciliation needs an
+  /// independent storage-level version check and explicit user decision.
+  bool get hasUnresolvedConflict => _conflictLatched;
+
   void _publish(SavePhase next) {
     _phase = next;
     onIndicator?.call(indicator);
@@ -157,6 +166,13 @@ class DraftAutosaveController {
     _revision++;
     _timer?.cancel();
     _timer = null;
+
+    if (_conflictLatched) {
+      // Preserve the latest in-memory text without erasing conflict evidence
+      // or autosaving over an external revision.
+      _publish(SavePhase.conflict);
+      return;
+    }
 
     // Returning exactly to acknowledged content while idle is not dirty.
     if (_content == _committed && _activeFlush == null) {
@@ -179,10 +195,11 @@ class DraftAutosaveController {
   void endComposition() {
     if (_closed) throw StateError('Draft controller is closed');
     _composing = false;
-    if (indicator.hasUnsavedChanges) _schedule();
+    if (!_conflictLatched && indicator.hasUnsavedChanges) _schedule();
   }
 
   void _schedule() {
+    if (_conflictLatched) return;
     _timer?.cancel();
     _timer = Timer(debounce, () {
       _timer = null;
@@ -201,6 +218,7 @@ class DraftAutosaveController {
     _timer = null;
     final active = _activeFlush;
     if (active != null) return active;
+    if (_conflictLatched) return Future<void>.value();
     final work = _drain();
     _activeFlush = work;
     return work.whenComplete(() {
@@ -210,6 +228,9 @@ class DraftAutosaveController {
 
   Future<void> _drain() async {
     while (!_closed) {
+      // A prior conflict is terminal for this session until deliberate
+      // external reconciliation. Never infer a safe expectedVersion.
+      if (_conflictLatched) return;
       if (_content == _committed) {
         _acknowledged = _revision;
         _publish(_version > 0 ? SavePhase.saved : SavePhase.pristine);
@@ -238,6 +259,9 @@ class DraftAutosaveController {
         _committed = snapshot;
         _acknowledged = sequence;
       } on DraftConflict {
+        _conflictLatched = true;
+        _timer?.cancel();
+        _timer = null;
         _publish(SavePhase.conflict);
         return;
       } catch (_) {
@@ -260,7 +284,7 @@ class DraftAutosaveController {
   /// Explicit retry after transient failures. Conflict requires separate
   /// user intervention and must not silently overwrite external changes.
   Future<void> retry() {
-    if (_phase == SavePhase.conflict) {
+    if (_conflictLatched) {
       throw const DraftConflict();
     }
     return flush();
