@@ -247,6 +247,91 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('explicit save of partial Telugu composition never confirms '
+      'complete page, but final composed text can be verified', (tester) async {
+    var confirmations = 0;
+    final harness = await mount(tester,
+      onClose: () {},
+      onAcknowledged: (_) async { confirmations++; },
+    );
+    final view = tester.state<ConnectedWritingStudioState>(
+      find.byType(ConnectedWritingStudio));
+    view.titleInput.text = 'ఊహించిన పేజీ';
+    const partial = 'తె';
+    view.bodyInput.value = TextEditingValue(
+      text: partial,
+      selection: TextSelection.collapsed(offset: partial.length),
+      composing: TextRange(start: 0, end: partial.length),
+    );
+    await tester.pump();
+    expect(harness.controller.isComposing, isTrue);
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('connected-save')));
+    await tester.tap(find.byKey(const ValueKey('connected-save')));
+    await tester.pumpAndSettle();
+    // Acknowledged partial content may be kept for power-loss recovery, but
+    // the user-level explicit Save-and-verify promise is not fulfilled yet.
+    expect(harness.port.stored?.body, partial);
+    expect(harness.port.storedVersion, 1);
+    expect(confirmations, 0);
+    expect(harness.controller.isComposing, isTrue);
+    expect(find.textContaining('Unfinished keyboard composition'),
+      findsOneWidget);
+    expect(find.textContaining('Finish typing and save again'),
+      findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    const complete = 'తెలుగు 🌿 కల్పిత జ్ఞాపకం';
+    view.bodyInput.value = TextEditingValue(
+      text: complete,
+      selection: TextSelection.collapsed(offset: complete.length),
+    );
+    await tester.pump();
+    expect(harness.controller.isComposing, isFalse);
+    await tester.tap(find.byKey(const ValueKey('connected-save')));
+    await tester.pumpAndSettle();
+    expect(harness.port.stored?.body, complete);
+    expect(harness.port.storedVersion, 2);
+    expect(confirmations, 1);
+    expect(find.textContaining('Unfinished keyboard composition'),
+      findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('failed partial composition write cannot emit an explicit '
+      'verification callback or false completion message', (tester) async {
+    var confirmations = 0;
+    final harness = await mount(tester,
+      onClose: () {},
+      onAcknowledged: (_) async { confirmations++; },
+    );
+    harness.port.fail = true;
+    final view = tester.state<ConnectedWritingStudioState>(
+      find.byType(ConnectedWritingStudio));
+    view.titleInput.text = 'Fictional Telugu failed write';
+    const partial = 'తె';
+    view.bodyInput.value = TextEditingValue(
+      text: partial,
+      selection: TextSelection.collapsed(offset: partial.length),
+      composing: TextRange(start: 0, end: partial.length),
+    );
+    await tester.pump();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('connected-save')));
+    await tester.tap(find.byKey(const ValueKey('connected-save')));
+    await tester.pumpAndSettle();
+    expect(harness.port.stored, isNull);
+    expect(harness.controller.indicator.phase, SavePhase.error);
+    expect(confirmations, 0);
+    expect(find.textContaining('Unfinished keyboard composition'),
+      findsOneWidget);
+    expect(find.textContaining('the page is not verified'),
+      findsOneWidget);
+    expect(find.text('Saved locally · version 1'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('repeated Android background transitions share one real ACK',
       (tester) async {
     final harness = await mount(tester, onClose: () {});

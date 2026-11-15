@@ -146,6 +146,22 @@ class ConnectedWritingStudioState extends State<ConnectedWritingStudio>
     try {
       await widget.controller.flush();
       final state = widget.controller.indicator;
+      // A lifecycle/manual flush is allowed to persist partial IME preedit
+      // for disaster recovery. An explicit "Save and verify" must NEVER
+      // treat that incomplete editorial decision as a completed save event.
+      // Keep the live text buffer open even if SQLite acknowledged the
+      // partial snapshot. This is distinct from the disk-write receipt.
+      if (widget.controller.isComposing) {
+        if (mounted) setState(() {
+          _localMessage = state.phase == SavePhase.saved
+              ? 'Unfinished keyboard composition: a partial recovery snapshot '
+                'was saved locally, but this page is not fully verified. '
+                'Finish typing and save again.'
+              : 'Unfinished keyboard composition: the page is not verified. '
+                'Finish typing, check save status, then retry.';
+        });
+        return;
+      }
       if (!state.mayLeaveSafely || state.phase != SavePhase.saved) {
         if (mounted) setState(() {
           _localMessage = state.phase == SavePhase.conflict
