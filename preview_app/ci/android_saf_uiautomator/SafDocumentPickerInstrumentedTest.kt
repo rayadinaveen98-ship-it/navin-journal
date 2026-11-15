@@ -71,12 +71,39 @@ class SafDocumentPickerInstrumentedTest {
     }
 
     private fun phase(phase: String) {
+        // The first authenticated roundtrip passed in two runs, but a fast
+        // force-stop → pm clear → immediate am start sometimes left the next
+        // cancellation phase with *no running probe process or marker*.
+        // Wait for Android to finish the old process shutdown and for the
+        // explicit activity start result; do not retry or fake the file picker.
         shell("am force-stop $probe")
+        val stopDeadline = SystemClock.uptimeMillis() + 10_000L
+        while (SystemClock.uptimeMillis() < stopDeadline &&
+            shell("pidof $probe").isNotEmpty()) {
+            SystemClock.sleep(350L)
+        }
+        assertTrue("Previous disposable probe process did not exit",
+            shell("pidof $probe").isEmpty())
         assertTrue("Failed clearing disposable app",
             shell("pm clear $probe").contains("Success"))
-        SystemClock.sleep(550L)
-        val result = shell("am start -n $probe/.MainActivity --es nj_test_phase $phase")
-        assertTrue("Failed starting disposable probe", !result.contains("Error"))
+        // The emulator can still be finalizing ActivityManager/data-clear
+        // bookkeeping after pm clear returns. No production app uses this wait.
+        SystemClock.sleep(1800L)
+        val result = shell(
+            "am start -W -n $probe/.MainActivity --es nj_test_phase $phase"
+        )
+        assertTrue("Failed starting disposable probe Activity",
+            !result.contains("Error") &&
+            !result.contains("Exception") &&
+            result.contains("Status: ok"))
+        // An accepted am start is not enough: Android must have created the
+        // test process. It can later exit, which requirePhase reports safely.
+        val startDeadline = SystemClock.uptimeMillis() + 10_000L
+        while (SystemClock.uptimeMillis() < startDeadline) {
+            if (shell("pidof $probe").isNotEmpty()) return
+            SystemClock.sleep(400L)
+        }
+        fail("Disposable probe process not running after Android activity start")
     }
 
     private fun picker() {
