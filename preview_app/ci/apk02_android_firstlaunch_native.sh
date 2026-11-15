@@ -139,6 +139,14 @@ assert_no_vault
 # semantics can become visible before SurfaceView's compositor first frame.
 seen_import=0
 seen_recovery=0
+size="$(adb -s "$SERIAL" shell wm size | head -n 1 | tr -d '\r')"
+read -r w h < <(python3 - "$size" <<'PY'
+import re,sys
+m=re.search(r'(\d+)x(\d+)',sys.argv[1])
+if not m: raise SystemExit(1)
+print(m.group(1),m.group(2))
+PY
+)
 for _ in $(seq 1 12); do
   if capture_ui; then
     if has_label "Choose fictional encrypted file"; then seen_import=1; fi
@@ -146,14 +154,6 @@ for _ in $(seq 1 12); do
   fi
   if [[ "$seen_import" == 1 && "$seen_recovery" == 1 ]]; then break; fi
   # Viewport-relative gesture, no fixed element coordinates or injected result.
-  size="$(adb -s "$SERIAL" shell wm size | head -n 1 | tr -d '\r')"
-  read -r w h < <(python3 - "$size" <<'PY'
-import re,sys
-m=re.search(r'(\d+)x(\d+)',sys.argv[1])
-if not m: raise SystemExit(1)
-print(m.group(1),m.group(2))
-PY
-)
   adb -s "$SERIAL" shell input swipe "$((w/2))" "$((h*75/100))" \
     "$((w/2))" "$((h*25/100))" 280
   sleep 1
