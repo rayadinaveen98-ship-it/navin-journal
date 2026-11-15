@@ -731,7 +731,7 @@ Future<void> _editorStorageWorker(List<Object> args) async {
           final original = vault.readEntry(originalId);
           if (original == null || original['journalId'] != journal ||
               original['deletedAtMs'] != null ||
-              original['version'] == expected) {
+              (original['version'] as int) <= expected) {
             // Copying is allowed only if a real competing encrypted revision
             // exists for the original live page in its active journal.
             throw const DraftConflict();
@@ -750,9 +750,8 @@ Future<void> _editorStorageWorker(List<Object> args) async {
             reply.send({
               'id': id, 'ok': true, 'newEntryId': existingCopyId,
             });
-            continue;
-          }
-          // JournalVault.createEntry performs the encrypted transaction.
+          } else {
+            // JournalVault.createEntry performs the encrypted transaction.
           // Never call editEntry, trash, restore or change the original row.
           final copiedId = vault.createEntry(
             journalId: journal,
@@ -771,6 +770,7 @@ Future<void> _editorStorageWorker(List<Object> args) async {
             throw const DraftConflict();
           }
           reply.send({'id': id, 'ok': true, 'newEntryId': copiedId});
+          }
         case 'persisted_id':
           final session = message['sessionId'] as String;
           final port = ports[session];
