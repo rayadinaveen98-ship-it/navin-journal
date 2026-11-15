@@ -1,0 +1,153 @@
+name: APK 02 Stage5C Native First-Launch UI Gate (Fictional Only)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'preview_app/ci/apk02_android_firstlaunch_native.sh'
+      - '.github/workflows/apk02-stage5c-native-firstlaunch.yml'
+      - 'preview_app/lib/apk02_library_main.dart'
+      - 'preview_app/lib/fictional_external_import_section.dart'
+      - 'preview_app/lib/fictional_activation_consent_panel.dart'
+      - 'spikes/flutter_bridge_probe/native/MainActivity.kt'
+  push:
+    branches: [main]
+    paths:
+      - 'preview_app/ci/apk02_android_firstlaunch_native.sh'
+      - '.github/workflows/apk02-stage5c-native-firstlaunch.yml'
+      - 'preview_app/lib/apk02_library_main.dart'
+      - 'preview_app/lib/fictional_external_import_section.dart'
+      - 'preview_app/lib/fictional_activation_consent_panel.dart'
+      - 'spikes/flutter_bridge_probe/native/MainActivity.kt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: navin-stage5c-native-firstlaunch
+  cancel-in-progress: true
+
+jobs:
+  api34-fictional-firstlaunch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Prepare exactly the disposable encrypted Library APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$GITHUB_WORKSPACE"
+          TARGET="$ROOT/preview_app/_stage5c_firstlaunch_generated"
+          flutter create --org com.navinjournal \
+            --project-name navin_journal_library_probe --platforms=android "$TARGET"
+          cp "$ROOT/preview_app/lib/"*.dart "$TARGET/lib/"
+          rm -f "$TARGET/test/widget_test.dart"
+          NATIVE="$TARGET/android/app/src/main/kotlin"
+          mkdir -p "$NATIVE/com/navinjournal/navin_journal_library_probe"
+          mkdir -p "$NATIVE/com/navinjournal/security/spike"
+          cp "$ROOT/spikes/flutter_bridge_probe/native/MainActivity.kt" \
+            "$NATIVE/com/navinjournal/navin_journal_library_probe/MainActivity.kt"
+          sed -i 's/package com.navinjournal.navin_journal_bridge_probe/package com.navinjournal.navin_journal_library_probe/' \
+            "$NATIVE/com/navinjournal/navin_journal_library_probe/MainActivity.kt"
+          cp "$ROOT/spikes/key_lifecycle/android/src/main/kotlin/com/navinjournal/security/spike/AndroidKeystoreKeyProtector.kt" \
+            "$NATIVE/com/navinjournal/security/spike/"
+          RES="$TARGET/android/app/src/main/res"
+          mkdir -p "$RES/drawable" "$RES/mipmap-anydpi-v26"
+          cp "$ROOT/prototype/brand/android/drawable/"*.xml "$RES/drawable/"
+          cp "$ROOT/prototype/brand/android/mipmap-anydpi-v26/navin_journal_ic_launcher.xml" \
+            "$RES/mipmap-anydpi-v26/ic_launcher.xml"
+          python3 - "$TARGET/pubspec.yaml" "$ROOT" <<'PY'
+          from pathlib import Path
+          import sys
+          path, root = Path(sys.argv[1]), Path(sys.argv[2])
+          s = path.read_text()
+          deps = (
+            "  navin_journal_core:\n"
+            f"    path: {root / 'packages/journal_core'}\n"
+            "  navin_journal_editor:\n"
+            f"    path: {root / 'packages/journal_editor'}\n"
+            "  navin_journal_autosave_spike:\n"
+            f"    path: {root / 'spikes/autosave_coordinator'}\n"
+            "  navin_journal_bridge_probe:\n"
+            f"    path: {root / 'spikes/flutter_bridge_probe'}\n"
+            "  navin_journal_encrypted_spike:\n"
+            f"    path: {root / 'spikes/encrypted_store'}\n"
+            "  navin_journal_recovery_archive_spike:\n"
+            f"    path: {root / 'spikes/recovery_archive'}\n"
+            "  navin_journal_key_lifecycle_spike:\n"
+            f"    path: {root / 'spikes/key_lifecycle'}\n"
+          )
+          s = s.replace("dependencies:\n", "dependencies:\n" + deps, 1)
+          s += "\nhooks:\n  user_defines:\n    sqlite3:\n      source: sqlite3mc\n"
+          path.write_text(s)
+          PY
+          # Prevent stale Android Auto Backup restoring synthetic app state.
+          python3 - "$TARGET/android/app/src/main/AndroidManifest.xml" <<'PY'
+          from pathlib import Path
+          import sys
+          p=Path(sys.argv[1])
+          s=p.read_text()
+          assert '<application' in s and 'android:allowBackup' not in s
+          p.write_text(s.replace('<application',
+                                 '<application android:allowBackup="false"',1))
+          PY
+          echo "APK02_LIBRARY_ROOT=$TARGET" >> "$GITHUB_ENV"
+
+      - name: Check native test script syntax and dependencies
+        shell: bash
+        run: |
+          bash -n "$GITHUB_WORKSPACE/preview_app/ci/apk02_android_firstlaunch_native.sh"
+          cd "$APK02_LIBRARY_ROOT"
+          flutter pub get
+          dart format lib
+          flutter analyze --no-pub
+
+      - name: Build native first-run fictional Library APK
+        shell: bash
+        run: |
+          cd "$APK02_LIBRARY_ROOT"
+          flutter build apk --debug -t lib/apk02_library_main.dart
+          test -s build/app/outputs/flutter-apk/app-debug.apk
+          sha256sum build/app/outputs/flutter-apk/app-debug.apk
+
+      - name: Enable emulator KVM when available
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -c /dev/kvm ]]; then
+            sudo chmod a+rw /dev/kvm
+            test -r /dev/kvm && test -w /dev/kvm
+          else
+            echo "::warning::No /dev/kvm, emulator may run in software"
+          fi
+
+      - name: Actually launch fresh Android Library and inspect native first-run UI
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_4
+          disable-animations: true
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim -camera-back none -no-snapshot-load -no-snapshot-save -memory 4096 -cores 4
+          script: bash "$GITHUB_WORKSPACE/preview_app/ci/apk02_android_firstlaunch_native.sh"
+
+      - name: Upload only fictional, no-key emulator first-run screenshots
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: navin-stage5c-API34-FIRSTLAUNCH-FICTIONAL-NOT-PHYSICAL
+          path: preview_app/_stage5c_firstlaunch_artifacts/*.png
+          retention-days: 7
+          if-no-files-found: error
