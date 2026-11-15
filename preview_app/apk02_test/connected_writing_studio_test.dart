@@ -258,7 +258,7 @@ void main() {
       find.byType(ConnectedWritingStudio));
     view.titleInput.text = 'ఊహించిన పేజీ';
     const partial = 'తె';
-    view.bodyInput.value = const TextEditingValue(
+    view.bodyInput.value = TextEditingValue(
       text: partial,
       selection: TextSelection.collapsed(offset: partial.length),
       composing: TextRange(start: 0, end: partial.length),
@@ -283,7 +283,7 @@ void main() {
     expect(tester.takeException(), isNull);
 
     const complete = 'తెలుగు 🌿 కల్పిత జ్ఞాపకం';
-    view.bodyInput.value = const TextEditingValue(
+    view.bodyInput.value = TextEditingValue(
       text: complete,
       selection: TextSelection.collapsed(offset: complete.length),
     );
@@ -311,7 +311,7 @@ void main() {
       find.byType(ConnectedWritingStudio));
     view.titleInput.text = 'Fictional Telugu failed write';
     const partial = 'తె';
-    view.bodyInput.value = const TextEditingValue(
+    view.bodyInput.value = TextEditingValue(
       text: partial,
       selection: TextSelection.collapsed(offset: partial.length),
       composing: TextRange(start: 0, end: partial.length),
