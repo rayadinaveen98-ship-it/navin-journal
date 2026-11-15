@@ -159,8 +159,55 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('connected-back')));
     await tester.pumpAndSettle();
     expect(find.text('Your changes are not safely saved'), findsOneWidget);
+    expect(find.textContaining('Automatic saves are paused'), findsOneWidget);
+    expect(find.text('Retry saving'), findsNothing);
     expect(closed, isFalse);
     expect(harness.port.stored, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('edit after a conflict never resumes automatic or manual save',
+      (tester) async {
+    var callbacks = 0;
+    var closed = false;
+    final harness = await mount(tester,
+      onClose: () => closed = true,
+      scriptOnly: false,
+      onAcknowledged: (_) async { callbacks++; },
+    );
+    harness.port.conflict = true;
+    await tester.enterText(
+      find.byKey(const ValueKey('connected-title')), 'Fiction conflict');
+    await tester.enterText(
+      find.byKey(const ValueKey('connected-body')), 'One imagined edit');
+    await tester.ensureVisible(find.byKey(const ValueKey('connected-save')));
+    await tester.tap(find.byKey(const ValueKey('connected-save')));
+    await tester.pumpAndSettle();
+    expect(harness.controller.hasUnresolvedConflict, isTrue);
+    expect(harness.controller.indicator.phase, SavePhase.conflict);
+    final attempts = harness.port.commits;
+    expect(callbacks, 0);
+
+    harness.port.conflict = false;
+    await tester.enterText(
+      find.byKey(const ValueKey('connected-body')),
+      'A different fictional continuation');
+    await tester.pump();
+    expect(harness.controller.indicator.phase, SavePhase.conflict);
+    expect(harness.controller.draft.body,
+      'A different fictional continuation');
+    await tester.tap(find.byKey(const ValueKey('connected-save')));
+    await tester.pumpAndSettle();
+    expect(harness.port.commits, attempts);
+    expect(callbacks, 0);
+    expect(harness.port.stored, isNull);
+    expect(find.textContaining('Edit conflict'), findsWidgets);
+
+    await tester.tap(find.byKey(const ValueKey('connected-back')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Automatic saves are paused'), findsOneWidget);
+    expect(find.text('Retry saving'), findsNothing);
+    expect(closed, isFalse);
     expect(tester.takeException(), isNull);
   });
 
