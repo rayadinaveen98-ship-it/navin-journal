@@ -2,7 +2,7 @@
 
 **State:** PROPOSED DESIGN / ENGINEERING REQUIREMENTS, NOT IMPLEMENTED OR APPROVED FOR PRIVATE BETA  
 **Prepared:** 15 November 2026  
-**Source of truth:** [Stage 5D.1 evidence](STAGE5D1_EDITOR_SAFETY_2026-11-15.md), [roadmap](ROADMAP.md), merged PRs #20/#21; draft [PR #22](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/22) (storage foundation, pending its full merge gate).
+**Source of truth:** [Stage 5D.1 evidence](STAGE5D1_EDITOR_SAFETY_2026-11-15.md), [roadmap](ROADMAP.md), merged PRs #20/#21 and **merged [PR #22](https://github.com/rayadinaveen98-ship-it/navin-journal/pull/22)** (fictional encrypted-worker foundation, all four exact-head CI checks passed). Only the foundation is implemented; this proposed UX and durable crash/idempotency contract are NOT implemented or approved for private beta.
 
 ## User promise and non-negotiable distinctions
 
@@ -43,4 +43,4 @@ When a conflicting encrypted revision exists, the app must **never silently repl
 
 ## Stage boundary
 
-This document is a **proposal** to align product, UX, security and engineering before UI implementation. It is not permission to enable unrestricted personal writing, bypass hardware testing, change existing backup behavior, or release an APK. The current application remains scripted fictional-only. Before implementation, verify draft PR #22's encrypted-worker integration and the actual Android DocumentsUI gate; then implement the **durable idempotency and provenance** foundation, followed by an explicit user-visible workflow and end-to-end Android tests. The founder retains design and private-beta signoff.
+This document is a **proposal** to align product, UX, security and engineering before UI implementation. It is not permission to enable unrestricted personal writing, bypass hardware testing, change existing backup behavior, or release an APK. The current application remains scripted fictional-only. The fictional PR #22 encrypted-worker and actual Android DocumentsUI integration are verified and merged. **Next:** implement the **durable idempotency and provenance** foundation, followed by an explicit user-visible workflow and end-to-end Android tests. Do not mistake the merged worker method for a finished conflict-resolution screen or real-content approval. The founder retains design and private-beta signoff.
