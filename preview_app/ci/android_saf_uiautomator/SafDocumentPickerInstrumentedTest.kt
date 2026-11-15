@@ -28,10 +28,23 @@ class SafDocumentPickerInstrumentedTest {
     private fun shell(cmd: String) = device.executeShellCommand(cmd).trim()
     private fun marker() = shell("run-as $probe cat files/nj_crash_phase.txt").trim()
 
+    // The Android native bridge accepts only a fixed set of nonsecret phase
+    // markers. Reject all other data including ADB/run-as errors containing
+    // app-private paths; never print a raw file read or UI hierarchy.
+    private fun safeMarker(): String {
+        val raw = marker()
+        return if (raw == "FAILED" ||
+            Regex("^SAF_[A-Z0-9_]{1,56}$").matches(raw)) {
+            raw
+        } else {
+            "NONE_OR_UNREADABLE"
+        }
+    }
+
     private fun seen(expected: String, timeoutMs: Long): Boolean {
         val deadline = SystemClock.uptimeMillis() + timeoutMs
         while (SystemClock.uptimeMillis() < deadline) {
-            val current = marker()
+            val current = safeMarker()
             if (current == expected) return true
             if (current == "FAILED" || current.startsWith("SAF_ERROR_")) {
                 fail("Disposable probe rejected $expected at $current")
@@ -44,23 +57,53 @@ class SafDocumentPickerInstrumentedTest {
     private fun requirePhase(expected: String, timeoutMs: Long = 75_000L) {
         val confirmed = seen(expected, timeoutMs)
         if (!confirmed) {
-            // Only booleans and nonsecret markers: never dump UI, file names,
-            // keys, document URIs or journal text.
-            println("PROBE_STATE expected=" + expected +
-                " alive=" + shell("pidof $probe").isNotEmpty() +
-                " runAsReady=" + shell("run-as $probe id").contains("uid=") +
-                " marker=" + marker())
+            // Assertion details reliably survive CI JUnit reporting, whereas
+            // println output was dropped by the runner in previous failures.
+            // Only fixed markers and booleans; no private paths, UI or keys.
+            val last = safeMarker()
+            val alive = shell("pidof $probe").isNotEmpty()
+            val accessible = device.hasObject(By.pkg(probe))
+            fail("Missing native fictional phase " + expected +
+                "; lastPhase=" + last +
+                " probeAlive=" + alive +
+                " probeAccessibilityVisible=" + accessible)
         }
-        assertTrue("Missing native fictional phase " + expected, confirmed)
     }
 
     private fun phase(phase: String) {
+        // The first authenticated roundtrip passed in two runs, but a fast
+        // force-stop → pm clear → immediate am start sometimes left the next
+        // cancellation phase with *no running probe process or marker*.
+        // Wait for Android to finish the old process shutdown and for the
+        // explicit activity start result; do not retry or fake the file picker.
         shell("am force-stop $probe")
+        val stopDeadline = SystemClock.uptimeMillis() + 10_000L
+        while (SystemClock.uptimeMillis() < stopDeadline &&
+            shell("pidof $probe").isNotEmpty()) {
+            SystemClock.sleep(350L)
+        }
+        assertTrue("Previous disposable probe process did not exit",
+            shell("pidof $probe").isEmpty())
         assertTrue("Failed clearing disposable app",
             shell("pm clear $probe").contains("Success"))
-        SystemClock.sleep(550L)
-        val result = shell("am start -n $probe/.MainActivity --es nj_test_phase $phase")
-        assertTrue("Failed starting disposable probe", !result.contains("Error"))
+        // The emulator can still be finalizing ActivityManager/data-clear
+        // bookkeeping after pm clear returns. No production app uses this wait.
+        SystemClock.sleep(1800L)
+        val result = shell(
+            "am start -W -n $probe/.MainActivity --es nj_test_phase $phase"
+        )
+        assertTrue("Failed starting disposable probe Activity",
+            !result.contains("Error") &&
+            !result.contains("Exception") &&
+            result.contains("Status: ok"))
+        // An accepted am start is not enough: Android must have created the
+        // test process. It can later exit, which requirePhase reports safely.
+        val startDeadline = SystemClock.uptimeMillis() + 10_000L
+        while (SystemClock.uptimeMillis() < startDeadline) {
+            if (shell("pidof $probe").isNotEmpty()) return
+            SystemClock.sleep(400L)
+        }
+        fail("Disposable probe process not running after Android activity start")
     }
 
     private fun picker() {
@@ -101,6 +144,49 @@ class SafDocumentPickerInstrumentedTest {
         fail("Real DocumentsUI unavailable; category=" + category +
             " probePhase=" + lastPhase +
             " probeAlive=" + shell("pidof $probe").isNotEmpty())
+    }
+
+    /**
+     * Emulator-only readiness probe. The Android 14 test runner has twice
+     * observed that the real system picker is missing or covered immediately
+     * after cold boot, despite the isolated journal probe remaining healthy.
+     *
+     * Launch the *real* ACTION_CREATE_DOCUMENT system UI once from ADB shell,
+     * require its actual accessibility package, then cancel it. The real test
+     * still launches a fresh picker from the probe and must independently
+     * authenticate its encrypted bytes. This preflight never inserts a URI,
+     * archive, ActivityResult, title, key, or success marker.
+     */
+    private fun preflightSystemPicker() {
+        device.wakeUp()
+        device.pressHome()
+        SystemClock.sleep(1200L)
+        val started = shell(
+            "am start -a android.intent.action.CREATE_DOCUMENT " +
+                "-c android.intent.category.OPENABLE -t application/octet-stream"
+        )
+        assertTrue("Cannot start Android system DocumentsUI preflight",
+            !started.contains("Error:") && !started.contains("Exception"))
+        val deadline = SystemClock.uptimeMillis() + 30_000L
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (device.hasObject(By.pkg(documentsUi)) ||
+                device.hasObject(By.pkg("com.android.documentsui"))) {
+                assertTrue("Cannot cancel real Android system picker preflight",
+                    device.pressBack())
+                device.pressHome()
+                SystemClock.sleep(900L)
+                return
+            }
+            SystemClock.sleep(600L)
+        }
+        val resolvedGoogle = shell("pm path com.google.android.documentsui")
+            .startsWith("package:")
+        val resolvedAosp = shell("pm path com.android.documentsui")
+            .startsWith("package:")
+        // No sensitive UI dump/filename/path: expose only fixed classifications.
+        fail("Actual system picker unavailable at cold-boot preflight; " +
+            "googleDocsUiInstalled=" + resolvedGoogle +
+            " aospDocsUiInstalled=" + resolvedAosp)
     }
 
     private fun clickableAncestor(node: UiObject2): UiObject2? {
@@ -158,6 +244,7 @@ class SafDocumentPickerInstrumentedTest {
 
     @Test
     fun actualFictionalAndroidPickerRoundTrip() {
+        preflightSystemPicker()
         phase("saf_roundtrip")
         requirePhase("SAF_ROUNDTRIP_EXPORT_READY")
         picker()
