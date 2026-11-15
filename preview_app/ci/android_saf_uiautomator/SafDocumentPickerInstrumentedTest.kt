@@ -103,6 +103,49 @@ class SafDocumentPickerInstrumentedTest {
             " probeAlive=" + shell("pidof $probe").isNotEmpty())
     }
 
+    /**
+     * Emulator-only readiness probe. The Android 14 test runner has twice
+     * observed that the real system picker is missing or covered immediately
+     * after cold boot, despite the isolated journal probe remaining healthy.
+     *
+     * Launch the *real* ACTION_CREATE_DOCUMENT system UI once from ADB shell,
+     * require its actual accessibility package, then cancel it. The real test
+     * still launches a fresh picker from the probe and must independently
+     * authenticate its encrypted bytes. This preflight never inserts a URI,
+     * archive, ActivityResult, title, key, or success marker.
+     */
+    private fun preflightSystemPicker() {
+        device.wakeUp()
+        device.pressHome()
+        SystemClock.sleep(1200L)
+        val started = shell(
+            "am start -a android.intent.action.CREATE_DOCUMENT " +
+                "-c android.intent.category.OPENABLE -t application/octet-stream"
+        )
+        assertTrue("Cannot start Android system DocumentsUI preflight",
+            !started.contains("Error:") && !started.contains("Exception"))
+        val deadline = SystemClock.uptimeMillis() + 30_000L
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (device.hasObject(By.pkg(documentsUi)) ||
+                device.hasObject(By.pkg("com.android.documentsui"))) {
+                assertTrue("Cannot cancel real Android system picker preflight",
+                    device.pressBack())
+                device.pressHome()
+                SystemClock.sleep(900L)
+                return
+            }
+            SystemClock.sleep(600L)
+        }
+        val resolvedGoogle = shell("pm path com.google.android.documentsui")
+            .startsWith("package:")
+        val resolvedAosp = shell("pm path com.android.documentsui")
+            .startsWith("package:")
+        // No sensitive UI dump/filename/path: expose only fixed classifications.
+        fail("Actual system picker unavailable at cold-boot preflight; " +
+            "googleDocsUiInstalled=" + resolvedGoogle +
+            " aospDocsUiInstalled=" + resolvedAosp)
+    }
+
     private fun clickableAncestor(node: UiObject2): UiObject2? {
         var target: UiObject2? = node
         repeat(5) {
@@ -158,6 +201,7 @@ class SafDocumentPickerInstrumentedTest {
 
     @Test
     fun actualFictionalAndroidPickerRoundTrip() {
+        preflightSystemPicker()
         phase("saf_roundtrip")
         requirePhase("SAF_ROUNDTRIP_EXPORT_READY")
         picker()
