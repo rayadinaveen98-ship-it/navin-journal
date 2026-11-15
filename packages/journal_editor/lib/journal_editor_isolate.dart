@@ -41,6 +41,15 @@ class EncryptedJournalShelf {
       {this.trashedPages = const []});
 }
 
+/// The separately encrypted page created from a conflicted fictional draft.
+/// This receipt is NOT an acknowledgement that the original page was saved.
+/// A new edit after the snapshot can remain unsaved in the original editor.
+class PreservedFictionalConflictCopy {
+  final String entryId;
+  final bool matchesCurrentDraft;
+  const PreservedFictionalConflictCopy(this.entryId, this.matchesCurrentDraft);
+}
+
 class JournalEditorWorker implements DraftCommitPort {
   final Isolate _worker;
   final ReceivePort _responses;
@@ -361,6 +370,28 @@ class JournalEditorWorker implements DraftCommitPort {
     return CommitReceipt(entryId, r['version'] as int);
   }
 
+  /// Stage 5D.1 fictional integration only: preserve the current conflicted
+  /// draft as a NEW encrypted page. The storage isolate proves a conflict,
+  /// validates journal scope, retains the original and its history unchanged,
+  /// and permits only one copy per in-memory conflict session.
+  Future<String> preserveFictionalConflictCopy({
+    required String sessionId,
+    required int expectedOriginalVersion,
+    required DraftContent snapshot,
+  }) async {
+    if (sessionId.trim().isEmpty || expectedOriginalVersion < 1 ||
+        snapshot.isBlank) {
+      throw const DraftConflict();
+    }
+    final result = await _send('preserve_conflicted_fictional_copy', {
+      'sessionId': sessionId,
+      'expectedOriginalVersion': expectedOriginalVersion,
+      'title': snapshot.title,
+      'body': snapshot.body,
+    });
+    return result['newEntryId'] as String;
+  }
+
   Future<String?> persistedIdFor(String sessionId) async {
     final r = await _send('persisted_id', {'sessionId': sessionId});
     return r['persistedId'] as String?;
@@ -396,6 +427,24 @@ class IsolateJournalEditorSession {
   Future<void> save() => controller.flush();
   Future<bool> closeSafely() => controller.closeSafely();
 
+  /// A conflict remains latched. A successful result is a verified distinct
+  /// encrypted page, never a saved-state acknowledgment for the original.
+  /// Only scripted fictional content is permitted at this stage.
+  Future<PreservedFictionalConflictCopy> preserveConflictCopyAsNew() async {
+    if (!controller.hasUnresolvedConflict || controller.isComposing ||
+        controller.draft.isBlank || controller.indicator.databaseVersion < 1) {
+      throw const DraftConflict();
+    }
+    final snapshot = controller.draft;
+    final copyId = await worker.preserveFictionalConflictCopy(
+      sessionId: sessionId,
+      expectedOriginalVersion: controller.indicator.databaseVersion,
+      snapshot: snapshot,
+    );
+    return PreservedFictionalConflictCopy(
+      copyId, controller.draft == snapshot && !controller.isComposing);
+  }
+
   /// Returned only after a committed real entry exists in encrypted storage.
   Future<String?> persistedEntryId() => worker.persistedIdFor(sessionId);
 }
@@ -422,6 +471,11 @@ Future<void> _editorStorageWorker(List<Object> args) async {
   }
 
   final ports = <String, JournalCoreDraftPort>{};
+  // In-memory-only deduplication; never mark a conflict resolved or auto-copy.
+  // Crash/unknown-ACK handling still requires querying the encrypted Library
+  // before the user can manually request another copy in a future session.
+  final conflictedSessions = <String>{};
+  final preservedCopyIds = <String, String>{};
   ready.send(incoming.sendPort);
   await for (final dynamic message in incoming) {
     if (message is! Map ||
@@ -640,15 +694,83 @@ Future<void> _editorStorageWorker(List<Object> args) async {
           final session = message['sessionId'] as String;
           final port = ports[session];
           if (port == null) throw const DraftConflict();
-          final receipt = await port.commit(
-            entryId: session,
-            expectedVersion: message['expectedVersion'] as int,
-            content: DraftContent(
-              title: message['title'] as String,
-              body: message['body'] as String,
-            ),
+          try {
+            final receipt = await port.commit(
+              entryId: session,
+              expectedVersion: message['expectedVersion'] as int,
+              content: DraftContent(
+                title: message['title'] as String,
+                body: message['body'] as String,
+              ),
+            );
+            reply.send({'id': id, 'ok': true, 'version': receipt.version});
+          } on DraftConflict {
+            conflictedSessions.add(session);
+            rethrow;
+          }
+        case 'preserve_conflicted_fictional_copy':
+          final session = message['sessionId'] as String;
+          final originalPort = ports[session];
+          if (originalPort == null || !conflictedSessions.contains(session)) {
+            throw const DraftConflict();
+          }
+          final originalId = originalPort.persistedEntryId;
+          if (originalId == null) throw const DraftConflict();
+          final expected = message['expectedOriginalVersion'] as int;
+          final title = message['title'] as String;
+          final body = message['body'] as String;
+          if (expected < 1 ||
+              (title.trim().isEmpty && body.trim().isEmpty)) {
+            throw const DraftConflict();
+          }
+          final journal = originalPort.journalId;
+          final eligible = vault.listJournals(includeTrash: true).where(
+            (j) => j['id'] == journal && j['deletedAtMs'] == null &&
+                j['archived'] == false).toList();
+          if (eligible.length != 1) throw const DraftConflict();
+          final original = vault.readEntry(originalId);
+          if (original == null || original['journalId'] != journal ||
+              original['deletedAtMs'] != null ||
+              (original['version'] as int) <= expected) {
+            // Copying is allowed only if a real competing encrypted revision
+            // exists for the original live page in its active journal.
+            throw const DraftConflict();
+          }
+          final existingCopyId = preservedCopyIds[session];
+          if (existingCopyId != null) {
+            final previousCopy = vault.readEntry(existingCopyId);
+            if (previousCopy == null ||
+                previousCopy['deletedAtMs'] != null ||
+                previousCopy['journalId'] != journal ||
+                previousCopy['title'] != title ||
+                previousCopy['body'] != body ||
+                previousCopy['version'] != 1) {
+              throw const DraftConflict();
+            }
+            reply.send({
+              'id': id, 'ok': true, 'newEntryId': existingCopyId,
+            });
+          } else {
+            // JournalVault.createEntry performs the encrypted transaction.
+          // Never call editEntry, trash, restore or change the original row.
+          final copiedId = vault.createEntry(
+            journalId: journal,
+            title: title,
+            body: body,
+            eventAtMs: original['eventAtMs'] as int?,
           );
-          reply.send({'id': id, 'ok': true, 'version': receipt.version});
+          preservedCopyIds[session] = copiedId;
+          final copied = vault.readEntry(copiedId);
+          if (copied == null || copied['id'] != copiedId ||
+              copied['journalId'] != journal ||
+              copied['title'] != title || copied['body'] != body ||
+              copied['version'] != 1 ||
+              copied['deletedAtMs'] != null) {
+            // Do not send success until encrypted readback is verified.
+            throw const DraftConflict();
+          }
+          reply.send({'id': id, 'ok': true, 'newEntryId': copiedId});
+          }
         case 'persisted_id':
           final session = message['sessionId'] as String;
           final port = ports[session];
