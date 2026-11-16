@@ -1,12 +1,10 @@
 // Stage 5D.1-E2 — fictional-only encrypted V3 snapshot/restore acceptance.
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:navin_journal_core/journal_vault.dart';
 import 'package:navin_journal_core/staged_product_restore.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_recovery_archive_spike/product_archive_v3.dart';
-import 'package:navin_journal_recovery_archive_spike/product_encrypted_archive.dart';
 import 'package:navin_journal_recovery_archive_spike/recovery_archive.dart';
 import 'package:test/test.dart';
 
