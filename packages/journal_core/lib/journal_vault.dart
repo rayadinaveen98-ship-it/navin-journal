@@ -20,6 +20,7 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
+import 'package:navin_journal_recovery_archive_spike/product_archive_v3.dart';
 import 'package:navin_journal_recovery_archive_spike/product_encrypted_archive.dart';
 import 'package:navin_journal_recovery_archive_spike/product_snapshot.dart';
 import 'package:navin_journal_recovery_archive_spike/recovery_archive.dart';
@@ -674,6 +675,18 @@ class JournalVault {
   /// never overwrites/merges existing data. A4.3 device restore is still open.
   Future<void> importIntoEmpty(Map<String, dynamic> snapshot) async {
     await ProductSnapshotCodec().validate(snapshot);
+    _importValidatedIntoEmpty(snapshot);
+  }
+
+  /// Import a previously authenticated V3 snapshot. Entries, revisions,
+  /// media and receipt provenance commit atomically in a NEW empty vault.
+  Future<void> importV3IntoEmpty(Map<String, dynamic> snapshot) async {
+    await ProductSnapshotV3Codec().validate(snapshot);
+    _importValidatedIntoEmpty(snapshot, includeReceipts: true);
+  }
+
+  void _importValidatedIntoEmpty(Map<String, dynamic> snapshot,
+      {bool includeReceipts = false}) {
     _transaction(() {
       for (final table in [
         'conflict_copy_receipts', 'attachments', 'revisions', 'entries',
@@ -730,6 +743,22 @@ class JournalVault {
         ]);
         injectFailure?.call('after_import_attachment');
       }
+      if (includeReceipts) {
+        for (final value in snapshot['conflictCopyReceipts'] as List) {
+          final r = Map<String, dynamic>.from(value as Map);
+          _db.execute('''
+            INSERT INTO conflict_copy_receipts(
+              operation_id,source_entry_id,source_expected_version,
+              source_competing_version,copy_entry_id,journal_id,created_at_ms
+            ) VALUES(?,?,?,?,?,?,?)
+          ''', [
+            r['operationId'], r['sourceEntryId'],
+            r['expectedOriginalVersion'], r['competingOriginalVersion'],
+            r['copyEntryId'], r['journalId'], r['createdAtMs'],
+          ]);
+          injectFailure?.call('after_import_conflict_receipt');
+        }
+      }
       injectFailure?.call('before_import_commit');
     });
   }
@@ -773,6 +802,61 @@ class JournalVault {
       _db.execute('ROLLBACK');
       rethrow;
     }
+  }
+
+  /// V3 captures journals, content and conflict-copy receipt provenance
+  /// within ONE SQLite WAL read transaction. Plaintext remains in memory only.
+  /// The legacy snapshot() deliberately refuses data-losing V2 export.
+  Map<String, dynamic> snapshotV3({void Function()? onAfterJournals}) {
+    _ensureOpen();
+    _db.execute('BEGIN');
+    try {
+      final journals = _db.select('SELECT * FROM journals ORDER BY id')
+          .map(_journal).toList(growable: false);
+      onAfterJournals?.call();
+      final entries = _db.select('SELECT * FROM entries ORDER BY id')
+          .map(_entry).toList(growable: false);
+      final revisions = _db.select('SELECT * FROM revisions ORDER BY entry_id,version')
+          .map(_revision).toList(growable: false);
+      final attachments = _db.select('SELECT * FROM attachments ORDER BY id')
+          .map(_attachment).toList(growable: false);
+      final receipts = _db.select('''
+        SELECT * FROM conflict_copy_receipts ORDER BY operation_id
+      ''').map((r) => <String, dynamic>{
+        'operationId': r['operation_id'] as String,
+        'sourceEntryId': r['source_entry_id'] as String,
+        'expectedOriginalVersion': r['source_expected_version'] as int,
+        'competingOriginalVersion': r['source_competing_version'] as int,
+        'copyEntryId': r['copy_entry_id'] as String,
+        'journalId': r['journal_id'] as String,
+        'createdAtMs': r['created_at_ms'] as int,
+      }).toList(growable: false);
+      if (!integrityCheck()) throw StateError('Journal store integrity failed');
+      _db.execute('COMMIT');
+      return {
+        'format': ProductSnapshotV3Codec.format,
+        'exportedAtUtc': DateTime.now().toUtc().toIso8601String(),
+        'journals': journals,
+        'entries': entries,
+        'revisions': revisions,
+        'attachments': attachments,
+        'conflictCopyReceipts': receipts,
+      };
+    } catch (_) {
+      _db.execute('ROLLBACK');
+      rethrow;
+    }
+  }
+
+  /// Fictional-only V3 authenticated archive export. This does NOT supply
+  /// recovery-key custody, file handling or a consumer backup workflow.
+  Future<Uint8List> exportEncryptedV3({
+    required RecoveryKey recoveryKey,
+  }) async {
+    return ProductArchiveV3Codec().export(
+      recoveryKey: recoveryKey,
+      snapshot: snapshotV3(),
+    );
   }
 
   /// One database snapshot, then authenticated encryption OUTSIDE SQL lock.
