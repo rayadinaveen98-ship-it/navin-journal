@@ -379,7 +379,6 @@ class JournalEditorWorker implements DraftCommitPort {
     required String sessionId,
     required int expectedOriginalVersion,
     required DraftContent snapshot,
-    String? operationId,
   }) async {
     if (sessionId.trim().isEmpty || expectedOriginalVersion < 1 ||
         snapshot.isBlank) {
@@ -387,7 +386,9 @@ class JournalEditorWorker implements DraftCommitPort {
     }
     final result = await _send('preserve_conflicted_fictional_copy', {
       'sessionId': sessionId,
-      'operationId': operationId ?? sessionId,
+      // The authenticated worker session is the sole operation ID; callers
+      // cannot choose another token to duplicate a conflicted snapshot.
+      'operationId': sessionId,
       'expectedOriginalVersion': expectedOriginalVersion,
       'title': snapshot.title,
       'body': snapshot.body,
