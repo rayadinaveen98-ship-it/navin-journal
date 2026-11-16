@@ -195,7 +195,10 @@ void main() {
       <String, Object?>{'operationId': 'short'},
     ]) {
       final variant = _sample();
-      (variant['conflictCopyReceipts'] as List).first.addAll(patch);
+      final rows = variant['conflictCopyReceipts'] as List;
+      final mutable = Map<String, dynamic>.from(rows.first as Map);
+      mutable.addAll(patch);
+      rows[0] = mutable;
       variants.add(variant);
     }
     for (final variant in variants) {
