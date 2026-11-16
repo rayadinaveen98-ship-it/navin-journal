@@ -733,16 +733,22 @@ Future<void> _editorStorageWorker(List<Object> args) async {
           // Validation and operation-id deduplication take place in ONE
           // encrypted SQL transaction. A retry may read the committed receipt
           // after a lost reply without creating another page.
-          final copyId = vault.preserveConflictCopy(
-            operationId: message['operationId'] as String,
-            sourceEntryId: originalId,
-            journalId: originalPort.journalId,
-            expectedOriginalVersion:
-                message['expectedOriginalVersion'] as int,
-            title: message['title'] as String,
-            body: message['body'] as String,
-          );
-          reply.send({'id': id, 'ok': true, 'newEntryId': copyId});
+          try {
+            final copyId = vault.preserveConflictCopy(
+              operationId: message['operationId'] as String,
+              sourceEntryId: originalId,
+              journalId: originalPort.journalId,
+              expectedOriginalVersion:
+                  message['expectedOriginalVersion'] as int,
+              title: message['title'] as String,
+              body: message['body'] as String,
+            );
+            reply.send({'id': id, 'ok': true, 'newEntryId': copyId});
+          } on JournalUnavailable {
+            // Archived/deleted/not-writable source: treat as a blocked
+            // conflict, not a transient storage failure. Never retry.
+            throw const DraftConflict();
+          }
         case 'conflict_copies_for_source':
           final receipts = vault.conflictCopiesForSource(
             message['sourceEntryId'] as String,
