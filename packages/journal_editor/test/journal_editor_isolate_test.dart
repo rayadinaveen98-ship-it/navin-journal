@@ -198,6 +198,23 @@ void main() {
       throwsA(isA<DraftConflict>()));
     expect((await worker.listEntries(journalId: journal)).length, 2);
     expect((await worker.readEntry(originalId))!['version'], 2);
+    final receipt = (await worker.fictionalConflictCopiesForSource(originalId))
+        .single;
+    expect(receipt['copyEntryId'], first.entryId);
+    expect(receipt['expectedOriginalVersion'], 1);
+    expect(receipt['competingOriginalVersion'], 2);
+
+    // The source session is intentionally gone after a process restart; read
+    // the encrypted receipt rather than blindly creating a replacement copy.
+    await worker.close();
+    worker = await JournalEditorWorker.open(dbPath, key: key);
+    final recovered = await worker.fictionalConflictCopiesForSource(originalId);
+    expect(recovered.single['copyEntryId'], first.entryId);
+    expect(recovered.single['operationId'], b.sessionId);
+    expect((await worker.listEntries(journalId: journal)).length, 2);
+    expect((await worker.readEntry(first.entryId))!['body'],
+        'No overwrite please');
+    expect(await worker.historyCount(originalId), 1);
   });
 
   test('worker rejects copy when no genuine conflict exists or original '
