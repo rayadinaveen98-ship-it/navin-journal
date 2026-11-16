@@ -38,7 +38,8 @@ class JournalUnavailable implements Exception {
 }
 
 class JournalVault {
-  static const schemaVersion = 1;
+  static const schemaVersion = 2;
+  static const legacySchemaVersion = 1;
   static const identity = 'NAVIN_JOURNAL_CORE_V1_TEST_ONLY';
   final Database _db;
   final void Function(String checkpoint)? injectFailure;
@@ -171,18 +172,48 @@ class JournalVault {
           sha256 TEXT NOT NULL
         ) STRICT
       ''');
+      _createConflictCopyLedger();
       _db.userVersion = schemaVersion;
     });
   }
 
+  /// Stored inside the ciphered SQLite vault, never in preferences or logs.
+  /// The receipt and the newly preserved entry are committed atomically.
+  void _createConflictCopyLedger() {
+    _db.execute('''
+      CREATE TABLE conflict_copy_receipts (
+        operation_id TEXT PRIMARY KEY NOT NULL,
+        source_entry_id TEXT NOT NULL REFERENCES entries(id) ON DELETE RESTRICT,
+        source_expected_version INTEGER NOT NULL CHECK(source_expected_version >= 1),
+        source_competing_version INTEGER NOT NULL CHECK(source_competing_version > source_expected_version),
+        copy_entry_id TEXT NOT NULL UNIQUE REFERENCES entries(id) ON DELETE RESTRICT,
+        journal_id TEXT NOT NULL REFERENCES journals(id) ON DELETE RESTRICT,
+        created_at_ms INTEGER NOT NULL
+      ) STRICT
+    ''');
+  }
+
   void _verifyIdentity() {
     try {
-      if (_db.userVersion != schemaVersion) {
+      final version = _db.userVersion;
+      if (version != schemaVersion && version != legacySchemaVersion) {
         throw const JournalUnavailable();
       }
       final marker = _db.select('SELECT marker FROM vault_identity');
       if (marker.length != 1 || marker.single['marker'] != identity) {
         throw const JournalUnavailable();
+      }
+      if (version == legacySchemaVersion) {
+        // Additive, transactionally versioned migration. The existing encrypted
+        // journals/entries/revisions/media are never rewritten or deleted.
+        _transaction(() {
+          _createConflictCopyLedger();
+          _db.userVersion = schemaVersion;
+        });
+      } else {
+        final ledger = _db.select("SELECT name FROM sqlite_master "
+            "WHERE type='table' AND name='conflict_copy_receipts'");
+        if (ledger.length != 1) throw const JournalUnavailable();
       }
     } on SqliteException {
       throw const JournalUnavailable();
@@ -316,6 +347,121 @@ class JournalVault {
       ''', [id, journalId, title, body, now, now, eventAtMs]);
     });
     return id;
+  }
+
+  /// Stage 5D.1 fictional-only: one durable, encrypted operation receipt and
+  /// one separate page in the SAME SQLite transaction. Replaying the same
+  /// operation after worker shutdown or an unknown acknowledgment does not
+  /// create another page. It never edits the conflicting source or revisions.
+  String preserveConflictCopy({
+    required String operationId,
+    required String sourceEntryId,
+    required String journalId,
+    required int expectedOriginalVersion,
+    required String title,
+    required String body,
+  }) {
+    if (!RegExp(r'^[A-Za-z0-9_-]{16,64}$').hasMatch(operationId) ||
+        expectedOriginalVersion < 1) {
+      throw const JournalConflict();
+    }
+    _checkText(title, body);
+    late String copiedId;
+    _transaction(() {
+      final already = _db.select(
+        'SELECT * FROM conflict_copy_receipts WHERE operation_id=?',
+        [operationId],
+      );
+      if (already.isNotEmpty) {
+        final receipt = already.single;
+        if (receipt['source_entry_id'] != sourceEntryId ||
+            receipt['journal_id'] != journalId ||
+            receipt['source_expected_version'] != expectedOriginalVersion) {
+          throw const JournalConflict();
+        }
+        copiedId = receipt['copy_entry_id'] as String;
+        final existing = _db.select('SELECT * FROM entries WHERE id=?',
+            [copiedId]);
+        if (existing.length != 1 ||
+            existing.single['journal_id'] != journalId ||
+            existing.single['title'] != title ||
+            existing.single['body'] != body ||
+            existing.single['version'] != 1 ||
+            existing.single['deleted_at_ms'] != null) {
+          throw const JournalConflict();
+        }
+        return;
+      }
+
+      _requireWritableJournal(journalId);
+      final originals = _db.select(
+        'SELECT * FROM entries WHERE id=? AND journal_id=?',
+        [sourceEntryId, journalId],
+      );
+      if (originals.length != 1 ||
+          originals.single['deleted_at_ms'] != null ||
+          (originals.single['version'] as int) <= expectedOriginalVersion) {
+        throw const JournalConflict();
+      }
+      final source = originals.single;
+      final now = _now();
+      copiedId = _id();
+      _db.execute('''
+        INSERT INTO entries(
+          id,journal_id,title,body,created_at_ms,updated_at_ms,
+          event_at_ms,version,deleted_at_ms
+        ) VALUES(?,?,?,?,?,?,?,1,NULL)
+      ''', [
+        copiedId, journalId, title, body, now, now,
+        source['event_at_ms'],
+      ]);
+      injectFailure?.call('after_conflict_copy_entry_before_receipt');
+      _db.execute('''
+        INSERT INTO conflict_copy_receipts(
+          operation_id,source_entry_id,source_expected_version,
+          source_competing_version,copy_entry_id,journal_id,created_at_ms
+        ) VALUES (?,?,?,?,?,?,?)
+      ''', [
+        operationId, sourceEntryId, expectedOriginalVersion,
+        source['version'], copiedId, journalId, now,
+      ]);
+      injectFailure?.call('after_conflict_copy_receipt_before_commit');
+    });
+    // An acknowledgment requires independent post-commit encrypted readback.
+    final check = readEntry(copiedId);
+    if (check == null || check['journalId'] != journalId ||
+        check['title'] != title || check['body'] != body ||
+        check['version'] != 1 || check['deletedAtMs'] != null) {
+      throw const JournalConflict();
+    }
+    return copiedId;
+  }
+
+  /// Read-only encrypted provenance for explicit post-crash reconciliation.
+  /// The caller must review these receipts; never silently retry a new copy.
+  List<Map<String, Object?>> conflictCopiesForSource(String sourceEntryId) {
+    _ensureOpen();
+    final rows = _db.select('''
+      SELECT r.*, e.version AS copy_version,
+             e.deleted_at_ms AS copy_deleted_at_ms
+      FROM conflict_copy_receipts r
+      JOIN entries e ON e.id=r.copy_entry_id
+      WHERE r.source_entry_id=?
+      ORDER BY r.created_at_ms DESC, r.operation_id
+    ''', [sourceEntryId]);
+    return [
+      for (final r in rows)
+        {
+          'operationId': r['operation_id'] as String,
+          'sourceEntryId': r['source_entry_id'] as String,
+          'expectedOriginalVersion': r['source_expected_version'] as int,
+          'competingOriginalVersion': r['source_competing_version'] as int,
+          'copyEntryId': r['copy_entry_id'] as String,
+          'journalId': r['journal_id'] as String,
+          'copyVersion': r['copy_version'] as int,
+          'copyDeletedAtMs': r['copy_deleted_at_ms'] as int?,
+        },
+    ];
   }
 
   int entryVersion(String id) {
@@ -529,7 +675,10 @@ class JournalVault {
   Future<void> importIntoEmpty(Map<String, dynamic> snapshot) async {
     await ProductSnapshotCodec().validate(snapshot);
     _transaction(() {
-      for (final table in ['attachments', 'revisions', 'entries', 'journals']) {
+      for (final table in [
+        'conflict_copy_receipts', 'attachments', 'revisions', 'entries',
+        'journals',
+      ]) {
         if ((_db.select('SELECT COUNT(*) AS n FROM ' + table).single['n'] as int) != 0) {
           throw const JournalUnavailable();
         }
@@ -592,6 +741,12 @@ class JournalVault {
     void Function()? onAfterJournals,
   }) {
     _ensureOpen();
+    // Snapshot format v1 cannot carry conflict-copy provenance. Fail closed
+    // rather than publish a backup that silently loses replay protection.
+    if (_db.select('SELECT operation_id FROM conflict_copy_receipts LIMIT 1')
+        .isNotEmpty) {
+      throw const JournalUnavailable();
+    }
     _db.execute('BEGIN');
     try {
       final journals = _db.select('SELECT * FROM journals ORDER BY id')
