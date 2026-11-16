@@ -194,7 +194,9 @@ void main() {
       <String, Object?>{'createdAtMs': 1699999999000},
       <String, Object?>{'operationId': 'short'},
     ]) {
-      final variant = _sample();
+      // JSON round-trip yields a fully mutable dynamic fixture, avoiding
+      // Dart's narrow const-literal map/list inference in adversarial tests.
+      final variant = _clone(_sample());
       final rows = variant['conflictCopyReceipts'] as List;
       final mutable = Map<String, dynamic>.from(rows.first as Map);
       mutable.addAll(patch);
@@ -205,7 +207,7 @@ void main() {
       await expectLater(snapshot.encode(variant),
           throwsA(isA<ProductSnapshotRejected>()));
     }
-    final dup = _sample();
+    final dup = _clone(_sample());
     (dup['conflictCopyReceipts'] as List).add(
         _clone(_sample())['conflictCopyReceipts'][0]);
     await expectLater(snapshot.encode(dup),
