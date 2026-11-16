@@ -1,0 +1,38 @@
+name: Navin Journal Stage 5D.1 Authenticated V3 Archive PR Gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'spikes/recovery_archive/**'
+      - '.github/workflows/stage5d1-v3-archive-codec-pr.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: navin-stage5d1-v3-archive-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  authenticated-v3-codec:
+    name: V3 AEAD, receipt validation and legacy V2 compatibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Resolve existing encrypted archive dependencies
+        working-directory: spikes/recovery_archive
+        run: dart pub get
+      - name: Format source in isolated CI runner
+        working-directory: spikes/recovery_archive
+        run: dart format lib test
+      - name: Strict Dart analysis
+        working-directory: spikes/recovery_archive
+        run: dart analyze --fatal-infos
+      - name: Run all archive and adverse-input tests (fictional only)
+        working-directory: spikes/recovery_archive
+        run: dart test --reporter expanded
