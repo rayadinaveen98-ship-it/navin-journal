@@ -741,14 +741,15 @@ class JournalVault {
     void Function()? onAfterJournals,
   }) {
     _ensureOpen();
-    // Snapshot format v1 cannot carry conflict-copy provenance. Fail closed
-    // rather than publish a backup that silently loses replay protection.
-    if (_db.select('SELECT operation_id FROM conflict_copy_receipts LIMIT 1')
-        .isNotEmpty) {
-      throw const JournalUnavailable();
-    }
     _db.execute('BEGIN');
     try {
+      // Establish the WAL read snapshot *before* evaluating provenance.
+      // A concurrent conflict-copy commit cannot sneak between this check
+      // and the exported journal/entry rows.
+      if (_db.select('SELECT operation_id FROM conflict_copy_receipts LIMIT 1')
+          .isNotEmpty) {
+        throw const JournalUnavailable();
+      }
       final journals = _db.select('SELECT * FROM journals ORDER BY id')
           .map(_journal).toList(growable: false);
       onAfterJournals?.call();
