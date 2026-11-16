@@ -1,0 +1,51 @@
+name: Stage 5D.1 Durable Encrypted Conflict Core PR Gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/journal_core/**'
+      - 'packages/journal_editor/**'
+      - '.github/workflows/stage5d1-durable-conflict-core-pr.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: navin-stage5d1-conflict-core-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  encrypted-receipt-core:
+    name: Schema migration, rollback, encrypted receipt replay
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Resolve SQLite3MultipleCiphers core dependencies
+        working-directory: packages/journal_core
+        run: dart pub get
+      - name: Format Dart source in isolated CI workspace
+        working-directory: packages/journal_core
+        run: dart format lib test
+      - name: Analyze encrypted core
+        working-directory: packages/journal_core
+        run: dart analyze --fatal-infos
+      - name: Test encrypted vault and conflict-copy receipts
+        working-directory: packages/journal_core
+        run: dart test --reporter expanded
+      - name: Resolve editor dependencies
+        working-directory: packages/journal_editor
+        run: dart pub get
+      - name: Format editor source in isolated CI workspace
+        working-directory: packages/journal_editor
+        run: dart format lib test
+      - name: Analyze background worker
+        working-directory: packages/journal_editor
+        run: dart analyze --fatal-infos
+      - name: Test worker restart reconciliation with fictional entries
+        working-directory: packages/journal_editor
+        run: dart test --reporter expanded
