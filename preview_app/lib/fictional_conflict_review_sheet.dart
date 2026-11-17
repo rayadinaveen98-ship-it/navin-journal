@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use
 // Stage 5D.1 fictional-only conflict review. No real diary data or release use.
 // A copy receipt is NOT a successful save of the original page.
 import 'package:flutter/material.dart';
