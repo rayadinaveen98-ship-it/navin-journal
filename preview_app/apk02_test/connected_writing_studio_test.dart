@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:navin_journal_autosave_spike/draft_autosave.dart';
 import 'package:navin_journal_preview/connected_writing_studio.dart';
+import 'package:navin_journal_preview/fictional_conflict_review_sheet.dart';
 
 const fixture = FictionalWritingPreset(
   'The quiet hour', 'A fictional day. ఈ రోజు ప్రశాంతంగా ఉంది.',
@@ -51,6 +52,8 @@ Future<WidgetHarness> mount(
   required VoidCallback onClose,
   bool scriptOnly = true,
   Future<void> Function(SaveIndicator)? onAcknowledged,
+  Future<Map<String, Object?>?> Function()? loadNewestSavedConflict,
+  Future<ConflictReviewCopyReceipt> Function()? preserveConflictAsNew,
 }) async {
   final port = FakeEncryptedPort();
   late EditorSaveNotifier notifier;
@@ -73,6 +76,8 @@ Future<WidgetHarness> mount(
     journalName: 'Fictional Pages',
     onAcknowledged: onAcknowledged,
     onClose: onClose,
+    loadNewestSavedConflict: loadNewestSavedConflict,
+    preserveConflictAsNew: preserveConflictAsNew,
   )));
   await tester.pumpAndSettle();
   return WidgetHarness(port, controller, notifier);
@@ -458,4 +463,141 @@ void main() {
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();
   });
+  testWidgets('fictional conflict review shows saved versus unsaved and '
+      'never mistakes a separate copy for an original save', (tester) async {
+    var copies = 0;
+    var originalSaveAcks = 0;
+    final harness = await mount(tester,
+      onClose: () {},
+      onAcknowledged: (_) async { originalSaveAcks++; },
+      loadNewestSavedConflict: () async => {
+        'title': 'Newest verified original',
+        'body': 'Original fictional revision remains here',
+        'version': 2,
+      },
+      preserveConflictAsNew: () async {
+        copies++;
+        return const ConflictReviewCopyReceipt(
+          entryId: 'independently-verified-fictional-copy',
+          matchesCurrentDraft: true,
+        );
+      },
+    );
+    harness.port.conflict = true;
+    await tester.ensureVisible(find.byKey(
+        const ValueKey('insert-fictional-sample')));
+    await tester.tap(find.byKey(const ValueKey('insert-fictional-sample')));
+    await tester.pumpAndSettle();
+    expect(harness.controller.hasUnresolvedConflict, isTrue);
+    await tester.ensureVisible(find.byKey(
+        const ValueKey('connected-review-conflict')));
+    await tester.tap(find.byKey(
+        const ValueKey('connected-review-conflict')));
+    await tester.pumpAndSettle();
+    expect(find.text('Newest saved page · read only'), findsOneWidget);
+    expect(find.text('Your unsaved draft · not backed up'), findsOneWidget);
+    expect(find.text('Newest verified original'), findsOneWidget);
+    expect(find.text(fixture.body), findsOneWidget);
+    expect(copies, 0);
+    await tester.ensureVisible(find.byKey(
+        const ValueKey('conflict-preserve-new-page')));
+    await tester.tap(find.byKey(
+        const ValueKey('conflict-preserve-new-page')));
+    await tester.pumpAndSettle();
+    expect(copies, 1);
+    expect(originalSaveAcks, 0);
+    expect(harness.port.stored, isNull);
+    expect(harness.controller.indicator.phase, SavePhase.conflict);
+    expect(find.textContaining('The original page was not changed'),
+        findsWidgets);
+    expect(tester.widget<FilledButton>(find.byKey(
+        const ValueKey('conflict-preserve-new-page'))).onPressed, isNull);
+    await tester.tap(find.byKey(const ValueKey('conflict-keep-editing')));
+    await tester.pumpAndSettle();
+    expect(harness.controller.hasUnresolvedConflict, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('unknown copy acknowledgment never auto-retries after '
+      'closing and reopening conflict review', (tester) async {
+    var attempts = 0;
+    final harness = await mount(tester,
+      onClose: () {},
+      loadNewestSavedConflict: () async => {
+        'title': 'Verified different original',
+        'body': 'Safe existing fictional page',
+        'version': 3,
+      },
+      preserveConflictAsNew: () async {
+        attempts++;
+        throw StateError('Simulated lost storage acknowledgment');
+      },
+    );
+    harness.port.conflict = true;
+    await tester.ensureVisible(find.byKey(
+        const ValueKey('insert-fictional-sample')));
+    await tester.tap(find.byKey(const ValueKey('insert-fictional-sample')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(
+        const ValueKey('connected-review-conflict')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(
+        const ValueKey('conflict-preserve-new-page')));
+    await tester.tap(find.byKey(
+        const ValueKey('conflict-preserve-new-page')));
+    await tester.pumpAndSettle();
+    expect(attempts, 1);
+    expect(find.textContaining('could not confirm'), findsWidgets);
+    await tester.tap(find.byKey(const ValueKey('conflict-keep-editing')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(
+        const ValueKey('connected-review-conflict')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(find.byKey(
+        const ValueKey('conflict-preserve-new-page'))).onPressed, isNull);
+    expect(attempts, 1);
+    expect(harness.controller.indicator.phase, SavePhase.conflict);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('unfinished Telugu composition disables conflict preservation',
+      (tester) async {
+    final harness = await mount(tester,
+      onClose: () {},
+      loadNewestSavedConflict: () async => {
+        'title': 'Saved fictional Telugu',
+        'body': 'కల్పితము',
+        'version': 2,
+      },
+      preserveConflictAsNew: () async =>
+          const ConflictReviewCopyReceipt(
+            entryId: 'never-attempted',
+            matchesCurrentDraft: true,
+          ),
+    );
+    harness.port.conflict = true;
+    await tester.ensureVisible(find.byKey(
+        const ValueKey('insert-fictional-sample')));
+    await tester.tap(find.byKey(const ValueKey('insert-fictional-sample')));
+    await tester.pumpAndSettle();
+    final view = tester.state<ConnectedWritingStudioState>(
+        find.byType(ConnectedWritingStudio));
+    const partial = 'తెలు';
+    view.bodyInput.value = const TextEditingValue(
+      text: partial,
+      selection: TextSelection.collapsed(offset: 4),
+      composing: TextRange(start: 0, end: 4),
+    );
+    await tester.pump();
+    expect(harness.controller.isComposing, isTrue);
+    await tester.tap(find.byKey(
+        const ValueKey('connected-review-conflict')));
+    await tester.pumpAndSettle();
+    expect(find.text('Finish typing before saving a separate page.'),
+        findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byKey(
+        const ValueKey('conflict-preserve-new-page'))).onPressed, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
 }
