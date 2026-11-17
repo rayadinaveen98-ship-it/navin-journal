@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:navin_journal_autosave_spike/draft_autosave.dart';
 
 import 'visuals.dart';
+import 'fictional_conflict_review_sheet.dart';
 
 /// Deliberately hardcoded fictional-only sample; the APK02 diagnostic never
 /// allows the user to type private material.
@@ -39,6 +40,10 @@ class ConnectedWritingStudio extends StatefulWidget {
   final bool scriptOnly;
   final Future<void> Function(SaveIndicator)? onAcknowledged;
   final VoidCallback? onClose;
+  /// Fictional conflict review: read the actual newest encrypted source only.
+  final Future<Map<String, Object?>?> Function()? loadNewestSavedConflict;
+  /// Returns an independently verified copy receipt, never an original save.
+  final Future<ConflictReviewCopyReceipt> Function()? preserveConflictAsNew;
   final String journalName;
 
   const ConnectedWritingStudio({
@@ -50,6 +55,8 @@ class ConnectedWritingStudio extends StatefulWidget {
     required this.journalName,
     this.onAcknowledged,
     this.onClose,
+    this.loadNewestSavedConflict,
+    this.preserveConflictAsNew,
   });
 
   @override
@@ -63,6 +70,7 @@ class ConnectedWritingStudioState extends State<ConnectedWritingStudio>
   bool _working = false;
   bool _leaving = false;
   String? _localMessage;
+  bool _conflictCopyAttempted = false;
   Future<void>? _backgroundSave;
 
   @override
@@ -177,6 +185,52 @@ class ConnectedWritingStudioState extends State<ConnectedWritingStudio>
     } finally {
       if (mounted) setState(() => _working = false);
     }
+  }
+
+  /// The modal is read-only and offers no automatic merge or source overwrite.
+  /// A failed/unknown acknowledgment must not allow a blind second copy.
+  Future<void> _reviewConflict() async {
+    final reader = widget.loadNewestSavedConflict;
+    final preserve = widget.preserveConflictAsNew;
+    if (_working || _leaving || !widget.controller.hasUnresolvedConflict ||
+        reader == null || preserve == null) return;
+    setState(() {
+      _working = true;
+      _localMessage = null;
+    });
+    Map<String, Object?>? newest;
+    try {
+      newest = await reader();
+    } catch (_) {
+      // No confidential body, source ID or SQL details in UI/logs.
+    }
+    if (!mounted) return;
+    setState(() => _working = false);
+    if (newest == null || newest['title'] is! String ||
+        newest['body'] is! String ||
+        newest['version'] is! int ||
+        (newest['version'] as int) <=
+            widget.controller.indicator.databaseVersion) {
+      setState(() => _localMessage =
+          'The newer saved page could not be verified. '
+          'Your unsaved draft remains open.');
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const JournalColors(false).canvas,
+      builder: (sheetContext) => FictionalConflictReviewSheet(
+        controller: widget.controller,
+        newestSaved: newest!,
+        preserveAsNew: preserve,
+        previouslyAttempted: _conflictCopyAttempted,
+        onAttempt: () => _conflictCopyAttempted = true,
+        onOutcome: (message) {
+          if (mounted) setState(() => _localMessage = message);
+        },
+      ),
+    );
   }
 
   Future<void> _requestClose() async {
@@ -412,6 +466,26 @@ class ConnectedWritingStudioState extends State<ConnectedWritingStudio>
                         ]),
                       ),
                     ),
+                    if (widget.loadNewestSavedConflict != null &&
+                        widget.preserveConflictAsNew != null)
+                      ValueListenableBuilder<SaveIndicator>(
+                        valueListenable: widget.saveStatus,
+                        builder: (context, indicator, child) =>
+                            indicator.phase == SavePhase.conflict
+                                ? Padding(
+                                    padding: const EdgeInsets.only(top: 12),
+                                    child: OutlinedButton.icon(
+                                      key: const ValueKey(
+                                          'connected-review-conflict'),
+                                      onPressed: _working
+                                          ? null
+                                          : () => unawaited(_reviewConflict()),
+                                      icon: const Icon(Icons.compare_outlined),
+                                      label: const Text('Review changes'),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                      ),
                     if (_localMessage != null) ...[
                       const SizedBox(height: 10),
                       Text(_localMessage!,
