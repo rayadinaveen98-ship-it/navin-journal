@@ -1,0 +1,51 @@
+name: Stage 5D.1-E2 Verified Encrypted V3 Restore PR
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/journal_core/**'
+      - 'spikes/recovery_archive/**'
+      - '.github/workflows/stage5d1-e2-v3-encrypted-restore-pr.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: navin-stage5d1-e2-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  authenticated-snapshot-and-restore:
+    name: Authenticated V3, atomic import, rollback and no-clobber
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Resolve V3 cryptography dependencies
+        working-directory: spikes/recovery_archive
+        run: dart pub get
+      - name: Format isolated V3 codec and tests
+        working-directory: spikes/recovery_archive
+        run: dart format lib test
+      - name: Strict V3 archive analysis
+        working-directory: spikes/recovery_archive
+        run: dart analyze --fatal-infos
+      - name: All authenticated V2/V3 archive tests
+        working-directory: spikes/recovery_archive
+        run: dart test --reporter expanded
+      - name: Resolve encrypted native SQLite3MC and restore core
+        working-directory: packages/journal_core
+        run: dart pub get
+      - name: Format encrypted core and tests
+        working-directory: packages/journal_core
+        run: dart format lib test
+      - name: Strict encrypted vault and restore analysis
+        working-directory: packages/journal_core
+        run: dart analyze --fatal-infos
+      - name: Encrypted snapshot, transactional restore, interruption and replay tests
+        working-directory: packages/journal_core
+        run: dart test --reporter expanded

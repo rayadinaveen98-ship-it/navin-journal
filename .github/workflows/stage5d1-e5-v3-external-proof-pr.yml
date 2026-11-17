@@ -1,0 +1,49 @@
+name: Stage 5D.1-E5 Fictional V3 External Recovery Proof PR
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/journal_editor/**'
+      - 'packages/journal_core/**'
+      - 'spikes/recovery_archive/**'
+      - '.github/workflows/stage5d1-e5-v3-external-proof-pr.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: navin-stage5d1-e5-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  separate-key-v3-evidence:
+    name: External V3 archive, provenance and no-clobber recovery
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Resolve encrypted editor and SQLite3MC
+        working-directory: packages/journal_editor
+        run: dart pub get
+      - name: Format existing and new Dart sources
+        working-directory: packages/journal_editor
+        run: dart format lib test
+      - name: Strict analyzer (no suppressed warnings)
+        working-directory: packages/journal_editor
+        run: dart analyze --fatal-infos
+      - name: External V3 receipt/clean restore, tampering and cancellation tests
+        working-directory: packages/journal_editor
+        run: dart test test/fictional_v3_external_transfer_test.dart --reporter expanded
+      - name: All encrypted editor tests, V2 regression and V3 worker
+        working-directory: packages/journal_editor
+        run: dart test --reporter expanded
+      - name: Resolve core V3 restore
+        working-directory: packages/journal_core
+        run: dart pub get
+      - name: Encrypted V3 restore, atomicity, concurrency and rollback
+        working-directory: packages/journal_core
+        run: dart test test/staged_v3_conflict_restore_test.dart --reporter expanded

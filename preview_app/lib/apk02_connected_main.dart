@@ -18,6 +18,7 @@ import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
 import 'package:navin_journal_key_lifecycle_spike/key_envelope_coordinator.dart';
 
 import 'connected_writing_studio.dart';
+import 'fictional_conflict_review_sheet.dart';
 import 'visuals.dart';
 
 const _channel = MethodChannel('navin_journal/test_lifecycle_v1');
@@ -360,6 +361,25 @@ class _Apk02ConnectedTestAppState extends State<Apk02ConnectedTestApp> {
               scriptOnly: true,
               journalName: 'Fictional Pages',
               onAcknowledged: _onSaveAcknowledged,
+              // Only this debug-only scripted harness exposes the E4 hook.
+              // The existing Android lifecycle fixture never auto-conflicts.
+              loadNewestSavedConflict: () async {
+                final fixture = _fixture;
+                if (fixture == null) return null;
+                final originalId = await fixture.session.persistedEntryId();
+                if (originalId == null) return null;
+                return fixture.worker.readEntry(originalId);
+              },
+              preserveConflictAsNew: () async {
+                final fixture = _fixture;
+                if (fixture == null) throw StateError('Test fixture closed');
+                final receipt =
+                    await fixture.session.preserveConflictCopyAsNew();
+                return ConflictReviewCopyReceipt(
+                  entryId: receipt.entryId,
+                  matchesCurrentDraft: receipt.matchesCurrentDraft,
+                );
+              },
               onClose: () {
                 if (mounted) {
                   setState(() =>

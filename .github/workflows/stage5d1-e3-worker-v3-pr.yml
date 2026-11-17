@@ -1,0 +1,49 @@
+name: Stage 5D.1-E3 Encrypted Worker V3 Recovery PR
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/journal_editor/**'
+      - 'packages/journal_core/**'
+      - 'spikes/recovery_archive/**'
+      - '.github/workflows/stage5d1-e3-worker-v3-pr.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: navin-stage5d1-e3-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  worker-v3-recovery:
+    name: Worker V3 export, authentic restore and regression suite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Resolve encrypted editor and native SQLite dependencies
+        working-directory: packages/journal_editor
+        run: dart pub get
+      - name: Format Dart files for strict analyzer
+        working-directory: packages/journal_editor
+        run: dart format lib test
+      - name: Strict editor analysis
+        working-directory: packages/journal_editor
+        run: dart analyze --fatal-infos
+      - name: Isolated Stage 5D.1-E3 V3 worker-to-clean-vault roundtrip
+        working-directory: packages/journal_editor
+        run: dart test test/stage5d1_worker_v3_recovery_test.dart --reporter expanded
+      - name: All encrypted editor/worker tests including legacy V2
+        working-directory: packages/journal_editor
+        run: dart test --reporter expanded
+      - name: Resolve core V3 restore checks
+        working-directory: packages/journal_core
+        run: dart pub get
+      - name: Full V3 restore and receipt provenance regression
+        working-directory: packages/journal_core
+        run: dart test test/staged_v3_conflict_restore_test.dart --reporter expanded

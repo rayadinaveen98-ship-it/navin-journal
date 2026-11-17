@@ -8,6 +8,7 @@ import 'package:navin_journal_recovery_archive_spike/product_encrypted_archive.d
 import 'package:navin_journal_recovery_archive_spike/product_snapshot.dart';
 import 'package:navin_journal_recovery_archive_spike/recovery_archive.dart';
 import 'package:test/test.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 void main() {
   late Directory temp;
@@ -258,4 +259,105 @@ void main() {
       other.destroy();
     }
   });
+  test('conflict-copy receipt survives vault restart and replays exactly once', () {
+    final journal = vault.createJournal('Fictional conflict ledger');
+    final source = vault.createEntry(
+      journalId: journal, title: 'Before', body: 'Original imaginary page');
+    vault.editEntry(id: source, expectedVersion: 1, journalId: journal,
+      title: 'Winning edit', body: 'Protected latest version', eventAtMs: null);
+    const op = 'fictional-copy-operation-00000001';
+    final copy = vault.preserveConflictCopy(
+      operationId: op, sourceEntryId: source, journalId: journal,
+      expectedOriginalVersion: 1, title: 'Lost edit',
+      body: 'తెలుగు imaginary losing draft 🌿');
+    expect(copy, isNot(source));
+    expect(vault.readEntry(source)!['body'], 'Protected latest version');
+    expect(vault.listRevisions(source).length, 1);
+    expect(vault.conflictCopiesForSource(source).single['copyEntryId'], copy);
+    // The v1 portable archive cannot encode copy receipts; fail closed.
+    expect(() => vault.snapshot(), throwsA(isA<JournalUnavailable>()));
+
+    vault.close();
+    vault = JournalVault.open(dbPath, key: dbKey);
+    // Simulate committed copy with lost ACK: same opaque ID must not duplicate.
+    final replay = vault.preserveConflictCopy(
+      operationId: op, sourceEntryId: source, journalId: journal,
+      expectedOriginalVersion: 1, title: 'Lost edit',
+      body: 'తెలుగు imaginary losing draft 🌿');
+    expect(replay, copy);
+    expect(vault.listEntries(journalId: journal).length, 2);
+    expect(vault.conflictCopiesForSource(source).length, 1);
+    expect(vault.readEntry(source)!['version'], 2);
+    expect(vault.listRevisions(source).length, 1);
+    expect(vault.integrityCheck(), isTrue);
+    expect(() => vault.preserveConflictCopy(
+      operationId: op, sourceEntryId: source, journalId: journal,
+      expectedOriginalVersion: 1, title: 'Changed text', body: 'Not same copy'),
+      throwsA(isA<JournalConflict>()));
+    expect(vault.listEntries(journalId: journal).length, 2);
+  });
+
+  test('injected copy and receipt faults roll back together', () {
+    final journal = vault.createJournal('Injected fictional rollback');
+    final source = vault.createEntry(
+      journalId: journal, title: 'Version one', body: 'Fictional v1');
+    vault.editEntry(id: source, expectedVersion: 1, journalId: journal,
+      title: 'Version two', body: 'Fictional winner', eventAtMs: null);
+    for (final checkpoint in [
+      'after_conflict_copy_entry_before_receipt',
+      'after_conflict_copy_receipt_before_commit',
+    ]) {
+      vault.close();
+      vault = JournalVault.open(dbPath, key: dbKey, injectFailure: (at) {
+        if (at == checkpoint) throw StateError('Simulated pre-commit failure');
+      });
+      expect(() => vault.preserveConflictCopy(
+        operationId: 'fictional-copy-operation-00000002',
+        sourceEntryId: source, journalId: journal,
+        expectedOriginalVersion: 1, title: 'Safety copy',
+        body: 'Would be rolled back'), throwsStateError);
+      expect(vault.conflictCopiesForSource(source), isEmpty);
+      expect(vault.listEntries(journalId: journal).length, 1);
+      expect(vault.readEntry(source)!['version'], 2);
+      expect(vault.integrityCheck(), isTrue);
+    }
+    vault.close();
+    vault = JournalVault.open(dbPath, key: dbKey);
+    final copy = vault.preserveConflictCopy(
+      operationId: 'fictional-copy-operation-00000002',
+      sourceEntryId: source, journalId: journal,
+      expectedOriginalVersion: 1, title: 'Safety copy',
+      body: 'Would be rolled back');
+    expect(vault.readEntry(copy)!['body'], 'Would be rolled back');
+    expect(vault.listEntries(journalId: journal).length, 2);
+    expect(vault.conflictCopiesForSource(source).length, 1);
+  });
+
+  test('encrypted v1 vault migrates additively without rewriting old entries', () {
+    final journal = vault.createJournal('Old fictional journal');
+    final original = vault.createEntry(
+      journalId: journal, title: 'Legacy', body: 'Previous encrypted data');
+    vault.close();
+    // Emulate a genuine schema-1 database using the same encrypted backend.
+    final raw = sqlite3.open(dbPath);
+    raw.execute("PRAGMA cipher = 'chacha20'");
+    raw.execute("PRAGMA hexkey = '${dbKey.hex}'");
+    raw.execute('DROP TABLE conflict_copy_receipts');
+    raw.userVersion = 1;
+    raw.close();
+    vault = JournalVault.open(dbPath, key: dbKey);
+    expect(vault.readEntry(original)!['body'], 'Previous encrypted data');
+    expect(vault.conflictCopiesForSource(original), isEmpty);
+    expect(vault.integrityCheck(), isTrue);
+    vault.editEntry(id: original, expectedVersion: 1, journalId: journal,
+      title: 'New', body: 'Version two', eventAtMs: null);
+    final copy = vault.preserveConflictCopy(
+      operationId: 'fictional-copy-operation-00000003',
+      sourceEntryId: original, journalId: journal,
+      expectedOriginalVersion: 1, title: 'Separate copy',
+      body: 'Post-migration safety');
+    expect(vault.readEntry(copy)!['body'], 'Post-migration safety');
+    expect(vault.readEntry(original)!['version'], 2);
+  });
+
 }

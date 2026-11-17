@@ -94,6 +94,8 @@ class PortableRecoveryWorker {
     /// TEST ONLY: inject a simulated storage failure at a verified checkpoint.
     /// Rejected in release builds. Never use for private data.
     String? faultCheckpointForDiagnostics,
+    /// Fictional V3-only authenticated receipt recovery, never legacy V2.
+    bool v3Only = false,
   }) async {
     if (faultCheckpointForDiagnostics != null) {
       if (const bool.fromEnvironment('dart.vm.product') ||
@@ -134,7 +136,7 @@ class PortableRecoveryWorker {
             base64Url.encode(rawRecovery).replaceAll('=', ''),
           );
           isolatedDb = TestVaultKey.fromBytes(rawDatabase);
-          return await StagedProductRestorer(
+          final restorer = StagedProductRestorer(
             injectFailure: faultCheckpointForDiagnostics == null ? null : (point) {
               if (point == faultCheckpointForDiagnostics) {
                 throw FileSystemException(
@@ -144,7 +146,19 @@ class PortableRecoveryWorker {
                 );
               }
             },
-          ).restoreNew(
+          );
+          if (v3Only) {
+            if (faultCheckpointForDiagnostics != null) {
+              throw const ProductRestoreRejected();
+            }
+            return await restorer.restoreV3New(
+              encryptedArchive: archive,
+              recoveryKey: isolatedRecovery,
+              destinationKey: isolatedDb,
+              destination: Directory(destinationPath),
+            );
+          }
+          return await restorer.restoreNew(
             encryptedArchive: archive,
             recoveryKey: isolatedRecovery,
             destinationKey: isolatedDb,
