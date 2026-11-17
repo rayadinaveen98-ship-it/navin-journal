@@ -15,6 +15,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:navin_journal_encrypted_spike/encrypted_journal_spike.dart';
+import 'package:navin_journal_recovery_archive_spike/product_archive_v3.dart';
 import 'package:navin_journal_recovery_archive_spike/product_encrypted_archive.dart';
 import 'package:navin_journal_recovery_archive_spike/product_snapshot.dart';
 import 'package:navin_journal_recovery_archive_spike/recovery_archive.dart';
@@ -64,6 +65,45 @@ class StagedProductRestorer {
       recoveryKey: recoveryKey,
       archive: encryptedArchive,
     );
+    return _restoreAuthenticatedNew(
+      source: source,
+      destinationKey: destinationKey,
+      destination: destination,
+      includeConflictReceipts: false,
+    );
+  }
+
+  /// Only V3 archives may enter this receipt-bearing restore route. Legacy
+  /// V2 restoreNew() continues to validate and restore empty-ledger backups.
+  /// No active vault merge, device-key overwrite or private-data beta.
+  Future<ProductRestoreReceipt> restoreV3New({
+    required Uint8List encryptedArchive,
+    required RecoveryKey recoveryKey,
+    required TestVaultKey destinationKey,
+    required Directory destination,
+  }) async {
+    final verified = await ProductArchiveV3Codec().verify(
+      recoveryKey: recoveryKey,
+      archive: encryptedArchive,
+    );
+    if (verified.archiveFormat != ProductArchiveV3Codec.format ||
+        !verified.hasAuthenticatedConflictProvenance) {
+      throw const ArchiveRejected();
+    }
+    return _restoreAuthenticatedNew(
+      source: verified.snapshot,
+      destinationKey: destinationKey,
+      destination: destination,
+      includeConflictReceipts: true,
+    );
+  }
+
+  Future<ProductRestoreReceipt> _restoreAuthenticatedNew({
+    required Map<String, dynamic> source,
+    required TestVaultKey destinationKey,
+    required Directory destination,
+    required bool includeConflictReceipts,
+  }) async {
     if (destination.path.trim().isEmpty || await _occupied(destination)) {
       throw const ProductRestoreRejected();
     }
@@ -83,7 +123,11 @@ class StagedProductRestorer {
         injectFailure: injectFailure,
       );
       injectFailure?.call('after_encrypted_database_created');
-      await writer.importIntoEmpty(source);
+      if (includeConflictReceipts) {
+        await writer.importV3IntoEmpty(source);
+      } else {
+        await writer.importIntoEmpty(source);
+      }
       writer.close();
       writer = null;
       injectFailure?.call('after_commit_before_verify');
@@ -91,8 +135,13 @@ class StagedProductRestorer {
       final verifier = JournalVault.open(dbPath, key: destinationKey);
       try {
         if (!verifier.integrityCheck()) throw const ProductRestoreRejected();
-        final reopened = verifier.snapshot();
-        await ProductSnapshotCodec().validate(reopened);
+        final reopened = includeConflictReceipts
+            ? verifier.snapshotV3() : verifier.snapshot();
+        if (includeConflictReceipts) {
+          await ProductSnapshotV3Codec().validate(reopened);
+        } else {
+          await ProductSnapshotCodec().validate(reopened);
+        }
         if (!equivalentSnapshots(source, reopened)) {
           throw const ProductRestoreRejected();
         }
@@ -139,13 +188,23 @@ class StagedProductRestorer {
     Map<String, dynamic> expected,
     Map<String, dynamic> actual,
   ) {
-    for (final group in ['journals', 'entries', 'revisions', 'attachments']) {
+    final includeReceipts = expected['format'] == ProductSnapshotV3Codec.format;
+    if (includeReceipts !=
+        (actual['format'] == ProductSnapshotV3Codec.format)) return false;
+    for (final group in [
+      'journals', 'entries', 'revisions', 'attachments',
+      if (includeReceipts) 'conflictCopyReceipts',
+    ]) {
       final e = [...expected[group] as List];
       final a = [...actual[group] as List];
       if (e.length != a.length) return false;
       int byId(dynamic first, dynamic second) {
         final x = first as Map;
         final y = second as Map;
+        if (group == 'conflictCopyReceipts') {
+          return (x['operationId'] as String)
+              .compareTo(y['operationId'] as String);
+        }
         if (group == 'revisions') {
           final firstEntry = (x['entryId'] as String).compareTo(y['entryId'] as String);
           if (firstEntry != 0) return firstEntry;
