@@ -151,14 +151,14 @@ class PortableRecoveryWorker {
             if (faultCheckpointForDiagnostics != null) {
               throw const ProductRestoreRejected();
             }
-            return restorer.restoreV3New(
+            return await restorer.restoreV3New(
               encryptedArchive: archive,
               recoveryKey: isolatedRecovery,
               destinationKey: isolatedDb,
               destination: Directory(destinationPath),
             );
           }
-          return restorer.restoreNew(
+          return await restorer.restoreNew(
             encryptedArchive: archive,
             recoveryKey: isolatedRecovery,
             destinationKey: isolatedDb,
