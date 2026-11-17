@@ -497,7 +497,10 @@ void main() {
     expect(find.text('Newest saved page · read only'), findsOneWidget);
     expect(find.text('Your unsaved draft · not backed up'), findsOneWidget);
     expect(find.text('Newest verified original'), findsOneWidget);
-    expect(find.text(fixture.body), findsOneWidget);
+    expect(find.descendant(
+      of: find.byType(FictionalConflictReviewSheet),
+      matching: find.text(fixture.body),
+    ), findsOneWidget);
     expect(copies, 0);
     await tester.ensureVisible(find.byKey(
         const ValueKey('conflict-preserve-new-page')));
@@ -512,6 +515,8 @@ void main() {
         findsWidgets);
     expect(tester.widget<FilledButton>(find.byKey(
         const ValueKey('conflict-preserve-new-page'))).onPressed, isNull);
+    await tester.ensureVisible(find.byKey(
+        const ValueKey('conflict-keep-editing')));
     await tester.tap(find.byKey(const ValueKey('conflict-keep-editing')));
     await tester.pumpAndSettle();
     expect(harness.controller.hasUnresolvedConflict, isTrue);
@@ -548,6 +553,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(attempts, 1);
     expect(find.textContaining('could not confirm'), findsWidgets);
+    await tester.ensureVisible(find.byKey(
+        const ValueKey('conflict-keep-editing')));
     await tester.tap(find.byKey(const ValueKey('conflict-keep-editing')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(
