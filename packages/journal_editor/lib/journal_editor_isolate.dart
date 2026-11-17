@@ -322,6 +322,24 @@ class JournalEditorWorker implements DraftCommitPort {
     }
   }
 
+  /// Fictional-only V3 export, retaining encrypted conflict-copy receipt
+  /// provenance. This does not write a document or activate any restore.
+  Future<Uint8List> exportRecoveryArchiveV3(RecoveryKey recoveryKey) async {
+    final raw = recoveryKey.snapshot();
+    try {
+      final r = await _send('export_recovery_archive_v3', {
+        'recoveryKey': TransferableTypedData.fromList([raw]),
+      });
+      final archive = r['archive'];
+      if (archive is! TransferableTypedData) {
+        throw const JournalEditorWorkerUnavailable();
+      }
+      return archive.materialize().asUint8List();
+    } finally {
+      raw.fillRange(0, raw.length, 0);
+    }
+  }
+
   /// The return type keeps editor state independent of platform specifics.
   /// This works only after journalId is created/opened in the same vault.
   Future<IsolateJournalEditorSession> startSession({
@@ -373,7 +391,8 @@ class JournalEditorWorker implements DraftCommitPort {
   /// Stage 5D.1 fictional integration only: preserve the current conflicted
   /// draft as a NEW encrypted page. The storage isolate proves a conflict,
   /// validates journal scope, retains the original and its history unchanged,
-  /// and permits only one copy per in-memory conflict session.
+  /// and records one durable copy receipt per opaque operation ID. This
+  /// remains a fictional-only API; not a consumer conflict-recovery control.
   Future<String> preserveFictionalConflictCopy({
     required String sessionId,
     required int expectedOriginalVersion,
@@ -385,11 +404,27 @@ class JournalEditorWorker implements DraftCommitPort {
     }
     final result = await _send('preserve_conflicted_fictional_copy', {
       'sessionId': sessionId,
+      // The authenticated worker session is the sole operation ID; callers
+      // cannot choose another token to duplicate a conflicted snapshot.
+      'operationId': sessionId,
       'expectedOriginalVersion': expectedOriginalVersion,
       'title': snapshot.title,
       'body': snapshot.body,
     });
     return result['newEntryId'] as String;
+  }
+
+  /// Reconcile an unknown acknowledgment after closing/reopening the worker.
+  /// Returns only encrypted-vault metadata; it never creates another page.
+  Future<List<Map<String, Object?>>> fictionalConflictCopiesForSource(
+      String sourceEntryId) async {
+    final r = await _send('conflict_copies_for_source', {
+      'sourceEntryId': sourceEntryId,
+    });
+    return [
+      for (final value in r['receipts'] as List)
+        Map<String, Object?>.from(value as Map),
+    ];
   }
 
   Future<String?> persistedIdFor(String sessionId) async {
@@ -471,11 +506,9 @@ Future<void> _editorStorageWorker(List<Object> args) async {
   }
 
   final ports = <String, JournalCoreDraftPort>{};
-  // In-memory-only deduplication; never mark a conflict resolved or auto-copy.
-  // Crash/unknown-ACK handling still requires querying the encrypted Library
-  // before the user can manually request another copy in a future session.
+  // Each session must first observe a real stored conflict. Durable copy
+  // receipts live inside the encrypted vault, never in this ephemeral map.
   final conflictedSessions = <String>{};
-  final preservedCopyIds = <String, String>{};
   ready.send(incoming.sendPort);
   await for (final dynamic message in incoming) {
     if (message is! Map ||
@@ -669,6 +702,29 @@ Future<void> _editorStorageWorker(List<Object> args) async {
             recovery?.destroy();
             raw.fillRange(0, raw.length, 0);
           }
+        case 'export_recovery_archive_v3':
+          final transferred = message['recoveryKey'] as TransferableTypedData;
+          final raw = transferred.materialize().asUint8List();
+          RecoveryKey? recovery;
+          try {
+            // The raw recovery key travels only in the isolate message, not
+            // through stdout, on-disk preferences or a plaintext export.
+            recovery = RecoveryKey.parse(
+              base64Url.encode(raw).replaceAll('=', ''),
+            );
+            final archive = await vault.exportEncryptedV3(recoveryKey: recovery);
+            try {
+              reply.send({
+                'id': id, 'ok': true,
+                'archive': TransferableTypedData.fromList([archive]),
+              });
+            } finally {
+              archive.fillRange(0, archive.length, 0);
+            }
+          } finally {
+            recovery?.destroy();
+            raw.fillRange(0, raw.length, 0);
+          }
         case 'start_session':
           final logical = message['sessionId'] as String;
           if (ports.containsKey(logical)) {
@@ -716,61 +772,30 @@ Future<void> _editorStorageWorker(List<Object> args) async {
           }
           final originalId = originalPort.persistedEntryId;
           if (originalId == null) throw const DraftConflict();
-          final expected = message['expectedOriginalVersion'] as int;
-          final title = message['title'] as String;
-          final body = message['body'] as String;
-          if (expected < 1 ||
-              (title.trim().isEmpty && body.trim().isEmpty)) {
+          // Validation and operation-id deduplication take place in ONE
+          // encrypted SQL transaction. A retry may read the committed receipt
+          // after a lost reply without creating another page.
+          try {
+            final copyId = vault.preserveConflictCopy(
+              operationId: message['operationId'] as String,
+              sourceEntryId: originalId,
+              journalId: originalPort.journalId,
+              expectedOriginalVersion:
+                  message['expectedOriginalVersion'] as int,
+              title: message['title'] as String,
+              body: message['body'] as String,
+            );
+            reply.send({'id': id, 'ok': true, 'newEntryId': copyId});
+          } on JournalUnavailable {
+            // Archived/deleted/not-writable source: treat as a blocked
+            // conflict, not a transient storage failure. Never retry.
             throw const DraftConflict();
           }
-          final journal = originalPort.journalId;
-          final eligible = vault.listJournals(includeTrash: true).where(
-            (j) => j['id'] == journal && j['deletedAtMs'] == null &&
-                j['archived'] == false).toList();
-          if (eligible.length != 1) throw const DraftConflict();
-          final original = vault.readEntry(originalId);
-          if (original == null || original['journalId'] != journal ||
-              original['deletedAtMs'] != null ||
-              (original['version'] as int) <= expected) {
-            // Copying is allowed only if a real competing encrypted revision
-            // exists for the original live page in its active journal.
-            throw const DraftConflict();
-          }
-          final existingCopyId = preservedCopyIds[session];
-          if (existingCopyId != null) {
-            final previousCopy = vault.readEntry(existingCopyId);
-            if (previousCopy == null ||
-                previousCopy['deletedAtMs'] != null ||
-                previousCopy['journalId'] != journal ||
-                previousCopy['title'] != title ||
-                previousCopy['body'] != body ||
-                previousCopy['version'] != 1) {
-              throw const DraftConflict();
-            }
-            reply.send({
-              'id': id, 'ok': true, 'newEntryId': existingCopyId,
-            });
-          } else {
-            // JournalVault.createEntry performs the encrypted transaction.
-          // Never call editEntry, trash, restore or change the original row.
-          final copiedId = vault.createEntry(
-            journalId: journal,
-            title: title,
-            body: body,
-            eventAtMs: original['eventAtMs'] as int?,
+        case 'conflict_copies_for_source':
+          final receipts = vault.conflictCopiesForSource(
+            message['sourceEntryId'] as String,
           );
-          preservedCopyIds[session] = copiedId;
-          final copied = vault.readEntry(copiedId);
-          if (copied == null || copied['id'] != copiedId ||
-              copied['journalId'] != journal ||
-              copied['title'] != title || copied['body'] != body ||
-              copied['version'] != 1 ||
-              copied['deletedAtMs'] != null) {
-            // Do not send success until encrypted readback is verified.
-            throw const DraftConflict();
-          }
-          reply.send({'id': id, 'ok': true, 'newEntryId': copiedId});
-          }
+          reply.send({'id': id, 'ok': true, 'receipts': receipts});
         case 'persisted_id':
           final session = message['sessionId'] as String;
           final port = ports[session];
