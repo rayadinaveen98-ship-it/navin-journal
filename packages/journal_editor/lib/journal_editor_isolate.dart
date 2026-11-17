@@ -322,6 +322,24 @@ class JournalEditorWorker implements DraftCommitPort {
     }
   }
 
+  /// Fictional-only V3 export, retaining encrypted conflict-copy receipt
+  /// provenance. This does not write a document or activate any restore.
+  Future<Uint8List> exportRecoveryArchiveV3(RecoveryKey recoveryKey) async {
+    final raw = recoveryKey.snapshot();
+    try {
+      final r = await _send('export_recovery_archive_v3', {
+        'recoveryKey': TransferableTypedData.fromList([raw]),
+      });
+      final archive = r['archive'];
+      if (archive is! TransferableTypedData) {
+        throw const JournalEditorWorkerUnavailable();
+      }
+      return archive.materialize().asUint8List();
+    } finally {
+      raw.fillRange(0, raw.length, 0);
+    }
+  }
+
   /// The return type keeps editor state independent of platform specifics.
   /// This works only after journalId is created/opened in the same vault.
   Future<IsolateJournalEditorSession> startSession({
@@ -672,6 +690,29 @@ Future<void> _editorStorageWorker(List<Object> args) async {
               base64Url.encode(raw).replaceAll('=', ''),
             );
             final archive = await vault.exportEncrypted(recoveryKey: recovery);
+            try {
+              reply.send({
+                'id': id, 'ok': true,
+                'archive': TransferableTypedData.fromList([archive]),
+              });
+            } finally {
+              archive.fillRange(0, archive.length, 0);
+            }
+          } finally {
+            recovery?.destroy();
+            raw.fillRange(0, raw.length, 0);
+          }
+        case 'export_recovery_archive_v3':
+          final transferred = message['recoveryKey'] as TransferableTypedData;
+          final raw = transferred.materialize().asUint8List();
+          RecoveryKey? recovery;
+          try {
+            // The raw recovery key travels only in the isolate message, not
+            // through stdout, on-disk preferences or a plaintext export.
+            recovery = RecoveryKey.parse(
+              base64Url.encode(raw).replaceAll('=', ''),
+            );
+            final archive = await vault.exportEncryptedV3(recoveryKey: recovery);
             try {
               reply.send({
                 'id': id, 'ok': true,
